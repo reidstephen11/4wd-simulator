@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { VehicleTuning } from '../data/vehicle';
 import type { Vehicle } from '../sim/vehicle/vehicle';
 import { slerp } from '../sim/vehicle/math';
+import type { VehicleCondition } from '../sim/vehicle/condition';
+import { hash2 } from '../sim/world/rng';
 import { pal } from './colors';
 import { patchFog } from './fog';
 import { MeshBuilder } from './lowpoly';
@@ -22,12 +24,29 @@ export class VehicleModel {
   readonly wheels: { pivot: THREE.Group; spin: THREE.Group }[] = [];
   readonly bodyMaterial: THREE.MeshLambertMaterial;
   private readonly tmpQ = { x: 0, y: 0, z: 0, w: 1 };
+  private readonly wheelGeo: THREE.BufferGeometry;
+  private readonly basePos: Float32Array;
+  private readonly baseCol: Float32Array;
+  private readonly wheelBaseCol: Float32Array;
+  private readonly dirtWeight: Float32Array;
+  private lastDirtKey = '';
+  private lastDentKey = '';
   /** Extra visual wheel spin from wheelspin (rad). */
   private readonly spinExtra = [0, 0, 0, 0];
 
   constructor(private readonly tuning: VehicleTuning) {
     this.bodyMaterial = patchFog(new THREE.MeshLambertMaterial({ vertexColors: true }));
     this.body = new THREE.Mesh(this.buildBody().build(true), this.bodyMaterial);
+    const bg = this.body.geometry;
+    this.basePos = Float32Array.from(bg.getAttribute('position').array as Float32Array);
+    this.baseCol = Float32Array.from(bg.getAttribute('color').array as Float32Array);
+    // Dirt collects low down and in patches.
+    this.dirtWeight = new Float32Array(this.basePos.length / 3);
+    for (let i = 0; i < this.dirtWeight.length; i++) {
+      const y = this.basePos[i * 3 + 1];
+      const patch = hash2(Math.floor(this.basePos[i * 3] * 4), Math.floor(this.basePos[i * 3 + 2] * 4), 5);
+      this.dirtWeight[i] = Math.min(1, Math.max(0.1, 1.15 - (y + 0.1) / 1.4) * (0.65 + 0.5 * patch));
+    }
     this.body.castShadow = true;
     this.body.receiveShadow = true;
     this.bodyGroup.add(this.body);
@@ -44,6 +63,8 @@ export class VehicleModel {
     this.bodyGroup.add(this.rackPlanks);
 
     const wheelGeo = this.buildWheel().build();
+    this.wheelGeo = wheelGeo;
+    this.wheelBaseCol = Float32Array.from(wheelGeo.getAttribute('color').array as Float32Array);
     const wheelMat = this.bodyMaterial;
     for (const w of tuning.wheels) {
       const pivot = new THREE.Group();
@@ -69,13 +90,22 @@ export class VehicleModel {
     const lamp = pal('vehicleRoof')
       .clone()
       .lerp(new THREE.Color(1, 0.95, 0.8), 0.4);
-    // Lower body tub (subdivided so dents have vertices to push).
+    // Lower body tub (subdivided so dents have vertices to push). Lower between the
+    // axles, higher over the front and rear overhangs.
     b.tag = BodyZone.Sides;
-    b.push().translate(0, 0.3, 0.02);
-    b.box(1.64, 0.72, 3.66, body, [6, 3, 14]);
+    b.push().translate(0, 0.3, 0);
+    b.box(1.64, 0.72, 2.3, body, [6, 3, 9]);
     b.pop();
-    // Bonnet (front, flat).
     b.tag = BodyZone.Front;
+    b.push().translate(0, 0.42, -1.5);
+    b.box(1.64, 0.48, 0.72, body, [6, 2, 3]);
+    b.pop();
+    b.tag = BodyZone.Rear;
+    b.push().translate(0, 0.42, 1.5);
+    b.box(1.64, 0.48, 0.72, body, [6, 2, 3]);
+    b.pop();
+    b.tag = BodyZone.Front;
+    // Bonnet (front, flat).
     b.push().translate(0, 0.72, -1.23);
     b.box(1.56, 0.12, 1.2, body, [5, 1, 4]);
     b.pop();
@@ -123,13 +153,13 @@ export class VehicleModel {
     b.pop();
     // Bumpers and winch.
     b.tag = BodyZone.Trim;
-    b.push().translate(0, 0.06, -1.97);
+    b.push().translate(0, 0.24, -1.97);
     b.box(1.84, 0.18, 0.16, trim);
     b.pop();
-    b.push().translate(0, 0.2, -2.0);
+    b.push().translate(0, 0.33, -2.0);
     b.box(0.56, 0.2, 0.2, trim.clone().multiplyScalar(1.25));
     b.pop();
-    b.push().translate(0, 0.06, 1.93);
+    b.push().translate(0, 0.24, 1.93);
     b.box(1.8, 0.16, 0.12, trim);
     b.pop();
     // Tail lights, indicators and blank plates.
@@ -139,12 +169,12 @@ export class VehicleModel {
       b.push().translate(x, 0.5, 1.86);
       b.box(0.14, 0.22, 0.05, tail);
       b.pop();
-      b.push().translate(x * 1.04, 0.24, -1.88);
+      b.push().translate(x * 1.04, 0.36, -1.88);
       b.box(0.12, 0.08, 0.05, amber);
       b.pop();
     }
     for (const z of [-2.06, 1.99]) {
-      b.push().translate(0, 0.08, z);
+      b.push().translate(0, 0.26, z);
       b.box(0.42, 0.13, 0.02, pal('vehicleRoof'));
       b.pop();
     }
@@ -170,8 +200,8 @@ export class VehicleModel {
       b.pop();
     }
     // Chassis rails and axles (seen when the car tips).
-    b.push().translate(0, -0.08, 0);
-    b.box(1.1, 0.14, 3.6, trim);
+    b.push().translate(0, -0.06, 0);
+    b.box(1.1, 0.14, 2.7, trim);
     b.pop();
     for (const z of [-this.tuning.wheels[2].z, this.tuning.wheels[2].z]) {
       b.push()
@@ -218,6 +248,72 @@ export class VehicleModel {
     b.cylinder(0.2, 0.22, 0.02, 8, rim, true, rim);
     b.pop();
     return b;
+  }
+
+  /** Blend in dirt and push in dents from the vehicle's condition (cheap when unchanged). */
+  applyCondition(c: VehicleCondition): void {
+    const d = c.dirt;
+    const dirtKey = [d.front, d.sides, d.rear, d.wheels, c.mudShare].map((x) => Math.round(x * 50)).join(',');
+    if (dirtKey !== this.lastDirtKey) {
+      this.lastDirtKey = dirtKey;
+      const dirtCol = pal('dirtTrack').clone().lerp(pal('mud'), c.mudShare);
+      const col = this.body.geometry.getAttribute('color') as THREE.BufferAttribute;
+      const tags = this.body.geometry.getAttribute('tag') as THREE.BufferAttribute;
+      const arr = col.array as Float32Array;
+      const avg = (d.front + d.sides + d.rear) / 3;
+      for (let i = 0; i < col.count; i++) {
+        const tag = tags.getX(i);
+        const level =
+          tag === BodyZone.Front
+            ? d.front
+            : tag === BodyZone.Rear
+              ? d.rear
+              : tag === BodyZone.Roof
+                ? d.sides * 0.25
+                : tag === BodyZone.Glass
+                  ? avg * 0.45
+                  : tag === BodyZone.Trim
+                    ? avg * 0.8
+                    : d.sides;
+        const k = Math.min(0.85, level * this.dirtWeight[i]);
+        arr[i * 3] = this.baseCol[i * 3] + (dirtCol.r - this.baseCol[i * 3]) * k;
+        arr[i * 3 + 1] = this.baseCol[i * 3 + 1] + (dirtCol.g - this.baseCol[i * 3 + 1]) * k;
+        arr[i * 3 + 2] = this.baseCol[i * 3 + 2] + (dirtCol.b - this.baseCol[i * 3 + 2]) * k;
+      }
+      col.needsUpdate = true;
+      const wcol = this.wheelGeo.getAttribute('color') as THREE.BufferAttribute;
+      const warr = wcol.array as Float32Array;
+      const kw = Math.min(0.8, d.wheels * 0.8);
+      for (let i = 0; i < warr.length; i += 3) {
+        warr[i] = this.wheelBaseCol[i] + (dirtCol.r - this.wheelBaseCol[i]) * kw;
+        warr[i + 1] = this.wheelBaseCol[i + 1] + (dirtCol.g - this.wheelBaseCol[i + 1]) * kw;
+        warr[i + 2] = this.wheelBaseCol[i + 2] + (dirtCol.b - this.wheelBaseCol[i + 2]) * kw;
+      }
+      wcol.needsUpdate = true;
+    }
+    const dentKey = c.dents.map((x) => `${x.x.toFixed(2)}${x.z.toFixed(2)}${x.depth.toFixed(3)}`).join('|');
+    if (dentKey !== this.lastDentKey) {
+      this.lastDentKey = dentKey;
+      const pos = this.body.geometry.getAttribute('position') as THREE.BufferAttribute;
+      const arr = pos.array as Float32Array;
+      arr.set(this.basePos);
+      for (const dent of c.dents) {
+        const r2 = dent.radius * dent.radius;
+        for (let i = 0; i < arr.length; i += 3) {
+          const dx = this.basePos[i] - dent.x;
+          const dy = this.basePos[i + 1] - dent.y;
+          const dz = this.basePos[i + 2] - dent.z;
+          const q = (dx * dx + dy * dy + dz * dz) / r2;
+          if (q >= 1) continue;
+          const f = dent.depth * (1 - q) * (1 - q);
+          arr[i] += dent.nx * f;
+          arr[i + 1] += dent.ny * f;
+          arr[i + 2] += dent.nz * f;
+        }
+      }
+      pos.needsUpdate = true;
+      this.body.geometry.computeVertexNormals();
+    }
   }
 
   /** Show or hide planks on the roof rack. */

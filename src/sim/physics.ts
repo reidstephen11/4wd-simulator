@@ -96,7 +96,7 @@ export class Physics {
   }
 
   addStaticBox(box: StaticBox, surface: SurfaceId, friction = 0.9): RAPIER.Collider {
-    const q = yawQuat(box.yaw);
+    const q = boxQuat(box.yaw, box.roll ?? 0);
     const c = this.world.createCollider(
       this.R.ColliderDesc.cuboid(box.hx, box.hy, box.hz)
         .setTranslation(box.x, box.y, box.z)
@@ -125,4 +125,14 @@ export class Physics {
 
 export function yawQuat(yaw: number): { x: number; y: number; z: number; w: number } {
   return { x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) };
+}
+
+/** Yaw about +y, then roll about the rotated local z. */
+export function boxQuat(yaw: number, roll: number): { x: number; y: number; z: number; w: number } {
+  const cy = Math.cos(yaw / 2);
+  const sy = Math.sin(yaw / 2);
+  const cr = Math.cos(roll / 2);
+  const sr = Math.sin(roll / 2);
+  // q = qy * qz
+  return { w: cy * cr, x: sy * sr, y: sy * cr, z: cy * sr };
 }

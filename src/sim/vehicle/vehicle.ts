@@ -10,7 +10,18 @@ import {
   tyreGripMultiplier,
 } from './condition';
 import { createDrivetrainState, engineBrakeForce, updateDrivetrain } from './drivetrain';
+import { floodPower, updateFlood, type FloodEvent } from './flooding';
+import { mulberry32 } from '../world/rng';
 import { type Quat, type Vec3, dot, headingToYaw, rotate, v3, yawQuat } from './math';
+
+/** How readily each surface lets a stuck wheel spin (visual, dirt and sound only). */
+const LOOSENESS: Partial<Record<SurfaceId, number>> = {
+  [SurfaceId.Mud]: 1,
+  [SurfaceId.Gravel]: 0.6,
+  [SurfaceId.Water]: 0.4,
+  [SurfaceId.Grass]: 0.35,
+  [SurfaceId.Dirt]: 0.25,
+};
 
 /** Rapier's positive steering turns left; our input is + = right. */
 const STEER_SIGN = -1;
@@ -73,6 +84,13 @@ export class Vehicle {
   freeRoll = false;
   /** External pull this step (winch), for audio/UI. */
   externalLoad = 0;
+  /** Set when flooding stalls or restarts the engine this step. */
+  floodEvent: FloodEvent = null;
+  /** World position of the air intake (updated each step). */
+  readonly intakePos = v3();
+  private sputterRand = 0;
+  /** Seeded so the simulation stays deterministic. */
+  private readonly rand: () => number;
   readonly prevPosition = v3();
   readonly prevRotation: Quat = { x: 0, y: 0, z: 0, w: 1 };
   /** Biggest velocity change in the last step (m/s), for impacts/dents. */
@@ -95,6 +113,9 @@ export class Vehicle {
   ) {
     const R = physics.R;
     const t = tuning;
+    let h = 0;
+    for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    this.rand = mulberry32(h);
     const desc = R.RigidBodyDesc.dynamic()
       .setTranslation(spawn.x, spawn.y, spawn.z)
       .setRotation(yawQuat(headingToYaw(spawn.headingDeg)))
@@ -221,6 +242,7 @@ export class Vehicle {
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     for (const w of this.wheels) w.sink = 0;
     this.drivetrain.gear = 0;
+    this.body.setBodyType(this.physics.R.RigidBodyType.Dynamic, true);
     this.lastVel.x = this.lastVel.y = this.lastVel.z = 0;
     this.snapshot();
   }
@@ -275,10 +297,24 @@ export class Vehicle {
     this.throttle = throttle;
     this.brake = brake;
 
+    // Engine flooding: is the air intake under the water surface?
+    this.localToWorld(t.intake.x, t.intake.y, t.intake.z, this.intakePos);
+    const ws = this.physics.ground.waterSurfaceAt(this.intakePos.x, this.intakePos.z);
+    const submerged = ws !== null && this.intakePos.y < ws + this.env.waterLevelOffset;
+    this.floodEvent = updateFlood(this.condition.flood, submerged, f, dt);
+    this.drivetrain.engineRunning = !this.condition.flood.stalled;
+    if (this.rand() < dt * 6) this.sputterRand = this.rand();
+
     const drive = updateDrivetrain(
       t,
       this.drivetrain,
-      { throttle, reverse, speed: this.speed, enginePower: enginePowerMultiplier(this.condition) },
+      {
+        throttle,
+        reverse,
+        speed: this.speed,
+        enginePower:
+          enginePowerMultiplier(this.condition) * floodPower(this.condition.flood, this.sputterRand),
+      },
       dt,
     );
 
@@ -310,8 +346,14 @@ export class Vehicle {
       const want = Math.abs(perAxle) / 2;
       for (const k of [i, j]) {
         const got = Math.abs(this.requests[k]);
-        const spin = want > 1 && throttle > 0.05 ? Math.max(0, 1 - got / want) : 0;
-        this.wheels[k].spin += (spin - this.wheels[k].spin) * Math.min(1, dt * 8);
+        let spin = want > 1 && throttle > 0.05 ? Math.max(0, 1 - got / want) : 0;
+        // Bogged down on loose ground with the throttle in: the wheels dig and spin.
+        const w = this.wheels[k];
+        if (w.contact && throttle > 0.3 && Math.abs(this.speed) < 1.2) {
+          const loose = LOOSENESS[w.surface] ?? 0;
+          spin = Math.max(spin, loose * throttle * (1 - Math.abs(this.speed) / 1.2));
+        }
+        w.spin += (spin - w.spin) * Math.min(1, dt * 8);
       }
     }
 
@@ -384,6 +426,7 @@ export class Vehicle {
 
     c.updateVehicle(dt, undefined, WHEEL_FILTER);
     this.addRollTorque(q);
+    this.pushDynamicGround(q, dt);
 
     // Rolling resistance, aero drag and water drag.
     let rr = 0;
@@ -450,6 +493,42 @@ export class Vehicle {
       tz += (up.x * ay - up.y * ax) * k;
     }
     this.body.applyTorqueImpulse({ x: tx, y: ty, z: tz }, true);
+  }
+
+  /**
+   * Rapier's wheels don't push back on what they stand on. Apply each wheel's load and
+   * tyre forces to dynamic ground (planks, the Fallen Tree) so the car's weight presses
+   * a plank onto its supports and drive force can shove it.
+   */
+  private pushDynamicGround(q: Quat, dt: number): void {
+    const c = this.controller;
+    for (let i = 0; i < 4; i++) {
+      if (!c.wheelIsInContact(i)) continue;
+      const col = c.wheelGroundObject(i);
+      const body = col?.parent();
+      if (!body || !body.isDynamic()) continue;
+      const n = c.wheelContactNormal(i);
+      const cp = c.wheelContactPoint(i);
+      if (!n || !cp) continue;
+      const load = Math.min(this.tuning.maxSuspensionForce, c.wheelSuspensionForce(i) ?? 0) * dt;
+      const steer = c.wheelSteering(i) ?? 0;
+      // Wheel axle and forward directions (forward = normal × axle, as in Rapier).
+      const ax = rotate(q, Math.cos(steer), 0, Math.sin(steer));
+      const fx = n.y * ax.z - n.z * ax.y;
+      const fy = n.z * ax.x - n.x * ax.z;
+      const fz = n.x * ax.y - n.y * ax.x;
+      const fwdImp = c.wheelForwardImpulse(i) ?? 0;
+      const sideImp = c.wheelSideImpulse(i) ?? 0;
+      body.applyImpulseAtPoint(
+        {
+          x: -n.x * load - fx * fwdImp - ax.x * sideImp,
+          y: -n.y * load - fy * fwdImp - ax.y * sideImp,
+          z: -n.z * load - fz * fwdImp - ax.z * sideImp,
+        },
+        cp,
+        true,
+      );
+    }
   }
 
   /** Depth of water around the body centre (m above the ground under it). */

@@ -485,21 +485,25 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
     const a = (g.headingDeg * Math.PI) / 180;
     const dirX = Math.sin(a);
     const dirZ = -Math.cos(a);
-    const lipW = 1.0;
-    const trenchHalf = g.gap / 2 + lipW + 0.1;
-    const rampOut = trenchHalf + 1.2;
+    // Earth walls either side of the gap. They're wide so they cover every heightfield
+    // triangle the trench carving touches (samples are 1 m apart).
+    const lipW = 2.2;
+    const trenchHalf = g.gap / 2 + 0.65;
+    const rampOut = trenchHalf + 0.5;
     const L = g.length / 2;
     const R = L + rampOut + 2;
     // Record the ground height along the lips before carving.
     const segLen = 3;
     const nSeg = Math.ceil(g.length / segLen);
-    const lipTop: number[][] = [];
+    // Each wall's top follows the ground across the gully: [inner edge, outer edge] heights.
+    const lipTop: [number, number][][] = [];
     for (let k = 0; k < nSeg; k++) {
       const along = -L + (k + 0.5) * (g.length / nSeg);
-      const tops: number[] = [];
+      const tops: [number, number][] = [];
       for (const sgn of [-1, 1]) {
-        const off = sgn * (g.gap / 2 + lipW + 0.4);
-        tops.push(sampleH(g.x + dirX * along - dirZ * off, g.z + dirZ * along + dirX * off));
+        const at = (off: number) =>
+          sampleH(g.x + dirX * along - dirZ * off * sgn, g.z + dirZ * along + dirX * off * sgn);
+        tops.push([at(g.gap / 2), at(g.gap / 2 + lipW)]);
       }
       lipTop.push(tops);
     }
@@ -525,18 +529,23 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
       if (endFade < 0.98) continue;
       for (let si = 0; si < 2; si++) {
         const sgn = si === 0 ? -1 : 1;
-        const off = sgn * (g.gap / 2 + lipW * 0.5 + 0.15);
-        const top = lipTop[k][si];
-        const bottom = top - g.depth - 0.6;
+        const off = sgn * (g.gap / 2 + lipW * 0.5);
+        const [inner, outer] = lipTop[k][si];
+        const top = (inner + outer) / 2;
+        const bottom = Math.min(inner, outer) - g.depth - 0.6;
+        // Box local +x points to the side the wall is on (sgn), so roll tilts the top
+        // from the inner edge height to the outer edge height.
+        const yaw = Math.atan2(dirX, dirZ);
         boxes.push({
           kind: 'gullyLip',
           x: g.x + dirX * along - dirZ * off,
-          y: (top + bottom) / 2,
+          y: top - (top - bottom) / 2,
           z: g.z + dirZ * along + dirX * off,
-          hx: lipW / 2 + 0.15,
+          hx: lipW / 2,
           hy: (top - bottom) / 2,
           hz: g.length / nSeg / 2,
-          yaw: Math.atan2(dirX, dirZ),
+          yaw,
+          roll: Math.atan2(outer - inner, lipW) * -sgn,
         });
       }
     }

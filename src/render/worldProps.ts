@@ -361,7 +361,10 @@ export class WorldProps {
     // Staircase ledges: granite slabs.
     const rand = mulberry32(99);
     for (const box of world.features.boxes) {
-      b.push().translate(box.x, box.y, box.z).rotate(0, box.yaw, 0);
+      b.push()
+        .translate(box.x, box.y, box.z)
+        .rotate(0, box.yaw, 0)
+        .rotate(0, 0, box.roll ?? 0);
       if (box.kind === 'ledge') {
         const c = pal('rock')
           .clone()

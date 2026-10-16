@@ -1,4 +1,4 @@
-import { flatDirt, Groups, groups, loadRapier, Physics } from '../../src/sim/physics';
+import { flatDirt, Groups, groups, loadRapier, Physics, type GroundQuery } from '../../src/sim/physics';
 import { vehicleTuning, type VehicleTuning } from '../../src/data/vehicle';
 import { Vehicle } from '../../src/sim/vehicle/vehicle';
 import { emptyInput, type VehicleInput } from '../../src/sim/input/vehicleInput';
@@ -19,9 +19,10 @@ export async function makeScene(opts: {
   tuning?: VehicleTuning;
   heading?: number;
   speed?: number;
+  ground?: GroundQuery;
 }): Promise<Scene> {
   const R = await loadRapier();
-  const physics = new Physics(R, flatDirt);
+  const physics = new Physics(R, opts.ground ?? flatDirt);
   const pitch = ((opts.pitchDeg ?? 0) * Math.PI) / 180;
   const roll = ((opts.rollDeg ?? 0) * Math.PI) / 180;
   // Rotation: pitch about +x, then roll about +z.

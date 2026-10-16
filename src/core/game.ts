@@ -20,6 +20,8 @@ import { FreeCamera } from '../debug/freeCamera';
 import { DebugOverlay } from '../debug/overlay';
 import { DebugTools } from '../debug/debugTools';
 import { GameLoop } from './loop';
+import { ToolController } from './toolController';
+import { ToolsView } from '../render/tools';
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
@@ -39,6 +41,13 @@ export interface GameHook {
   vehicle(): { x: number; y: number; z: number; speed: number; range: string; tilt: number; heading: number };
   /** Park the vehicle on the approach to a POI and frame it with the free camera (screenshots). */
   showPoi(id: string): void;
+  /** Tool actions (the M5 tool menu calls the same). */
+  tool(action: 'planks' | 'winch' | 'confirm' | 'cancel' | 'detach' | 'recall' | 'quick'): boolean;
+  /** Plain-data simulation snapshot. */
+  state(): unknown;
+  returnToCampsite(id: string): void;
+  /** Debug: turn the car upside down where it is. */
+  flip(): void;
   pois(): { id: string; name: string; x: number; z: number; radius: number }[];
 }
 
@@ -57,6 +66,9 @@ export class Game {
   private readonly overlay: DebugOverlay | null;
   private readonly tools: DebugTools | null;
   private readonly model: VehicleModel;
+  readonly toolsView: ToolsView;
+  readonly tool: ToolController;
+  private clock = 0;
   private freeCamOn = false;
   private scriptedInput: Partial<VehicleInput> | null = null;
   private readonly inputs = new Map<string, VehicleInput>();
@@ -77,6 +89,9 @@ export class Game {
 
     this.model = new VehicleModel(vehicleTuning);
     view.scene.add(this.model.root);
+    this.toolsView = new ToolsView();
+    view.scene.add(this.toolsView.group);
+    this.tool = new ToolController(sim, this.input, LOCAL_VEHICLE);
     view.camera.fov = cameraTuning.fov;
     view.camera.near = cameraTuning.near;
     view.camera.updateProjectionMatrix();
@@ -185,17 +200,33 @@ export class Game {
   private step(dt: number): void {
     const inp = this.input.vehicleInput(dt);
     if (this.scriptedInput) Object.assign(inp, this.scriptedInput);
+    // Park on the handbrake while placing planks or choosing an anchor.
+    if (this.tool.mode !== 'drive') {
+      inp.throttle = 0;
+      inp.brake = 0;
+      inp.steer = 0;
+      inp.handbrake = true;
+      inp.winchAttach = false;
+      inp.interact = false;
+    }
     this.inputs.set(LOCAL_VEHICLE, inp);
     this.sim.step(this.inputs, dt);
   }
 
   private renderFrame(alpha: number, frameDt: number): void {
     this.input.poll();
+    this.clock += frameDt;
+    this.tool.update(frameDt);
     const v = this.vehicle;
+    const tools = this.sim.toolsOf(LOCAL_VEHICLE);
     this.model.update(v, alpha, frameDt);
+    this.model.applyCondition(v.condition);
+    this.model.setPlanksOnRack(tools.planks.carried);
+    this.toolsView.update(v, tools, this.sim.probeGround, this.clock);
     if (this.freeCamOn) this.freeCam.update(frameDt);
     else {
       this.chase.zoom(this.input.takeZoom(frameDt));
+      this.chase.toolView = this.tool.mode !== 'drive';
       const p = this.model.root.position;
       this.tmpPos.copy(p);
       const f = v.forward();
@@ -210,7 +241,13 @@ export class Game {
     this.view.focus.copy(this.model.root.position);
     this.view.render();
     if (this.overlay) {
-      this.overlay.setLines(this.tools?.update(v) ?? []);
+      const w = tools.winch;
+      const fl = v.condition.flood;
+      this.overlay.setLines([
+        ...(this.tools?.update(v) ?? []),
+        `winch ${w.anchor ? `${w.anchor.label} ${w.length.toFixed(1)} m ${(w.tension / 1000).toFixed(1)} kN` : 'off'}  planks ${tools.planks.carried}/2  jack ${tools.jack.state}`,
+        `flood ${fl.timer.toFixed(1)} s${fl.stalled ? ' STALLED' : ''}  dirt ${v.condition.dirt.sides.toFixed(2)}  dents ${v.condition.dents.length}  mode ${this.tool.mode}`,
+      ]);
       this.overlay.frame(frameDt, this.view.renderer);
     }
     this.input.consumeUi();
@@ -249,6 +286,42 @@ export class Game {
         this.scriptedInput = inp;
       },
       showPoi: (id) => this.showPoi(id),
+      tool: (action) => {
+        switch (action) {
+          case 'planks':
+            return this.tool.startPlanks();
+          case 'winch':
+            return this.tool.startWinchTarget();
+          case 'confirm':
+            this.tool.confirm();
+            return true;
+          case 'cancel':
+            this.tool.cancel();
+            return true;
+          case 'detach':
+            this.sim.detachWinch(LOCAL_VEHICLE);
+            return true;
+          case 'recall':
+            this.sim.recallPlanks(LOCAL_VEHICLE);
+            return true;
+          case 'quick':
+            this.sim.quickAttach(LOCAL_VEHICLE);
+            return true;
+        }
+        return false;
+      },
+      state: () => this.sim.serialize(),
+      flip: () => {
+        const v = this.vehicle;
+        const p = v.body.translation();
+        v.body.setTranslation({ x: p.x, y: p.y + 1.6, z: p.z }, true);
+        v.body.setRotation({ x: 0, y: 0, z: 1, w: 0 }, true);
+      },
+      returnToCampsite: (id) => {
+        this.sim.returnToCampsite(LOCAL_VEHICLE, id);
+        this.chase.reset();
+        this.view.snap();
+      },
       pois: () => this.world.pois.map((p) => ({ id: p.id, name: p.name, x: p.x, z: p.z, radius: p.radius })),
       vehicle: () => {
         const v = this.vehicle;

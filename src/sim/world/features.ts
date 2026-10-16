@@ -27,6 +27,8 @@ export interface StaticBox {
   hy: number;
   hz: number;
   yaw: number;
+  /** Tilt about the box's local z axis (radians), applied after yaw. */
+  roll?: number;
 }
 
 export interface GullyInfo {

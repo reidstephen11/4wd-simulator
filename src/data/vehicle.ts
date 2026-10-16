@@ -124,12 +124,15 @@ export const vehicleTuning: VehicleTuning = {
   damperRelaxation: 2.6,
   maxSuspensionForce: 45000,
   bodyBoxes: [
-    // Body tub and chassis rails.
-    { cx: 0, cy: 0.33, cz: 0, hx: 0.8, hy: 0.44, hz: 1.86 },
+    // Body tub and chassis between the axles (lowest part: 0.28 m ground clearance).
+    { cx: 0, cy: 0.32, cz: 0, hx: 0.8, hy: 0.42, hz: 1.15 },
+    // Front and rear overhangs sit higher: ~37° approach and ~33° departure angles.
+    { cx: 0, cy: 0.5, cz: -1.52, hx: 0.8, hy: 0.32, hz: 0.38 },
+    { cx: 0, cy: 0.48, cz: 1.52, hx: 0.8, hy: 0.34, hz: 0.4 },
     // Cabin.
     { cx: 0, cy: 1.1, cz: 0.3, hx: 0.76, hy: 0.36, hz: 1.05 },
   ],
-  bumpRadius: 0.3,
+  bumpRadius: 0.24,
   bodyFriction: 0.45,
 
   engine: {
@@ -145,7 +148,7 @@ export const vehicleTuning: VehicleTuning = {
       [4300, 190],
       [4800, 80],
     ],
-    engineBrake: 55,
+    engineBrake: 120,
   },
   gearbox: {
     ratios: [2.48, 1.48, 1.0],
@@ -181,5 +184,5 @@ export const vehicleTuning: VehicleTuning = {
   },
   intakeHeight: 0.9,
   intake: { x: 0.7, y: 0.9 - R, z: -0.9 },
-  winchMount: { x: 0, y: 0.05, z: -1.95 },
+  winchMount: { x: 0, y: 0.28, z: -2.0 },
 };

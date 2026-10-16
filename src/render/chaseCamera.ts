@@ -20,6 +20,9 @@ export type Blocker = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => 
  */
 export class ChaseCamera {
   distance = C.distance;
+  /** Look down at the ground ahead (plank placement, picking an anchor). */
+  toolView = false;
+  private toolBlend = 0;
   private yaw = 0;
   private initialised = false;
   private readonly pos = new THREE.Vector3();
@@ -61,14 +64,17 @@ export class ChaseCamera {
     this.slopeSmoothed += (t.slopeDeg - this.slopeSmoothed) * k;
     this.speedSmoothed += (Math.abs(t.speed) - this.speedSmoothed) * k;
 
+    this.toolBlend += ((this.toolView ? 1 : 0) - this.toolBlend) * Math.min(1, dt * 3);
     const speedF = Math.min(1, this.speedSmoothed / C.speedRef);
     let dist = this.distance * (1 + C.speedPullback * speedF);
     if (this.speedSmoothed < C.crawlSpeed)
       dist *= C.crawlCloser + (1 - C.crawlCloser) * (this.speedSmoothed / C.crawlSpeed);
-    const height = C.height * (dist / C.distance) ** 0.8 + C.slopeLift * Math.min(1, this.slopeSmoothed / 30);
+    let height = C.height * (dist / C.distance) ** 0.8 + C.slopeLift * Math.min(1, this.slopeSmoothed / 30);
+    height += this.toolBlend * 4.5;
+    dist += this.toolBlend * 1.5;
 
     const back = this.tmp.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    this.look.copy(t.position).addScaledVector(t.forward, C.lookAhead);
+    this.look.copy(t.position).addScaledVector(t.forward, C.lookAhead + this.toolBlend * 3.5);
     this.look.y = t.position.y + C.targetHeight;
     const desired = new THREE.Vector3().copy(this.look).addScaledVector(back, dist);
     desired.y += height;
