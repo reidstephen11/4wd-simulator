@@ -109,7 +109,7 @@ export const glyphs: Record<'keyboard' | 'gamepad', Partial<Record<Action, strin
     horn: 'H',
     map: 'M',
     pause: 'Esc',
-    confirm: 'Enter',
+    confirm: 'E',
     back: 'Esc',
   },
   gamepad: {

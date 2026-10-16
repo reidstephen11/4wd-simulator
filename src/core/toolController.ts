@@ -88,8 +88,8 @@ export class ToolController {
       const t = this.tools;
       const n = t.targeting?.length ?? 0;
       if (n > 0) {
-        if (inp.pressed('menuRight')) t.targetIndex = (t.targetIndex + 1) % n;
-        if (inp.pressed('menuLeft')) t.targetIndex = (t.targetIndex + n - 1) % n;
+        t.targetIndex =
+          (t.targetIndex + inp.pressCount('menuRight') + n * 10 - inp.pressCount('menuLeft')) % n;
       }
     }
     return true;

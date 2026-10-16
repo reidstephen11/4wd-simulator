@@ -15,7 +15,8 @@ export class InputManager {
   vehicleEnabled = true;
   private readonly keys = new Set<string>();
   private readonly vehicleEdges = new Set<Action>();
-  private readonly uiEdges = new Set<Action>();
+  /** UI presses since the last frame, counted so quick taps in one slow frame aren't lost. */
+  private readonly uiEdges = new Map<Action, number>();
   private readonly padPrev: boolean[] = [];
   private padButtons: boolean[] = [];
   private padAxes: number[] = [0, 0, 0, 0];
@@ -35,7 +36,7 @@ export class InputManager {
       this.setDevice('keyboard');
       for (const a of this.actionsForKey(e.code)) {
         this.vehicleEdges.add(a);
-        this.uiEdges.add(a);
+        this.uiEdges.set(a, (this.uiEdges.get(a) ?? 0) + 1);
       }
       if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab') e.preventDefault();
     });
@@ -111,7 +112,7 @@ export class InputManager {
         for (const [a, list] of Object.entries(padBindings) as [Action, readonly number[]][]) {
           if (list.includes(i)) {
             this.vehicleEdges.add(a);
-            this.uiEdges.add(a);
+            this.uiEdges.set(a, (this.uiEdges.get(a) ?? 0) + 1);
           }
         }
       }
@@ -152,7 +153,12 @@ export class InputManager {
 
   /** Edge-triggered UI action since the last call to consumeUi(). */
   pressed(a: Action): boolean {
-    return this.uiEdges.has(a);
+    return (this.uiEdges.get(a) ?? 0) > 0;
+  }
+
+  /** How many times an action was pressed since the last consumeUi(). */
+  pressCount(a: Action): number {
+    return this.uiEdges.get(a) ?? 0;
   }
 
   /** Clear UI edges; call once per rendered frame after the UI has looked at them. */

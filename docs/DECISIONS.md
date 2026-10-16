@@ -65,3 +65,14 @@ Rapier's `DynamicRayCastVehicleController` is the base, as §2 asks. A few of it
 - **Dirt** builds per zone (front, sides, rear, wheels) from the surface's dirt rate times speed — or wheelspin, so a car bogged in mud gets muddy — and water washes it down to 25% of its level (wheels fully). **Dents** come from a sudden velocity change above 3.5 m/s; the hit side is found from the direction of that change, and nearby body vertices are pushed in (max 11 cm, 28 dents kept).
 - **Bogged wheelspin:** with the throttle in and the car barely moving on loose ground, the wheels show spin (visual, dirt and sound only) even though the physics model treats mud as extra rolling resistance rather than lost traction.
 - **Headless M4 checks** (`tests/tools.test.ts`): 11 s with the intake under water stalls the engine (and it restarts only after 20 s clear); winching in closes the distance to the anchor; the Bog Hole holds the car in high range and the winch pulls it out; the Washout Gully stops the car without planks and it crosses on planks (driven along the planks at a crawl, as a player would steer).
+
+## Exploration UI and saving (M5)
+
+- **Every named feature is a discoverable POI** (14 in total, including both campsites). The campsite you spawn at is discovered straight away, because the car starts inside it.
+- **Saving** writes one `localStorage` key holding discovered POIs, the last campsite visited and the settings. It saves when something is discovered, when a campsite is reached and when settings change. If storage is blocked or full the game keeps running with default settings and prints one console warning; nothing is shown on screen.
+- **Pausing:** the paper map and the pause menu stop the simulation. The tool menu (hold Q) doesn't pause, but it parks the car (no throttle, steering or brake input) while open, so you can choose a tool without the car wandering off.
+- **Context prompts** only show what can be done right now: "Attach winch" appears below about 5 km/h with an anchor in reach, "Pick up planks" next to placed planks, "Hold J — Right vehicle" once the jack is available, and an engine warning while the intake is under water.
+- **The compass strip** shows only discovered POIs within 400 m, so undiscovered places stay a surprise.
+- **The paper map** is drawn once in the background after loading (relief shading, contour lines, creeks, tracks and forest), split into small chunks so it never freezes the game. Only discovered POIs are labelled. If it's opened before that finishes, it shows blank paper and fills in when ready.
+- **Menus count every key press.** On a slow frame several presses can arrive together; menus apply each one instead of dropping all but the first.
+- **Return to last campsite** fades to black, places the car at the campsite's parking spot facing its exit, and clears flooding (not dirt or dents).

@@ -1,0 +1,92 @@
+import { expect, test } from '@playwright/test';
+import { collectErrors, shot, waitReady } from './helpers';
+
+test('M5: driving into a POI shows the toast, adds it to the map, and survives a reload', async ({
+  page,
+}) => {
+  test.setTimeout(600_000);
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await waitReady(page);
+  // Spawning at River Flat Camp discovers it.
+  await expect(page.locator('.discovery-name')).toHaveText('River Flat Camp', { timeout: 30_000 });
+  await shot(page, 'M5', 'hud-and-first-discovery');
+
+  // Drive into the Gravel Ford's radius.
+  await page.evaluate(() => window.__game!.teleport(-212, 228, 320));
+  expect(await page.evaluate(() => window.__game!.discovered())).not.toContain('gravel-ford');
+  await page.evaluate(() => window.__game!.setInput({ throttle: 0.7 }));
+  await expect(page.locator('.discovery-name')).toHaveText('Gravel Ford', { timeout: 120_000 });
+  await page.evaluate(() => window.__game!.setInput({ brake: 1 }));
+  await shot(page, 'M5', 'discovery-toast');
+  await page.evaluate(() => window.__game!.setInput(null));
+  expect(await page.evaluate(() => window.__game!.discovered())).toContain('gravel-ford');
+
+  // The map shows it (and nothing undiscovered).
+  await page.keyboard.press('KeyM');
+  await expect.poll(() => page.evaluate(() => window.__game!.ui().map)).toBe(true);
+  expect(await page.evaluate(() => window.__game!.ui().paused)).toBe(true);
+  await page.waitForTimeout(6000);
+  await shot(page, 'M5', 'paper-map');
+  await page.keyboard.press('KeyM');
+  await expect.poll(() => page.evaluate(() => window.__game!.ui().map)).toBe(false);
+
+  // Pause menu, settings and controls.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.pause-card h2')).toHaveText('Paused');
+  await shot(page, 'M5', 'pause-menu');
+  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-quality="low"]').click();
+  await shot(page, 'M5', 'settings');
+  await page.locator('[data-act="back"]').click();
+  await page.locator('[data-act="controls"]').click();
+  await shot(page, 'M5', 'controls');
+  await page.locator('[data-act="back"]').click();
+  await page.locator('[data-act="resume"]').click();
+  expect(await page.evaluate(() => window.__game!.ui().paused)).toBe(false);
+
+  // Tool menu.
+  await page.evaluate(() => window.__game!.teleport(-188, 225, 315));
+  await page.waitForTimeout(1000);
+  await page.keyboard.down('KeyQ');
+  await expect.poll(() => page.evaluate(() => window.__game!.ui().toolMenu)).toBe(true);
+  await page.mouse.move(640, 360);
+  await page.mouse.move(560, 420, { steps: 4 });
+  await page.waitForTimeout(500);
+  await shot(page, 'M5', 'tool-menu');
+  await page.keyboard.up('KeyQ');
+  await expect.poll(() => page.evaluate(() => window.__game!.ui().mode)).toBe('plankPlace');
+  await page.waitForTimeout(1500);
+  await shot(page, 'M5', 'plank-placement-prompts');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.evaluate(() => window.__game!.ui().mode)).toBe('drive');
+
+  // Reload: discoveries and settings are kept.
+  await page.reload();
+  await waitReady(page);
+  const disc = await page.evaluate(() => window.__game!.discovered());
+  expect(disc).toContain('gravel-ford');
+  expect(disc).toContain('river-flat-camp');
+  expect(errors).toEqual([]);
+});
+
+test('M5: with storage blocked the game still runs', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors = collectErrors(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new DOMException('Storage is disabled', 'SecurityError');
+      },
+    });
+  });
+  await page.goto('/');
+  await waitReady(page);
+  await expect(page.locator('.discovery-name')).toHaveText('River Flat Camp', { timeout: 30_000 });
+  const t0 = await page.evaluate(() => window.__game!.simTime());
+  await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
+  await page.waitForTimeout(3000);
+  expect(await page.evaluate(() => window.__game!.simTime())).toBeGreaterThan(t0);
+  await shot(page, 'M5', 'storage-blocked-still-running');
+  expect(errors).toEqual([]);
+});
