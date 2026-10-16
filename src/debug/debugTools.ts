@@ -42,13 +42,18 @@ export class DebugTools {
     private readonly tuning: VehicleTuning,
     private readonly getVehicle: () => Vehicle,
     pois: readonly PoiDef[],
-    actions: { teleport: (poi: PoiDef) => void; toggleFreeCam: () => boolean },
+    actions: {
+      teleport: (poi: PoiDef) => void;
+      toggleFreeCam: () => boolean;
+      bird: (kind: 'kookaburra' | 'magpie') => void;
+    },
   ) {
     this.panel = document.createElement('div');
     this.panel.className = 'debug-panel';
     this.panel.innerHTML = `<details open><summary>Debug</summary>
       <div class="debug-row"><button data-act="free">Free camera (C)</button><button data-act="coll">Colliders</button></div>
       <details><summary>Teleport</summary><div class="debug-teleports"></div></details>
+      <details><summary>Sounds</summary><div class="debug-row"><button data-bird="kookaburra">Kookaburra</button><button data-bird="magpie">Magpie</button></div></details>
       <details><summary>Vehicle tuning</summary><div class="debug-sliders"></div></details>
     </details>`;
     root.appendChild(this.panel);
@@ -59,6 +64,8 @@ export class DebugTools {
       b.addEventListener('click', () => actions.teleport(p));
       tp.appendChild(b);
     }
+    for (const b of this.panel.querySelectorAll<HTMLButtonElement>('[data-bird]'))
+      b.addEventListener('click', () => actions.bird(b.dataset.bird as 'kookaburra' | 'magpie'));
     const freeBtn = this.panel.querySelector('[data-act="free"]') as HTMLButtonElement;
     freeBtn.addEventListener('click', () => freeBtn.classList.toggle('on', actions.toggleFreeCam()));
     const collBtn = this.panel.querySelector('[data-act="coll"]') as HTMLButtonElement;

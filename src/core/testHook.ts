@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { VehicleInput } from '../sim/input/vehicleInput';
+import type { AudioInfo } from '../audio/audioSystem';
 import type { Game } from './game';
 
 const LOCAL = 'player-1';
@@ -30,6 +31,10 @@ export interface GameHook {
   ui(): { map: boolean; pause: boolean; toolMenu: boolean; paused: boolean; mode: string };
   /** Seconds of simulated time so far. */
   simTime(): number;
+  /** Audio state, levels and what's playing. */
+  audio(): AudioInfo;
+  /** Debug: play a bird call now. */
+  bird(kind: 'kookaburra' | 'magpie'): void;
 }
 
 declare global {
@@ -117,6 +122,8 @@ export function installHook(game: Game): void {
       mode: g.tool.mode,
     }),
     simTime: () => g.sim.time,
+    audio: () => g.audio.info(),
+    bird: (kind) => g.audio.bird(kind),
     vehicle: () => {
       const v = g.vehicle;
       const p = v.body.translation();

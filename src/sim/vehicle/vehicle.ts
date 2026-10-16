@@ -31,6 +31,8 @@ export interface WheelState {
   surface: SurfaceId;
   /** Suspension length: hard point to wheel centre. */
   suspension: number;
+  /** How fast the suspension is compressing (m/s, + = compressing). */
+  compression: number;
   /** Accumulated spin (rad). */
   rotation: number;
   /** Steering angle (rad, + = right). */
@@ -86,6 +88,11 @@ export class Vehicle {
   externalLoad = 0;
   /** Set when flooding stalls or restarts the engine this step. */
   floodEvent: FloodEvent = null;
+  /** Engine power multiplier applied this step (dips while flooding sputters). */
+  enginePower = 1;
+  /** Compression speed of each wheel that hit hard this step (0 = no hit). */
+  readonly wheelImpacts = [0, 0, 0, 0];
+  private readonly impactCooldown = [0.5, 0.5, 0.5, 0.5];
   /** World position of the air intake (updated each step). */
   readonly intakePos = v3();
   private sputterRand = 0;
@@ -171,6 +178,7 @@ export class Vehicle {
       contact: false,
       surface: SurfaceId.Dirt,
       suspension: t.suspensionRestLength,
+      compression: 0,
       rotation: 0,
       steer: 0,
       spin: 0,
@@ -241,6 +249,8 @@ export class Vehicle {
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     for (const w of this.wheels) w.sink = 0;
+    // Settling onto the ground after a teleport isn't a hit.
+    this.impactCooldown.fill(0.5);
     this.drivetrain.gear = 0;
     this.body.setBodyType(this.physics.R.RigidBodyType.Dynamic, true);
     this.lastVel.x = this.lastVel.y = this.lastVel.z = 0;
@@ -304,17 +314,13 @@ export class Vehicle {
     this.floodEvent = updateFlood(this.condition.flood, submerged, f, dt);
     this.drivetrain.engineRunning = !this.condition.flood.stalled;
     if (this.rand() < dt * 6) this.sputterRand = this.rand();
+    this.enginePower =
+      enginePowerMultiplier(this.condition) * floodPower(this.condition.flood, this.sputterRand);
 
     const drive = updateDrivetrain(
       t,
       this.drivetrain,
-      {
-        throttle,
-        reverse,
-        speed: this.speed,
-        enginePower:
-          enginePowerMultiplier(this.condition) * floodPower(this.condition.flood, this.sputterRand),
-      },
+      { throttle, reverse, speed: this.speed, enginePower: this.enginePower },
       dt,
     );
 
@@ -548,7 +554,15 @@ export class Vehicle {
     for (let i = 0; i < 4; i++) {
       const w = this.wheels[i];
       w.contact = c.wheelIsInContact(i);
-      w.suspension = c.wheelSuspensionLength(i) ?? w.suspension;
+      const susp = c.wheelSuspensionLength(i) ?? w.suspension;
+      w.compression = (w.suspension - susp) / dt;
+      w.suspension = susp;
+      this.wheelImpacts[i] = 0;
+      this.impactCooldown[i] = Math.max(0, this.impactCooldown[i] - dt);
+      if (w.contact && w.compression > this.tuning.wheelImpactSpeed && this.impactCooldown[i] === 0) {
+        this.wheelImpacts[i] = w.compression;
+        this.impactCooldown[i] = 0.12;
+      }
       w.rotation = c.wheelRotation(i) ?? w.rotation;
       w.load = w.contact ? Math.min(this.tuning.maxSuspensionForce, c.wheelSuspensionForce(i) ?? 0) : 0;
       const cp = c.wheelContactPoint(i);

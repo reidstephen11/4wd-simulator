@@ -34,6 +34,8 @@ export interface VehicleTuning {
   /** Bump-stop spheres at each wheel when fully compressed (radius). */
   bumpRadius: number;
   bodyFriction: number;
+  /** Suspension compression speed (m/s) that counts as a hard hit (sound, events). */
+  wheelImpactSpeed: number;
 
   engine: {
     idleRpm: number;
@@ -134,6 +136,7 @@ export const vehicleTuning: VehicleTuning = {
   ],
   bumpRadius: 0.24,
   bodyFriction: 0.45,
+  wheelImpactSpeed: 1.2,
 
   engine: {
     idleRpm: 800,

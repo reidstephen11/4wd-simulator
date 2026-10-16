@@ -27,6 +27,8 @@ import { Fade, PauseMenu } from '../ui/menus';
 import { FreeCamera } from '../debug/freeCamera';
 import { DebugOverlay } from '../debug/overlay';
 import { DebugTools } from '../debug/debugTools';
+import { AudioSystem } from '../audio/audioSystem';
+import { buildAudioFrame } from '../audio/frame';
 import { GameLoop } from './loop';
 import { ToolController } from './toolController';
 import { buildHudState } from './hudState';
@@ -56,6 +58,7 @@ export class Game {
   readonly map: PaperMap;
   readonly pause: PauseMenu;
   private readonly fade: Fade;
+  readonly audio: AudioSystem;
   settings: Settings;
   freeCamOn = false;
   scriptedInput: Partial<VehicleInput> | null = null;
@@ -83,6 +86,7 @@ export class Game {
     this.settings = settings;
     this.exploration = exploration;
     this.input = new InputManager(window);
+    this.audio = new AudioSystem(settings);
     // Loading puts you at the last campsite (SPEC §14).
     sim.addVehicle(LOCAL_VEHICLE, sim.campsitePose(exploration.lastCampsite || world.map.spawnCampsite));
 
@@ -129,6 +133,7 @@ export class Game {
       ? new DebugTools(uiRoot, view.scene, sim, vehicleTuning, () => this.vehicle, world.pois, {
           teleport: (p) => this.teleportToPoi(p),
           toggleFreeCam: () => this.toggleFreeCam(),
+          bird: (kind) => this.audio.bird(kind),
         })
       : null;
     window.addEventListener('keydown', (e) => {
@@ -139,9 +144,12 @@ export class Game {
     sim.events.on('rangeChanged', ({ range }) =>
       this.hud.toast(range === 'low' ? 'Low range' : 'High range', 1400),
     );
-    sim.events.on('engine', ({ event }) =>
-      this.hud.toast(event === 'stalled' ? 'Engine stalled — flooded' : 'Engine restarted'),
-    );
+    sim.events.on('engine', ({ event }) => {
+      this.hud.toast(event === 'stalled' ? 'Engine stalled — flooded' : 'Engine restarted');
+      this.audio.engineEvent(event);
+    });
+    sim.events.on('wheelImpact', ({ id, speed }) => id === LOCAL_VEHICLE && this.audio.wheelImpact(speed));
+    sim.events.on('dent', ({ id, impact }) => id === LOCAL_VEHICLE && this.audio.dent(impact));
 
     this.loop = new GameLoop({
       step: (dt) => this.step(dt),
@@ -212,6 +220,7 @@ export class Game {
     this.settings = { ...this.settings, ...s };
     if (this.settings.quality !== prevQuality) this.view.setQuality(qualityPresets[this.settings.quality]);
     this.pause.setSettings(this.settings);
+    this.audio.setSettings(this.settings);
     this.onSettings?.(this.settings);
     this.save();
   }
@@ -231,10 +240,12 @@ export class Game {
     const p = this.vehicle.body.translation();
     this.map.open(this.exploration.discovered, { x: p.x, z: p.z, heading: this.cameraHeading() });
     this.loop.paused = true;
+    this.audio.mapOpened();
   }
 
   closeMap(): void {
     this.map.close();
+    this.audio.mapClosed();
     this.loop.paused = this.pause.isOpen;
   }
 
@@ -362,6 +373,7 @@ export class Game {
     const p = this.vehicle.body.translation();
     const found = this.exploration.check(p.x, p.z);
     for (const poi of found.discovered) this.hud.discovered(poi.name, poi.kind);
+    if (found.discovered.length > 0) this.audio.discovery();
     if (found.campsite) {
       const camp = this.world.pois.find((q) => q.id === found.campsite);
       if (camp && !found.discovered.includes(camp)) this.hud.toast(`Campsite: ${camp.name}`);
@@ -444,6 +456,7 @@ export class Game {
     }
     this.view.focus.copy(this.model.root.position);
     this.view.render();
+    this.audio.update(buildAudioFrame(v, tools.winch, this.world, this.loop.paused, frameDt));
     this.hud.update(
       buildHudState({
         vehicle: v,
@@ -463,6 +476,7 @@ export class Game {
         ...(this.debugTools?.update(v) ?? []),
         `winch ${w.anchor ? `${w.anchor.label} ${w.length.toFixed(1)} m ${(w.tension / 1000).toFixed(1)} kN` : 'off'}  planks ${tools.planks.carried}/2  jack ${tools.jack.state}`,
         `flood ${fl.timer.toFixed(1)} s${fl.stalled ? ' STALLED' : ''}  dirt ${v.condition.dirt.sides.toFixed(2)}  dents ${v.condition.dents.length}  mode ${this.tool.mode}`,
+        audioLine(this.audio),
       ]);
       this.overlay.frame(frameDt, this.view.renderer);
     }
@@ -470,4 +484,13 @@ export class Game {
     this.frameCount++;
     if (this.frameCount === 3 && window.__game) window.__game.ready = true;
   }
+}
+
+function audioLine(audio: AudioSystem): string {
+  const a = audio.info();
+  if (a.state !== 'running') return `audio ${a.state}${a.state === 'off' ? ' (click or press a key)' : ''}`;
+  const tyres = Object.entries(a.tyres)
+    .map(([k, w]) => `${k} ${w.toFixed(2)}`)
+    .join(' ');
+  return `audio ${(20 * Math.log10(a.level + 1e-6)).toFixed(0)} dB  engine ${a.engineHz.toFixed(0)} Hz  wind ${a.wind.toFixed(2)}  water ${a.water.toFixed(2)}  ${tyres}${a.winchHz ? `  winch ${a.winchHz.toFixed(0)} Hz` : ''}`;
 }
