@@ -1,0 +1,149 @@
+:root {
+  --paper: #f3ebda;
+  --paper-dark: #e4d6ba;
+  --ink: #3b2a1e;
+  --ink-soft: #6b5442;
+  --accent: #b5653a;
+  --water: #5e8e98;
+  --font: 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
+  --font-hand: 'Patrick Hand', 'Nunito', 'Comic Sans MS', cursive;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #9fb4c4;
+  color: var(--ink);
+  font-family: var(--font);
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#game-canvas {
+  display: block;
+  outline: none;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+#ui > * {
+  pointer-events: auto;
+}
+
+.paper {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 10px 14px 9px 12px;
+  box-shadow:
+    3px 4px 0 rgba(59, 42, 30, 0.25),
+    inset 0 0 30px rgba(180, 150, 100, 0.25);
+}
+
+.loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #8db3c9 0%, #f2d3a0 100%);
+  transition: opacity 0.5s ease;
+  z-index: 50;
+}
+
+.loading.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-card {
+  width: min(440px, 90vw);
+  padding: 28px 32px 22px;
+  text-align: center;
+}
+
+.loading h1 {
+  font-family: var(--font-hand);
+  font-size: 44px;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.loading .subtitle {
+  margin: 2px 0 18px;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.progress {
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--paper-dark);
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.progress-label {
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin: 8px 0 14px;
+}
+
+.controls-reminder {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.error-panel {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 100;
+}
+
+.error-panel .paper {
+  padding: 24px;
+  max-width: 520px;
+}
+
+.debug-overlay {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  color: #fff;
+  font:
+    12px/1.35 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  text-shadow: 0 1px 2px #000;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.debug-overlay pre {
+  margin: 4px 0 0;
+}
