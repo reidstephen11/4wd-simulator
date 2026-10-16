@@ -287,7 +287,7 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
       heights[iz * res + ix] =
         h +
         detailAmplitude * noise2.fbm(x / detailScale, z / detailScale, 2) +
-        detailAmplitude * 0.35 * noise3.noise(x / 2.3, z / 2.3);
+        detailAmplitude * 0.25 * noise3.noise(x / 2.3, z / 2.3);
     }
   }
 

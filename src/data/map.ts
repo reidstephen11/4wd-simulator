@@ -29,7 +29,7 @@ export const highCountryMap: MapDef = {
     macroScale: 380,
     midAmplitude: 3.2,
     midScale: 85,
-    detailAmplitude: 0.22,
+    detailAmplitude: 0.13,
     detailScale: 7,
     creekCalm: 70,
   },

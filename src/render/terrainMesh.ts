@@ -309,11 +309,11 @@ export class TerrainMesh {
         const h01 = hs(sx, sz + step);
         const h11 = hs(sx + step, sz + step);
         const cs = step >> 1;
-        // Triangle A (00, 11, 10) and B (00, 01, 11): diagonal 00–11 like the physics heightfield.
-        const nA = step / Math.hypot(h10 - h00, step, h11 - h10);
-        pushTri(x0, h00, z0, x1, h11, z1, x1, h10, z0, colorFor(sx + cs, sz, nA, 0), false);
-        const nB = step / Math.hypot(h11 - h01, step, h01 - h00);
-        pushTri(x0, h00, z0, x0, h01, z1, x1, h11, z1, colorFor(sx, sz + cs, nB, 1), false);
+        // Triangle A (00, 01, 10) and B (10, 01, 11): split along the 10–01 diagonal like Rapier.
+        const nA = step / Math.hypot(h10 - h00, step, h01 - h00);
+        pushTri(x0, h00, z0, x0, h01, z1, x1, h10, z0, colorFor(sx, sz, nA, 0), false);
+        const nB = step / Math.hypot(h11 - h01, step, h11 - h10);
+        pushTri(x1, h10, z0, x0, h01, z1, x1, h11, z1, colorFor(sx + cs, sz + cs, nB, 1), false);
       }
     }
 

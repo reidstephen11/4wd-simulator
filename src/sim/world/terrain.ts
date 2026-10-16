@@ -60,8 +60,8 @@ export class Terrain {
     const h10 = this.heights[i + 1];
     const h01 = this.heights[i + r];
     const h11 = this.heights[i + r + 1];
-    if (tx >= tz) return h00 + tx * (h10 - h00) + tz * (h11 - h10);
-    return h00 + tz * (h01 - h00) + tx * (h11 - h01);
+    if (tx + tz <= 1) return h00 + tx * (h10 - h00) + tz * (h01 - h00);
+    return h11 + (1 - tx) * (h01 - h11) + (1 - tz) * (h10 - h11);
   }
 
   /** Surface normal (unit) of the triangle under (x, z). */
@@ -84,12 +84,12 @@ export class Terrain {
     const h11 = this.heights[i + r + 1];
     let dx: number;
     let dz: number;
-    if (tx >= tz) {
+    if (tx + tz <= 1) {
       dx = h10 - h00;
-      dz = h11 - h10;
+      dz = h01 - h00;
     } else {
       dx = h11 - h01;
-      dz = h01 - h00;
+      dz = h11 - h10;
     }
     const len = Math.sqrt(dx * dx + 1 + dz * dz);
     out.x = -dx / len;

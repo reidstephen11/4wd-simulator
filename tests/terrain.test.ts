@@ -30,9 +30,9 @@ describe('terrain generation', () => {
   it('heightAt matches grid samples and interpolates within triangles', () => {
     const t = testWorld().terrain;
     expect(t.heightAt(10, 20)).toBeCloseTo(t.sample(10 + t.half, 20 + t.half), 4);
-    const h00 = t.sample(t.half, t.half);
-    const h11 = t.sample(t.half + 1, t.half + 1);
-    expect(t.heightAt(0.5, 0.5)).toBeCloseTo((h00 + h11) / 2, 4);
+    const h10 = t.sample(t.half + 1, t.half);
+    const h01 = t.sample(t.half, t.half + 1);
+    expect(t.heightAt(0.5, 0.5)).toBeCloseTo((h10 + h01) / 2, 4);
   });
 
   it('has a creek with water and dry campsites', () => {
