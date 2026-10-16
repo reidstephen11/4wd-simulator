@@ -12,16 +12,14 @@ const TILE = 128;
  */
 export class WaterMesh {
   readonly group = new THREE.Group();
-  readonly material: THREE.MeshStandardMaterial;
+  readonly material: THREE.MeshLambertMaterial;
 
   constructor(terrain: Terrain, seed: number, levelOffset = 0) {
     this.material = patchFog(
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshLambertMaterial({
         vertexColors: true,
         transparent: true,
-        opacity: 0.78,
-        roughness: 0.35,
-        metalness: 0.0,
+        opacity: 0.82,
         depthWrite: false,
         flatShading: true,
         polygonOffset: true,
@@ -59,7 +57,7 @@ export class WaterMesh {
             const bed = (H[i00] + H[i10] + H[i01] + H[i11]) / 4;
             const depth = (w00 + w10 + w01 + w11) / 4 - bed;
             const steep = Math.max(Math.abs(w10 - w00), Math.abs(w01 - w00), Math.abs(w11 - w00));
-            tmp.copy(shallow).lerp(deep, Math.min(1, Math.max(0, (depth - 0.25) / 0.8)));
+            tmp.copy(shallow).lerp(deep, Math.min(1, Math.max(0, (depth - 0.2) / 0.6)));
             if (steep > 0.35) tmp.lerp(foam, Math.min(0.85, (steep - 0.35) * 0.6));
             const x0 = ix - half;
             const z0 = iz - half;

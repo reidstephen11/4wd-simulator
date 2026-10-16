@@ -38,3 +38,16 @@ Rapier's `DynamicRayCastVehicleController` is the base, as §2 asks. A few of it
 - **Driving model.** S brakes when moving forwards and selects reverse once stopped (like most driving games); W does the same in reverse. A hold brake keeps the car still when stopped with no input, except while winching. Range changes are allowed below 20 km/h.
 - **Measured against §6.2** (headless tests in `tests/vehicle.test.ts`): 5 s full throttle on flat dirt ≈ 40 m; low range climbs a 30° ramp from a standstill, high range slides back; high range still creeps up 18°; a hard turn at 50 km/h on a 20° side slope rolls the car; the same turn on flat ground at 40 km/h slides but stays upright; it drives across a 31° slope and rolls across 38°. The roll on a 20° slope happens when turning _down_ the slope (gravity keeps the speed up); turning hard _up_ a 20° slope at 50 km/h lifts the inside wheels but the car slows enough to survive.
 - **Debug free camera** toggles with C (debug mode only) or the button in the debug panel.
+
+## World content (M3)
+
+- **Static scatter collides as a few triangle meshes.** Rapier's step time grows with the number of separate colliders (~1 ms per step for 8,000 tree trunks). Trunks, rocks, logs and props are merged into one trimesh per 256 m cell and surface type, which brings the step back to ~0.1 ms. The Staircase ledges and washout walls stay as exact boxes.
+- **Every tree inside the playable area has a trunk collider and can be a winch anchor.** The graphics "vegetation density" setting only thins out grass tussocks and shrubs (which don't collide), so invisible trees never block the car on Low.
+- **Trees:** four eucalypt types — tall mountain ash in the valley, mid-size candlebark on the slopes, short twisted snow gums on the high plain, and a few dead stags — each with two shapes and a far-away low-detail version. They're drawn with `BatchedMesh`, which culls per tree and switches detail per tree.
+- **Marked anchor boulders** carry a pale paint ring and a steel ring bolt so they read as anchors. About a third of the larger scattered boulders are marked, plus hand-placed ones by the Bog Hole and on the Staircase.
+- **Washout Gully:** a 3 m trench in the heightfield plus vertical earth walls (static boxes) that leave exactly a 1.2 m gap where the track crosses; the 1 m heightfield can't represent a 1.2 m gap on its own. The gully runs 112 m across the slope so the detour around its top end is the only way past without planks.
+- **The Staircase** is a 25–30° rocky climb with granite ledges (0.3 m risers every 5.5 m) as static boxes across the track, and a switchback with some camber.
+- **The Fallen Tree** is a 750 kg dynamic log with branch stubs (so it doesn't roll like a pipe), lying across the main track in a small clearing so it can also be driven around slowly.
+- **Track ruts** are thin ribbons drawn on top of the terrain; faint tracks are only these two wheel lines over the grass.
+- **"Reachable by driving"** is checked headlessly: for each POI the car starts 50 m back along its approach track and an autopilot drives it into the discovery radius (`tests/poi.test.ts`). The M3 screenshots park the car on that approach.
+- **Props face their heading** (the front of a hut, the mine entrance, a sign face). Sign lettering is drawn into small canvas textures with the UI font.

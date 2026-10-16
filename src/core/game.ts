@@ -11,6 +11,8 @@ import type { Vehicle } from '../sim/vehicle/vehicle';
 import { InputManager } from '../sim/input/inputManager';
 import type { VehicleInput } from '../sim/input/vehicleInput';
 import type { PoiDef } from '../sim/world/mapTypes';
+import { poiApproach } from '../sim/world/poiApproach';
+import { headingOf } from '../sim/vehicle/math';
 import { GameRenderer } from '../render/renderer';
 import { VehicleModel } from '../render/vehicleModel';
 import { ChaseCamera } from '../render/chaseCamera';
@@ -35,6 +37,9 @@ export interface GameHook {
   /** Override driver input (tests). Pass null to give control back to devices. */
   setInput(input: Partial<VehicleInput> | null): void;
   vehicle(): { x: number; y: number; z: number; speed: number; range: string; tilt: number; heading: number };
+  /** Park the vehicle on the approach to a POI and frame it with the free camera (screenshots). */
+  showPoi(id: string): void;
+  pois(): { id: string; name: string; x: number; z: number; radius: number }[];
 }
 
 declare global {
@@ -118,7 +123,15 @@ export class Game {
     const sim = new Simulation(await rapier, world, lateAfternoon);
     progress(0.92, 'Building meshes');
     await nextFrame();
-    const view = new GameRenderer(appEl, world, lateAfternoon, qualityPresets[defaultQuality]);
+    // Sign lettering uses the web font; wait for it (but never block on a slow network).
+    await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 1500))]);
+    const view = new GameRenderer(
+      appEl,
+      world,
+      lateAfternoon,
+      qualityPresets[defaultQuality],
+      sim.dynamics.values(),
+    );
     return new Game(world, sim, view, uiEl);
   }
 
@@ -143,6 +156,30 @@ export class Game {
     const r = p.reset ?? { x: p.x, z: p.z + 12, headingDeg: 0 };
     this.vehicle.teleport(this.sim.poseAt(r.x, r.z, r.headingDeg));
     this.chase.reset();
+    this.view.snap();
+  }
+
+  private showPoi(id: string): void {
+    const poi = this.world.pois.find((p) => p.id === id);
+    if (!poi) return;
+    const path = poiApproach(poi, this.world.features.tracks, 45);
+    const t = this.world.terrain;
+    const park = path[Math.max(0, path.length - 14)];
+    const next = path[Math.min(path.length - 1, path.length - 10)];
+    this.vehicle.teleport(this.sim.poseAt(park[0], park[1], headingOf(next[0] - park[0], next[1] - park[1])));
+    const from = path[0];
+    const dx = from[0] - poi.x;
+    const dz = from[1] - poi.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const cx = poi.x + (dx / d) * 34;
+    const cz = poi.z + (dz / d) * 34;
+    const cy = Math.max(t.heightAt(cx, cz), t.heightAt(poi.x, poi.z)) + 13;
+    if (!this.freeCamOn) this.toggleFreeCam();
+    this.freeCam.set(
+      new THREE.Vector3(cx, cy, cz),
+      new THREE.Vector3(poi.x, t.heightAt(poi.x, poi.z) + 1.5, poi.z),
+    );
+    this.view.snap();
   }
 
   private step(dt: number): void {
@@ -187,6 +224,7 @@ export class Game {
       setCamera: (x, y, z, tx, ty, tz) => {
         if (!this.freeCamOn) this.toggleFreeCam();
         this.freeCam.set(new THREE.Vector3(x, y, z), new THREE.Vector3(tx, ty, tz));
+        this.view.snap();
       },
       useChaseCamera: () => {
         if (this.freeCamOn) this.toggleFreeCam();
@@ -201,6 +239,7 @@ export class Game {
       teleport: (x, z, h) => {
         this.vehicle.teleport(this.sim.poseAt(x, z, h));
         this.chase.reset();
+        this.view.snap();
       },
       teleportPoi: (id) => {
         const p = this.world.pois.find((q) => q.id === id);
@@ -209,6 +248,8 @@ export class Game {
       setInput: (inp) => {
         this.scriptedInput = inp;
       },
+      showPoi: (id) => this.showPoi(id),
+      pois: () => this.world.pois.map((p) => ({ id: p.id, name: p.name, x: p.x, z: p.z, radius: p.radius })),
       vehicle: () => {
         const v = this.vehicle;
         const p = v.body.translation();

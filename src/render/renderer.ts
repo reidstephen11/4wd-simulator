@@ -7,6 +7,10 @@ import { Lighting } from './lighting';
 import { Sky, createBackdrop } from './sky';
 import { TerrainMesh } from './terrainMesh';
 import { WaterMesh } from './water';
+import { Vegetation } from './vegetation';
+import { WorldProps } from './worldProps';
+import { TrackRuts } from './tracks';
+import type { DynamicObject } from '../sim/sim';
 
 /** Owns the Three.js renderer, scene and camera, and the static world meshes. */
 export class GameRenderer {
@@ -17,7 +21,11 @@ export class GameRenderer {
   readonly sky: Sky;
   readonly terrainMesh: TerrainMesh;
   readonly water: WaterMesh;
+  readonly vegetation: Vegetation;
+  readonly props: WorldProps;
+  readonly ruts: TrackRuts;
   private quality: QualityPreset;
+  private lastFrame = performance.now();
   private firstFrame = true;
   /** Point the shadow camera follows (the vehicle). */
   readonly focus = new THREE.Vector3();
@@ -27,6 +35,7 @@ export class GameRenderer {
     readonly world: World,
     private env: EnvironmentConfig,
     quality: QualityPreset,
+    dynamics: Iterable<DynamicObject> = [],
   ) {
     this.quality = quality;
     this.renderer = new THREE.WebGLRenderer({
@@ -55,6 +64,12 @@ export class GameRenderer {
     this.scene.add(this.terrainMesh.group);
     this.water = new WaterMesh(world.terrain, world.map.seed, env.waterLevelOffset);
     this.scene.add(this.water.group);
+    this.vegetation = new Vegetation(world, quality);
+    this.scene.add(this.vegetation.group);
+    this.props = new WorldProps(world, dynamics);
+    this.scene.add(this.props.group);
+    this.ruts = new TrackRuts(world);
+    this.scene.add(this.ruts.group);
 
     this.setQuality(quality);
     this.resize();
@@ -69,6 +84,7 @@ export class GameRenderer {
     this.camera.far = q.drawDistance;
     this.camera.updateProjectionMatrix();
     this.terrainMesh.setLodDistances(q.terrainLod);
+    this.vegetation?.setQuality(q);
     applyFogEnvironment(this.scene, this.env, q.drawDistance);
     this.resize();
   }
@@ -90,8 +106,19 @@ export class GameRenderer {
     this.camera.updateProjectionMatrix();
   }
 
+  /** Build all detail around the camera now (after teleports and camera jumps). */
+  snap(): void {
+    this.firstFrame = true;
+  }
+
   render(): void {
+    const now = performance.now();
+    const dt = Math.min(0.25, (now - this.lastFrame) / 1000);
+    this.lastFrame = now;
     this.terrainMesh.update(this.camera.position, this.firstFrame);
+    this.vegetation.update(this.camera.position, this.firstFrame ? 1 : dt);
+    this.props.update();
+    this.ruts.update(this.camera.position, 420);
     this.firstFrame = false;
     this.lighting.follow(this.focus);
     this.sky.update(this.camera);

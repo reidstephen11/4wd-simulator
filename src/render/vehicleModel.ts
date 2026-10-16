@@ -132,6 +132,31 @@ export class VehicleModel {
     b.push().translate(0, 0.06, 1.93);
     b.box(1.8, 0.16, 0.12, trim);
     b.pop();
+    // Tail lights, indicators and blank plates.
+    const tail = pal('dirtTrack').clone().lerp(pal('dirtDark'), 0.3);
+    const amber = pal('barkOchre');
+    for (const x of [-0.68, 0.68]) {
+      b.push().translate(x, 0.5, 1.86);
+      b.box(0.14, 0.22, 0.05, tail);
+      b.pop();
+      b.push().translate(x * 1.04, 0.24, -1.88);
+      b.box(0.12, 0.08, 0.05, amber);
+      b.pop();
+    }
+    for (const z of [-2.06, 1.99]) {
+      b.push().translate(0, 0.08, z);
+      b.box(0.42, 0.13, 0.02, pal('vehicleRoof'));
+      b.pop();
+    }
+    // Side steps and door seams.
+    for (const x of [-0.86, 0.86]) {
+      b.push().translate(x, -0.04, 0.05);
+      b.box(0.14, 0.05, 1.1, trim);
+      b.pop();
+      b.push().translate(x * 0.96, 0.55, -0.5);
+      b.box(0.02, 0.6, 0.03, trim);
+      b.pop();
+    }
     // Spare wheel on the back.
     b.push()
       .translate(0, 0.86, 2.05)

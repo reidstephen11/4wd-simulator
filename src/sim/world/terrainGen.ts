@@ -1,7 +1,6 @@
 import { SurfaceId } from '../../data/surfaces';
 import type { FlatDef, MapDef, ScarpDef, HillDef, TrackDef } from './mapTypes';
 import { Noise2D, clamp, smoothstep } from './noise';
-import { hash2 } from './rng';
 import { attrAt, densify, type DensePolyline } from './polyline';
 import { GroundTint, NO_WATER, Terrain } from './terrain';
 import type { CreekInfo, GullyInfo, StaticBox, TerrainFeatures, TrackInfo } from './features';
@@ -602,7 +601,7 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
         const i = iz * res + ix;
         surface[i] = sid;
         if (kind === 'rock')
-          tint[i] = hash2(ix >> 2, iz >> 2, map.seed) > 0.35 ? GroundTint.Rock : GroundTint.Scree;
+          tint[i] = noise2.noise(x / 6, z / 6) > -0.25 ? GroundTint.Rock : GroundTint.Scree;
         else if (kind === 'gravel') tint[i] = GroundTint.Gravel;
         else if (kind === 'dirt') tint[i] = GroundTint.DirtTrack;
         else if (kind === 'mud') tint[i] = GroundTint.Mud;

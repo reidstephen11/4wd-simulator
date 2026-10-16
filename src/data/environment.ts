@@ -42,12 +42,12 @@ export interface EnvironmentConfig {
 export const lateAfternoon: EnvironmentConfig = {
   sun: {
     color: '#FFD9A0',
-    intensity: 2.6,
+    intensity: 2.5,
     elevationDeg: 25,
     azimuthDeg: 300,
     shadowRadius: 3,
   },
-  hemisphere: { sky: '#BFD6E2', ground: '#8A6A4A', intensity: 1.15 },
+  hemisphere: { sky: '#BFD6E2', ground: '#8A6A4A', intensity: 2.3 },
   fog: {
     nearColor: '#E8CFA6',
     farColor: '#9FB4C4',
@@ -64,7 +64,7 @@ export const lateAfternoon: EnvironmentConfig = {
     groundColor: '#9FB4C4',
   },
   toneMapping: 'aces',
-  exposure: 0.62,
+  exposure: 0.56,
   waterLevelOffset: 0,
   wetness: 0,
 };

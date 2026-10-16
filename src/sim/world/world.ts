@@ -2,12 +2,16 @@ import type { MapDef, PoiDef } from './mapTypes';
 import type { Terrain } from './terrain';
 import type { TerrainFeatures } from './features';
 import { generateTerrainSteps, type GenStep } from './terrainGen';
+import { generateScatter, SpatialGrid, type RockInstance, type Scatter, type TreeInstance } from './scatter';
 
-/** Everything static about the map: terrain, derived features and points of interest. */
+/** Everything static about the map: terrain, derived features, scatter and points of interest. */
 export interface World {
   map: MapDef;
   terrain: Terrain;
   features: TerrainFeatures;
+  scatter: Scatter;
+  treeGrid: SpatialGrid<TreeInstance>;
+  rockGrid: SpatialGrid<RockInstance>;
   pois: readonly PoiDef[];
 }
 
@@ -16,11 +20,21 @@ export function* buildWorldSteps(map: MapDef): Generator<GenStep, World, void> {
   const gen = generateTerrainSteps(map);
   let r = gen.next();
   while (!r.done) {
-    yield { progress: r.value.progress * 0.85, label: r.value.label };
+    yield { progress: r.value.progress * 0.8, label: r.value.label };
     r = gen.next();
   }
   const { terrain, features } = r.value;
-  return { map, terrain, features, pois: map.pois };
+  yield { progress: 0.66, label: 'Growing trees' };
+  const scatter = generateScatter(map, terrain, features);
+  return {
+    map,
+    terrain,
+    features,
+    scatter,
+    treeGrid: new SpatialGrid(16, scatter.trees),
+    rockGrid: new SpatialGrid(16, scatter.rocks),
+    pois: map.pois,
+  };
 }
 
 export function buildWorld(map: MapDef): World {
