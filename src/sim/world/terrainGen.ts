@@ -692,7 +692,7 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
   const terrain = new Terrain(size, heights, surface, tint, water);
   return {
     terrain,
-    features: { tracks, creek, boxes, gullies, trackDistance, creekDistance },
+    features: { tracks, creek, boxes, logs: [], gullies, trackDistance, creekDistance },
   };
 }
 

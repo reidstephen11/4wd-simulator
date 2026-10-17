@@ -104,6 +104,8 @@ export interface TrackDef {
   steps?: readonly TrackStepsDef[];
   /** Rocky steps: short sharp rises along the profile. */
   rockySteps?: ReadonlyArray<{ at: number; rise: number }>;
+  markerColor?: 'green' | 'amber' | 'red';
+  routeHint?: string;
 }
 
 export type SurfaceKind = 'dirt' | 'grass' | 'gravel' | 'rock' | 'mud';
@@ -254,12 +256,22 @@ export interface CrawlTrailDef {
   name: string;
   trackId: string;
   bypassTrackId: string;
+  difficulty?: 'moderate' | 'hard';
+  bypassHint?: string;
   sections: ReadonlyArray<{
     from: number;
     to: number;
     name: string;
     hint: string;
     rocks: CrawlCourseDef['lines'][number]['obstacles'];
+    logs?: ReadonlyArray<{
+      at: number;
+      lateral: number;
+      length: number;
+      radius: number;
+      /** Rotation away from a log laid straight across the track. */
+      angleDeg?: number;
+    }>;
   }>;
 }
 

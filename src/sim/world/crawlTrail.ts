@@ -1,5 +1,6 @@
 import type { CrawlTrailDef } from './mapTypes';
-import type { TrackInfo, StaticBox } from './features';
+import type { TrackInfo, StaticBox, StaticLog } from './features';
+import { StaticMeshBatcher } from './staticMesh';
 import { pointAt, segmentDistance } from './polyline';
 import type { Terrain } from './terrain';
 
@@ -51,4 +52,30 @@ export function trailObstacles(
       };
     }),
   );
+}
+
+export function trailLogs(trail: CrawlTrailDef, tracks: readonly TrackInfo[], terrain: Terrain): StaticLog[] {
+  const track = tracks.find((t) => t.def.id === trail.trackId);
+  if (!track) throw new Error(`Missing crawl trail track ${trail.trackId}`);
+  return trail.sections.flatMap((section) =>
+    (section.logs ?? []).map((log) => {
+      const centre = trailPoint(track, log.at, log.lateral);
+      const yaw = ((-centre.headingDeg + (log.angleDeg ?? 0)) * Math.PI) / 180;
+      const dx = (Math.cos(yaw) * log.length) / 2,
+        dz = (-Math.sin(yaw) * log.length) / 2;
+      const end = (side: number): [number, number, number] => {
+        const x = centre.x + dx * side,
+          z = centre.z + dz * side;
+        return [x, terrain.heightAt(x, z) + log.radius * 0.7, z];
+      };
+      return { a: end(-1), b: end(1), radius: log.radius };
+    }),
+  );
+}
+
+/** Rendering and collision use this exact capped nine-sided log mesh. */
+export function staticLogMesh(log: StaticLog) {
+  const batcher = new StaticMeshBatcher(256);
+  batcher.prism('wood', log.a, log.b, log.radius, 9, -Math.PI / 2);
+  return batcher.batches.values().next().value!;
 }

@@ -42,10 +42,17 @@ export interface GullyInfo {
   bottom: number;
 }
 
+export interface StaticLog {
+  a: [number, number, number];
+  b: [number, number, number];
+  radius: number;
+}
+
 export interface TerrainFeatures {
   tracks: TrackInfo[];
   creek: CreekInfo;
   boxes: StaticBox[];
+  logs: StaticLog[];
   gullies: GullyInfo[];
   /** Distance (m, clamped to 255) from each sample to the nearest track edge (0 = on a track). */
   trackDistance: Uint8Array;

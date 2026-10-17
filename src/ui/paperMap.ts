@@ -3,6 +3,7 @@ import { NO_WATER } from '../sim/world/terrain';
 import { Noise2D } from '../sim/world/noise';
 import type { PoiDef } from '../sim/world/mapTypes';
 import { icons } from './icons';
+import { placeMapLabels, type MapLabel } from './mapLabels';
 
 const SIZE = 1400;
 const MARGIN = 70;
@@ -385,7 +386,26 @@ export class PaperMap {
     const g = this.ctx;
     g.drawImage(this.base, 0, 0);
     const pois = this.world.pois.filter((p) => discovered.has(p.id));
-    for (const p of pois) this.drawPoi(g, p);
+    const labels = placeMapLabels(
+      pois.map((p) => {
+        const [x, y] = this.toMap(p.x, p.z);
+        g.font = `${p.kind === 'campsite' ? 'bold ' : ''}26px "Patrick Hand", "Nunito", sans-serif`;
+        return { id: p.id, x, y, width: g.measureText(p.name).width };
+      }),
+      SIZE,
+      MARGIN,
+    );
+    g.strokeStyle = 'rgba(59, 42, 30, 0.5)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    for (const label of labels) {
+      if (label.labelX === label.x + 22 && label.labelY === label.y) continue;
+      const right = label.labelX > label.x;
+      g.moveTo(label.x + (right ? 18 : -18), label.y);
+      g.lineTo(label.labelX + (right ? 0 : label.width), label.labelY);
+    }
+    g.stroke();
+    pois.forEach((p, i) => this.drawPoi(g, p, labels[i]));
     this.drawPlayer(g, player);
   }
 
@@ -394,7 +414,7 @@ export class PaperMap {
     this.isOpen = false;
   }
 
-  private drawPoi(g: CanvasRenderingContext2D, p: PoiDef): void {
+  private drawPoi(g: CanvasRenderingContext2D, p: PoiDef, label: MapLabel): void {
     const [x, y] = this.toMap(p.x, p.z);
     const img = this.iconImages.get(p.kind);
     g.fillStyle = 'rgba(243, 235, 218, 0.85)';
@@ -407,9 +427,9 @@ export class PaperMap {
     g.textBaseline = 'middle';
     g.lineWidth = 5;
     g.strokeStyle = 'rgba(243, 235, 218, 0.9)';
-    g.strokeText(p.name, x + 22, y);
+    g.strokeText(p.name, label.labelX, label.labelY);
     g.fillStyle = '#3B2A1E';
-    g.fillText(p.name, x + 22, y);
+    g.fillText(p.name, label.labelX, label.labelY);
   }
 
   private drawPlayer(g: CanvasRenderingContext2D, p: { x: number; z: number; heading: number }): void {
