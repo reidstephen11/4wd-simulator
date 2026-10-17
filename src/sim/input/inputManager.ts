@@ -35,7 +35,7 @@ export class InputManager {
       this.keys.add(e.code);
       this.setDevice('keyboard');
       for (const a of this.actionsForKey(e.code)) {
-        this.vehicleEdges.add(a);
+        if (this.vehicleEnabled) this.vehicleEdges.add(a);
         this.uiEdges.set(a, (this.uiEdges.get(a) ?? 0) + 1);
       }
       if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab') e.preventDefault();
@@ -53,6 +53,10 @@ export class InputManager {
 
   onDeviceChange(fn: (d: Device) => void): void {
     this.deviceListeners.push(fn);
+  }
+
+  requestDriveAction(action: 'frontDiff' | 'rearDiff' | 'precision'): void {
+    if (this.vehicleEnabled) this.vehicleEdges.add(action);
   }
 
   private setDevice(d: Device): void {
@@ -111,7 +115,7 @@ export class InputManager {
       if (this.padButtons[i] && !this.padPrev[i]) {
         for (const [a, list] of Object.entries(padBindings) as [Action, readonly number[]][]) {
           if (list.includes(i)) {
-            this.vehicleEdges.add(a);
+            if (this.vehicleEnabled) this.vehicleEdges.add(a);
             this.uiEdges.set(a, (this.uiEdges.get(a) ?? 0) + 1);
           }
         }
@@ -145,6 +149,9 @@ export class InputManager {
     inp.horn = this.held('horn');
     inp.jack = this.held('jack');
     inp.toggleRange = edges.has('range');
+    inp.toggleFrontDiff = edges.has('frontDiff');
+    inp.toggleRearDiff = edges.has('rearDiff');
+    inp.togglePrecision = edges.has('precision');
     inp.winchAttach = edges.has('winch');
     inp.interact = edges.has('interact');
     edges.clear();
@@ -164,6 +171,7 @@ export class InputManager {
   /** Clear UI edges; call once per rendered frame after the UI has looked at them. */
   consumeUi(): void {
     this.uiEdges.clear();
+    if (!this.vehicleEnabled) this.vehicleEdges.clear();
   }
 
   /** Camera zoom steps since last call (+ = further away). */

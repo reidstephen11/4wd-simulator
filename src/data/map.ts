@@ -1,4 +1,5 @@
 import type { MapDef } from '../sim/world/mapTypes';
+import { campCrawlCourse, campCourseSigns } from './crawlCourse';
 
 /**
  * High Country map (SPEC §5). Hand-authored main features; small detail comes
@@ -111,6 +112,7 @@ export const highCountryMap: MapDef = {
   ],
   flats: [
     { id: 'camp', x: -160, z: 246, radius: 26, blend: 26 },
+    { id: 'crawl-course', x: -120, z: 253, radius: 19, blend: 8 },
     { id: 'hut', x: -200, z: -436, radius: 16, blend: 16 },
     { id: 'lookout', x: 60, z: -240, radius: 10, blend: 10 },
     { id: 'tower-top', x: -170, z: -602, radius: 11, blend: 12 },
@@ -397,10 +399,21 @@ export const highCountryMap: MapDef = {
     { id: 'spoil-gravel', kind: 'gravel', x: 310, z: 386, radius: 16, ragged: 0.3 },
     { id: 'ute-dirt', kind: 'dirt', x: 440, z: 232, radius: 7, ragged: 0.6 },
     { id: 'camp-dirt', kind: 'dirt', x: -156, z: 243, radius: 5, ragged: 0.5 },
+    { id: 'crawl-course-gravel', kind: 'gravel', x: -120, z: 253, radius: 18, ragged: 0.1 },
   ],
   bogs: [{ id: 'bog-hole', x: 174, z: 3, radiusX: 15, radiusZ: 8, rotationDeg: 12, depth: 0.45 }],
   gullies: [{ id: 'washout-gully', x: 90, z: 282, headingDeg: 0, length: 112, gap: 1.2, depth: 1.6 }],
   pois: [
+    {
+      id: campCrawlCourse.id,
+      name: campCrawlCourse.name,
+      kind: 'feature',
+      x: -120,
+      z: 253,
+      radius: 20,
+      reset: { x: -120, z: 267, headingDeg: 0 },
+      note: 'Three marked rock lines east of camp. Try low range, diff locks and precision crawl.',
+    },
     {
       id: 'river-flat-camp',
       name: 'River Flat Camp',
@@ -475,6 +488,7 @@ export const highCountryMap: MapDef = {
     },
   ],
   props: [
+    ...campCourseSigns,
     { kind: 'fireRing', x: -164, z: 244, headingDeg: 0, flatten: 3 },
     { kind: 'logSeat', x: -168.5, z: 246.5, headingDeg: 60 },
     { kind: 'logSeat', x: -160, z: 240, headingDeg: 170 },
@@ -519,6 +533,7 @@ export const highCountryMap: MapDef = {
     { id: 'ridge-tor', x: 196, z: -226, radius: 8, count: 4 },
   ],
   fallenTrees: [{ id: 'fallen-tree', x: -489, z: -140, headingDeg: 82, length: 12, radius: 0.42, mass: 750 }],
+  crawlCourses: [campCrawlCourse],
   vegetation: {
     maxTreeDensity: 1.5,
     ashBelow: 48,
@@ -528,6 +543,7 @@ export const highCountryMap: MapDef = {
     boulderDensity: 0.012,
     clearings: [
       { x: -160, z: 246, radius: 48 },
+      { x: -120, z: 253, radius: 26 },
       { x: -200, z: -436, radius: 34 },
       { x: 60, z: -242, radius: 24 },
       { x: -565, z: 300, radius: 80 },

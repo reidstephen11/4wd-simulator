@@ -4,7 +4,7 @@ import type { Terrain } from './terrain';
 /** Collision shape in a prop's local frame (y measured from the ground at the prop origin; -z = front). */
 export type PropShape =
   | { type: 'box'; x: number; y: number; z: number; hx: number; hy: number; hz: number }
-  | { type: 'cylinder'; x: number; y: number; z: number; r: number; hh: number };
+  | { type: 'cylinder'; x: number; y: number; z: number; r: number; hh: number; axis?: 'x'; sides?: number };
 
 /** Prop dimensions shared by colliders and render models. */
 export const propDims = {
@@ -14,7 +14,7 @@ export const propDims = {
   oldUte: { w: 1.75, l: 4.5, h: 1.5 },
   mine: { width: 2.6, height: 2.6 },
   signpost: { h: 2.1 },
-  logSeat: { l: 2.2, r: 0.22 },
+  logSeat: { l: 2.2, r: 0.22, y: 0.2, sides: 7 },
   cattleGrid: { w: 5, d: 2.4 },
 } as const;
 
@@ -22,7 +22,18 @@ const shapes: Record<PropKind, PropShape[]> = {
   hut: [{ type: 'box', x: 0, y: 1.95, z: 0, hx: 3, hy: 1.95, hz: 2.3 }],
   waterTank: [{ type: 'cylinder', x: 0, y: 1.05, z: 0, r: 1.15, hh: 1.05 }],
   fireRing: [],
-  logSeat: [{ type: 'box', x: 0, y: 0.2, z: 0, hx: 1.1, hy: 0.2, hz: 0.22 }],
+  logSeat: [
+    {
+      type: 'cylinder',
+      x: 0,
+      y: propDims.logSeat.y,
+      z: 0,
+      hh: propDims.logSeat.l / 2,
+      r: propDims.logSeat.r,
+      axis: 'x',
+      sides: propDims.logSeat.sides,
+    },
+  ],
   signpost: [{ type: 'box', x: 0, y: 1.05, z: 0, hx: 0.08, hy: 1.05, hz: 0.08 }],
   fireTower: [
     { type: 'box', x: -1.7, y: 4.5, z: -1.7, hx: 0.16, hy: 4.5, hz: 0.16 },

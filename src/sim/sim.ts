@@ -45,6 +45,9 @@ export interface DynamicObject {
 export interface SimEvents extends Record<string, unknown> {
   vehicleSpawned: { id: string };
   rangeChanged: { id: string; range: 'high' | 'low' };
+  diffChanged: { id: string; axle: 'front' | 'rear'; locked: boolean };
+  diffBlocked: { id: string; axle: 'front' | 'rear' };
+  precisionChanged: { id: string; enabled: boolean };
   tool: { id: string; event: ToolEvent };
   engine: { id: string; event: 'stalled' | 'restarted' };
   dent: { id: string; impact: number };
@@ -64,6 +67,8 @@ export interface SimState {
     angvel: { x: number; y: number; z: number };
     range: 'high' | 'low';
     gear: number;
+    differentials: { front: boolean; rear: boolean };
+    precisionCrawl: boolean;
     engineRunning: boolean;
     flood: { timer: number; stalled: boolean; dryTime: number };
     dirt: { front: number; sides: number; rear: number; wheels: number };
@@ -138,7 +143,18 @@ export class Simulation {
       for (const ps of placedPropShapes(p, this.world.terrain)) {
         const s = ps.shape;
         if (s.type === 'box') batcher.box('wood', ps.x, ps.y, ps.z, s.hx, s.hy, s.hz, ps.yaw);
-        else batcher.prism('wood', [ps.x, ps.y - s.hh, ps.z], [ps.x, ps.y + s.hh, ps.z], s.r, 10);
+        else if (s.axis === 'x') {
+          const dx = Math.cos(ps.yaw) * s.hh;
+          const dz = -Math.sin(ps.yaw) * s.hh;
+          batcher.prism(
+            'wood',
+            [ps.x - dx, ps.y, ps.z - dz],
+            [ps.x + dx, ps.y, ps.z + dz],
+            s.r,
+            s.sides,
+            -Math.PI / 2,
+          );
+        } else batcher.prism('wood', [ps.x, ps.y - s.hh, ps.z], [ps.x, ps.y + s.hh, ps.z], s.r, 10);
       }
     }
     for (const [key, b] of batcher.batches) {
@@ -257,8 +273,20 @@ export class Simulation {
       } else if (input.winchAttach) this.quickAttach(id);
       tools.updateFreeRoll(v, input);
       const before = v.drivetrain.range;
+      const frontBefore = v.differentials.front;
+      const rearBefore = v.differentials.rear;
+      const precisionBefore = v.precisionCrawl;
       v.step(input, dt);
       if (v.drivetrain.range !== before) this.events.emit('rangeChanged', { id, range: v.drivetrain.range });
+      for (const axle of ['front', 'rear'] as const) {
+        const previous = axle === 'front' ? frontBefore : rearBefore;
+        if (v.differentials[axle] !== previous)
+          this.events.emit('diffChanged', { id, axle, locked: v.differentials[axle] });
+        else if (axle === 'front' ? input.toggleFrontDiff : input.toggleRearDiff)
+          this.events.emit('diffBlocked', { id, axle });
+      }
+      if (v.precisionCrawl !== precisionBefore)
+        this.events.emit('precisionChanged', { id, enabled: v.precisionCrawl });
       if (v.floodEvent) this.events.emit('engine', { id, event: v.floodEvent });
       tools.winch.step(v, input.winchIn, input.winchOut, dt);
       v.externalLoad = tools.winch.tension;
@@ -463,6 +491,8 @@ export class Simulation {
           angvel: { x: av.x, y: av.y, z: av.z },
           range: v.drivetrain.range,
           gear: v.drivetrain.gear,
+          differentials: { ...v.differentials },
+          precisionCrawl: v.precisionCrawl,
           engineRunning: v.drivetrain.engineRunning,
           flood: {
             timer: v.condition.flood.timer,

@@ -3,7 +3,7 @@ import { floodTuning } from '../data/tools';
 import type { Device } from '../sim/input/inputManager';
 import type { VehicleTools } from '../sim/tools/tools';
 import type { Vehicle } from '../sim/vehicle/vehicle';
-import type { PoiDef } from '../sim/world/mapTypes';
+import type { CrawlCourseDef, PoiDef } from '../sim/world/mapTypes';
 import { headingOf } from '../sim/vehicle/math';
 import type { CompassPoi, HudState, Prompt } from '../ui/hud';
 import type { ToolMode } from './toolController';
@@ -16,6 +16,7 @@ export interface HudInputs {
   cameraHeading: number;
   discovered: ReadonlySet<string>;
   pois: readonly PoiDef[];
+  crawlCourses?: readonly CrawlCourseDef[];
   /** Is there a winch anchor in reach (checked a few times a second)? */
   anchorInReach: boolean;
 }
@@ -71,10 +72,32 @@ export function buildHudState(i: HudInputs): HudState {
     pois.push({ id: poi.id, kind: poi.kind, bearing: headingOf(dx, dz) });
   }
 
+  let courseHint: HudState['courseHint'] = null;
+  if (i.mode === 'drive')
+    for (const course of i.crawlCourses ?? []) {
+      const h = (course.headingDeg * Math.PI) / 180;
+      const dx = p.x - course.x;
+      const dz = p.z - course.z;
+      const along = Math.sin(h) * dx - Math.cos(h) * dz;
+      const across = Math.cos(h) * dx + Math.sin(h) * dz;
+      const line = course.lines.find((line) => Math.abs(across - line.offset) < 2.5);
+      if (!line || along < -6 || along > course.length + 4) continue;
+      courseHint = {
+        title: `${line.difficulty[0].toUpperCase()}${line.difficulty.slice(1)} · ${line.name}`,
+        text: line.hint,
+        controls: `${g.range} low range · ${g.frontDiff} front · ${g.rearDiff} rear · ${g.precision} crawl`,
+      };
+      break;
+    }
+
   return {
     heading: i.cameraHeading,
     pois,
     range: v.drivetrain.range,
+    frontLocked: v.differentials.front,
+    rearLocked: v.differentials.rear,
+    precisionCrawl: v.precisionCrawl,
+    courseHint,
     planksCarried: t.planks.carried,
     planksTotal: 2,
     winchAttached: t.winch.attached,

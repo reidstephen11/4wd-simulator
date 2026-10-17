@@ -36,6 +36,8 @@ Sound starts after your first click or key press (browser rule).
 | Steer                       | A D / ← →                                             | Left stick                                           |
 | Handbrake                   | Space                                                 | X / Square                                           |
 | Toggle high/low range       | L (below 20 km/h)                                     | Y / Triangle                                         |
+| Front / rear diff lock      | Z / X (below 5 km/h to engage)                        | D-pad left / right                                   |
+| Precision crawl             | P                                                     | Right stick click                                    |
 | Winch quick attach / detach | E                                                     | RB                                                   |
 | Winch in / out              | R / F                                                 | D-pad up / down                                      |
 | Tool menu (winch, planks)   | Hold Q, point with the mouse, arrows or WASD, release | Hold LB, point with the left stick or d-pad, release |
@@ -47,6 +49,14 @@ Sound starts after your first click or key press (browser rule).
 | Pause                       | Esc                                                   | Start / Options                                      |
 
 Placing planks: choose **Place planks** in the tool menu, move them with W/S, turn them with A/D, place with E, cancel with Esc. Prompts on screen switch between keyboard and gamepad glyphs depending on what you last touched.
+
+## Rock crawling
+
+The **Camp Rock Course** is about 40 m east of River Flat Camp; follow the sign beside camp. Three marked lines progress from low warm-up steps to cross-axle rocks and a harder ledge line. Each line has entrance and exit markers, a difficulty sign and nearby driving hints. The course also appears on the map once discovered.
+
+Select **low range (L)**, then toggle **precision crawl (P)**. Hold W for a forward target of 2.5 km/h; S still brakes normally while moving forwards, then targets 2 km/h in reverse once stopped. Precision mode adjusts throttle and brakes to control descents while retaining full engine effort for climbing. Analogue triggers vary the target speed. Release the controls to stop, or press P again for normal driving.
+
+Toggle the **rear locker with X** and **front locker with Z**. A locked axle keeps using the grounded tyre when its partner lifts. Engage below 5 km/h; unlocking is always allowed. Front lock increases the turning radius, so unlock it for tight manoeuvres. The status buttons show each axle's state and can also be clicked. On gamepad, use D-pad right for rear lock, D-pad left for front lock and right-stick click for precision crawl.
 
 ## Debug mode
 
@@ -60,7 +70,8 @@ Add `?debug` to the URL (for example `http://localhost:5173/?debug` or `https://
 The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 
 - [ ] It loads from the Pages link in current Chrome, Firefox and Edge.
-- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (14 places; the map fills in as you find them).
+- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (15 places; the map fills in as you find them).
+- [ ] **Camp logs:** select low range (L) and crawl over both logs without a run-up. Try reverse and a line with only one wheel on each axle crossing the log; the tyres should climb before the body touches.
 - [ ] **Deep Crossing:** drive into the deep channel and sit there — the engine sputters after about 5 s under water and stalls at 10 s. It restarts on throttle once the air intake has been clear for 20 s.
 - [ ] **The Staircase:** the rocky climb needs low range (press L while slow); high range shouldn't make it.
 - [ ] **Washout Gully:** the car can't cross the 1.2 m gap on its own. Lay both planks across it (tool menu → Place planks) or take the detour around the top end.

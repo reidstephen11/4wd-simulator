@@ -49,7 +49,7 @@ export class StaticMeshBatcher {
   }
 
   /** Capped prism between two points (trunks, logs, posts). */
-  prism(group: string, a: V3, b: V3, radius: number, sides = 6): void {
+  prism(group: string, a: V3, b: V3, radius: number, sides = 6, phase = 0): void {
     const dx = b[0] - a[0];
     const dy = b[1] - a[1];
     const dz = b[2] - a[2];
@@ -69,7 +69,7 @@ export class StaticMeshBatcher {
     const w: V3 = [ax[1] * u[2] - ax[2] * u[1], ax[2] * u[0] - ax[0] * u[2], ax[0] * u[1] - ax[1] * u[0]];
     const verts: V3[] = [];
     for (let i = 0; i < sides; i++) {
-      const ang = (i / sides) * Math.PI * 2;
+      const ang = phase + (i / sides) * Math.PI * 2;
       const ox = (Math.cos(ang) * u[0] + Math.sin(ang) * w[0]) * radius;
       const oy = (Math.cos(ang) * u[1] + Math.sin(ang) * w[1]) * radius;
       const oz = (Math.cos(ang) * u[2] + Math.sin(ang) * w[2]) * radius;

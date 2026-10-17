@@ -1,6 +1,6 @@
 /**
  * Vehicle tuning (SPEC §6). Local frame: x = right, y = up, z = back (the vehicle
- * faces -z). The origin is mid-wheelbase at wheel-hub height when parked.
+ * faces -z). The origin is mid-wheelbase, 0.12 m above the parked wheel hubs.
  */
 export interface WheelLayout {
   /** Suspension top mount (local). */
@@ -13,7 +13,7 @@ export interface WheelLayout {
 export interface VehicleTuning {
   name: string;
   mass: number;
-  /** Centre of mass (local). Height above ground = comY + wheelRadius. */
+  /** Centre of mass (local). */
   com: { x: number; y: number; z: number };
   /** Principal inertia: pitch (x), yaw (y), roll (z). */
   inertia: { x: number; y: number; z: number };
@@ -62,6 +62,14 @@ export interface VehicleTuning {
   };
   /** Share of torque an open diff still passes when one wheel on an axle has no grip (0 = textbook open diff). */
   openDiffLeak: number;
+  crawling: {
+    diffLockMaxKmh: number;
+    frontLockSteering: number;
+    forwardKmh: number;
+    reverseKmh: number;
+    speedGain: number;
+    brakeGain: number;
+  };
   /** Base lateral friction coefficient (multiplied by surface grip). */
   lateralGrip: number;
   /**
@@ -104,11 +112,13 @@ const R = 0.38;
 const HALF_TRACK = 0.725;
 const HALF_BASE = 1.15;
 const MOUNT_Y = 0.32;
+const SUSPENSION_LIFT = 0.12;
 
 export const vehicleTuning: VehicleTuning = {
   name: 'Short-wheelbase 4WD',
   mass: 1600,
-  com: { x: 0, y: 0.44, z: 0.05 },
+  // Retain the existing centre-of-mass height above ground with the taller suspension.
+  com: { x: 0, y: 0.44 - SUSPENSION_LIFT, z: 0.05 },
   inertia: { x: 2300, y: 2500, z: 720 },
   wheelRadius: R,
   wheelWidth: 0.26,
@@ -118,21 +128,27 @@ export const vehicleTuning: VehicleTuning = {
     { x: -HALF_TRACK, y: MOUNT_Y, z: HALF_BASE, front: false },
     { x: HALF_TRACK, y: MOUNT_Y, z: HALF_BASE, front: false },
   ],
-  // Parked: 0.12 m of sag from full droop, leaving 0.13 m of bump travel.
-  suspensionRestLength: MOUNT_Y + 0.12,
+  // 0.12 m suspension lift, retaining 0.12 m sag and 0.13 m bump travel.
+  suspensionRestLength: MOUNT_Y + 0.12 + SUSPENSION_LIFT,
   suspensionTravel: 0.25,
   springStiffness: 20.4,
   damperCompression: 1.7,
   damperRelaxation: 2.6,
   maxSuspensionForce: 45000,
   bodyBoxes: [
-    // Body tub and chassis between the axles (lowest part: 0.28 m ground clearance).
-    { cx: 0, cy: 0.32, cz: 0, hx: 0.8, hy: 0.42, hz: 1.15 },
-    // Front and rear overhangs sit higher: ~37° approach and ~33° departure angles.
-    { cx: 0, cy: 0.5, cz: -1.52, hx: 0.8, hy: 0.32, hz: 0.38 },
-    { cx: 0, cy: 0.48, cz: 1.52, hx: 0.8, hy: 0.34, hz: 0.4 },
-    // Cabin.
-    { cx: 0, cy: 1.1, cz: 0.3, hx: 0.76, hy: 0.36, hz: 1.05 },
+    // Match the visible frame rails and transmission instead of filling the wheel wells.
+    { cx: -0.47, cy: 0.02, cz: 0.06, hx: 0.05, hy: 0.08, hz: 1.59 },
+    { cx: 0.47, cy: 0.02, cz: 0.06, hx: 0.05, hy: 0.08, hz: 1.59 },
+    { cx: 0, cy: 0.015, cz: -0.23, hx: 0.19, hy: 0.075, hz: 0.325 },
+    // Narrow floor, doors between the wheel openings, engine and rear tub.
+    { cx: 0, cy: 0.13, cz: 0.1, hx: 0.58, hy: 0.06, hz: 1.68 },
+    { cx: 0, cy: 0.47, cz: -0.045, hx: 0.8, hy: 0.34, hz: 0.54 },
+    { cx: 0, cy: 0.7, cz: -1.23, hx: 0.58, hy: 0.2, hz: 0.61 },
+    { cx: 0, cy: 0.49, cz: 1.17, hx: 0.58, hy: 0.3, hz: 0.65 },
+    // Bumpers and hardtop follow the drawn model, including their actual overhangs.
+    { cx: 0, cy: 0.22, cz: -1.98, hx: 0.92, hy: 0.08, hz: 0.095 },
+    { cx: 0, cy: 0.21, cz: 1.94, hx: 0.895, hy: 0.075, hz: 0.085 },
+    { cx: 0, cy: 1.19, cz: 0.62, hx: 0.76, hy: 0.5, hz: 1.19 },
   ],
   bumpRadius: 0.24,
   bodyFriction: 0.45,
@@ -167,6 +183,14 @@ export const vehicleTuning: VehicleTuning = {
     low: { ratio: 2.5, topSpeedKmh: 25, reverseTopKmh: 10 },
   },
   openDiffLeak: 0.35,
+  crawling: {
+    diffLockMaxKmh: 5,
+    frontLockSteering: 0.72,
+    forwardKmh: 2.5,
+    reverseKmh: 2,
+    speedGain: 3,
+    brakeGain: 0.8,
+  },
   lateralGrip: 0.9,
   rollTorqueScale: 1.0,
   antiRoll: { front: 8000, rear: 5000 },
@@ -186,6 +210,6 @@ export const vehicleTuning: VehicleTuning = {
     padRate: 8,
   },
   intakeHeight: 0.9,
-  intake: { x: 0.7, y: 0.9 - R, z: -0.9 },
+  intake: { x: 0.7, y: 0.9 - R - SUSPENSION_LIFT, z: -0.9 },
   winchMount: { x: 0, y: 0.28, z: -2.0 },
 };

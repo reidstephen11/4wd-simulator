@@ -7,6 +7,7 @@ import { mulberry32 } from '../sim/world/rng';
 import { pal } from './colors';
 import { patchFog } from './fog';
 import { MeshBuilder } from './lowpoly';
+import { coursePoint } from '../sim/world/crawlCourse';
 
 const timber = () => pal('barkPale').clone().lerp(pal('barkOchre'), 0.35).multiplyScalar(0.82);
 const rust = () => pal('dirtDark').clone().lerp(pal('mud'), 0.3);
@@ -121,10 +122,11 @@ function fireRing(b: MeshBuilder): void {
 }
 
 function logSeat(b: MeshBuilder): void {
+  const d = propDims.logSeat;
   b.push()
-    .translate(0, 0.2, 0)
+    .translate(0, d.y, 0)
     .rotate(0, 0, Math.PI / 2);
-  b.cylinder(0.22, 0.22, propDims.logSeat.l, 7, pal('barkOchre'), true, pal('barkPale'));
+  b.cylinder(d.r, d.r, d.l, d.sides, pal('barkOchre'), true, pal('barkPale'));
   b.pop();
 }
 
@@ -358,6 +360,24 @@ export class WorldProps {
       b.pop();
       if (p.kind === 'signpost' && p.text) this.addSignFace(p, base);
     }
+    // Coloured timber markers bracket the entrance and exit of each practice line.
+    for (const course of world.map.crawlCourses ?? [])
+      for (const line of course.lines) {
+        const colour = new THREE.Color(
+          { easy: '#72975A', moderate: '#CEA348', hard: '#B45D49' }[line.difficulty],
+        );
+        for (const along of [1, course.length])
+          for (const side of [-1, 1]) {
+            const p = coursePoint(course, line.offset + side * 1.8, along);
+            const y = world.terrain.heightAt(p.x, p.z);
+            b.push().translate(p.x, y + 0.3, p.z);
+            b.cylinder(0.035, 0.045, 0.6, 6, timber());
+            b.pop();
+            b.push().translate(p.x, y + 0.55, p.z);
+            b.box(0.18, 0.15, 0.1, colour);
+            b.pop();
+          }
+      }
     // Staircase ledges: granite slabs.
     const rand = mulberry32(99);
     for (const box of world.features.boxes) {

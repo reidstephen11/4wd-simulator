@@ -210,6 +210,31 @@ export interface ClearingDef {
   radius: number;
 }
 
+/** A practice line runs forwards from the course origin; offsets are across the line. */
+export interface CrawlCourseDef {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  headingDeg: number;
+  length: number;
+  lines: ReadonlyArray<{
+    id: string;
+    name: string;
+    difficulty: 'easy' | 'moderate' | 'hard';
+    offset: number;
+    hint: string;
+    obstacles: ReadonlyArray<{
+      at: number;
+      lateral: number;
+      width: number;
+      length: number;
+      height: number;
+      rollDeg?: number;
+    }>;
+  }>;
+}
+
 export interface VegetationDef {
   /** Trees per 100 m² in the densest forest. */
   maxTreeDensity: number;
@@ -267,6 +292,7 @@ export interface MapDef {
   boulders: readonly BoulderDef[];
   tors: readonly TorDef[];
   fallenTrees: readonly FallenTreeDef[];
+  crawlCourses?: readonly CrawlCourseDef[];
   vegetation: VegetationDef;
   /** POI id of the spawn campsite. */
   spawnCampsite: string;
