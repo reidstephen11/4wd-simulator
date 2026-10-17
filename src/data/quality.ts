@@ -14,8 +14,12 @@ export interface QualityPreset {
   vegetationDensity: number;
   /** Distance trees switch to their low-detail model. */
   treeLodDistance: number;
+  /** Distance trees switch to their very simple distant model. */
+  treeFarDistance: number;
   /** Distance beyond which grass and shrubs are hidden. */
   grassDistance: number;
+  /** Multiplier on particle emission rates (dust, mud, splashes). */
+  particles: number;
   /** Max device pixel ratio. */
   pixelRatio: number;
   antialias: boolean;
@@ -30,7 +34,9 @@ export const qualityPresets: Record<QualityLevel, QualityPreset> = {
     terrainLod: [64, 160, 360],
     vegetationDensity: 0.45,
     treeLodDistance: 110,
+    treeFarDistance: 380,
     grassDistance: 70,
+    particles: 0.45,
     pixelRatio: 0.8,
     antialias: false,
   },
@@ -42,7 +48,9 @@ export const qualityPresets: Record<QualityLevel, QualityPreset> = {
     terrainLod: [96, 230, 520],
     vegetationDensity: 0.75,
     treeLodDistance: 170,
+    treeFarDistance: 520,
     grassDistance: 110,
+    particles: 1,
     pixelRatio: 1,
     antialias: true,
   },
@@ -54,7 +62,9 @@ export const qualityPresets: Record<QualityLevel, QualityPreset> = {
     terrainLod: [128, 320, 700],
     vegetationDensity: 1,
     treeLodDistance: 260,
+    treeFarDistance: 800,
     grassDistance: 160,
+    particles: 1.35,
     pixelRatio: 1.5,
     antialias: true,
   },

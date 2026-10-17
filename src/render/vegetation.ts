@@ -11,6 +11,9 @@ import { MeshBuilder } from './lowpoly';
 
 const SPECIES: TreeSpecies[] = ['ash', 'candlebark', 'snowgum', 'dead'];
 /** Nominal model heights; instances scale to their own height. */
+/** Tree LOD value for "not drawn". */
+const HIDDEN = 3;
+
 const NOMINAL: Record<TreeSpecies, number> = { ash: 28, candlebark: 17, snowgum: 7.5, dead: 13 };
 
 function canopyColor(rand: () => number, dark: boolean): THREE.Color {
@@ -18,10 +21,22 @@ function canopyColor(rand: () => number, dark: boolean): THREE.Color {
   return c.lerp(pal('grassSage'), 0.1 + rand() * 0.2);
 }
 
-/** Build one tree model (local origin at the trunk base). `lod` 0 = near, 1 = far. */
+/** Canopy centre height, horizontal radius and vertical radius (fractions of height) for the distant model. */
+const FAR_CANOPY: Record<TreeSpecies, [number, number, number] | null> = {
+  ash: [0.78, 0.2, 0.15],
+  candlebark: [0.8, 0.28, 0.16],
+  snowgum: [0.72, 0.5, 0.2],
+  dead: null,
+};
+
+/**
+ * Build one tree model (local origin at the trunk base). `lod` 0 = near, 1 = mid,
+ * 2 = distant (a three-sided trunk and one eight-sided canopy, ~14 triangles).
+ */
 export function buildTree(species: TreeSpecies, variant: number, lod: number): THREE.BufferGeometry {
   const H = NOMINAL[species];
   const def = treeSpecies[species];
+  if (lod === 2) return buildFarTree(species, variant);
   const seed = SPECIES.indexOf(species) * 100 + variant * 10 + lod;
   const rand = mulberry32(seed + 17);
   const b = new MeshBuilder(seed);
@@ -123,6 +138,36 @@ export function buildTree(species: TreeSpecies, variant: number, lod: number): T
         trunkR * 0.4,
         trunkR * 0.12,
       );
+    }
+  }
+  return b.build();
+}
+
+function buildFarTree(species: TreeSpecies, variant: number): THREE.BufferGeometry {
+  const H = NOMINAL[species];
+  const def = treeSpecies[species];
+  const b = new MeshBuilder(SPECIES.indexOf(species) * 100 + variant * 10 + 2);
+  const rand = mulberry32(SPECIES.indexOf(species) * 100 + variant * 10 + 19);
+  const trunkR = (def.trunkRadius[0] + def.trunkRadius[1]) / 2;
+  const canopy = FAR_CANOPY[species];
+  const trunkH = canopy ? H * canopy[0] : H * 0.8;
+  b.push().translate(0, trunkH / 2 - 0.3, 0);
+  b.cylinder(trunkR * 0.5, trunkR, trunkH, 3, pal('barkPale'), false);
+  b.pop();
+  if (canopy) {
+    const [cy, rx, ry] = canopy;
+    const c = canopyColor(rand, false).lerp(pal('foliageDark'), 0.25);
+    const top = { x: 0, y: H * (cy + ry), z: 0 };
+    const bottom = { x: 0, y: H * (cy - ry), z: 0 };
+    const ring = [0, 1, 2, 3].map((k) => {
+      const a = (k / 4) * Math.PI * 2 + variant;
+      return { x: Math.cos(a) * H * rx, y: H * cy, z: Math.sin(a) * H * rx };
+    });
+    for (let k = 0; k < 4; k++) {
+      const p = ring[k];
+      const q = ring[(k + 1) % 4];
+      b.tri(top, q, p, c);
+      b.tri(bottom, p, q, c.clone().multiplyScalar(0.85));
     }
   }
   return b.build();
@@ -245,7 +290,7 @@ export class Vegetation {
 
     // --- Trees ---
     const geos: THREE.BufferGeometry[][] = SPECIES.map((s) =>
-      [0, 1].flatMap((v) => [buildTree(s, v, 0), buildTree(s, v, 1)]),
+      [0, 1].flatMap((v) => [buildTree(s, v, 0), buildTree(s, v, 1), buildTree(s, v, 2)]),
     );
     const all = geos.flat();
     const list = world.scatter.trees;
@@ -258,7 +303,7 @@ export class Vegetation {
     for (const t of list) {
       const si = SPECIES.indexOf(t.species);
       const variant = t.seed < 0.5 ? 0 : 1;
-      const id = this.trees.addInstance(this.treeGeo[si][variant * 2 + 1]);
+      const id = this.trees.addInstance(this.treeGeo[si][variant * 3 + 1]);
       const s = t.height / NOMINAL[t.species];
       this.tmpE.set(t.leanX, t.yaw, t.leanZ);
       this.tmpQ.setFromEuler(this.tmpE);
@@ -337,6 +382,7 @@ export class Vegetation {
     if (this.lodTimer > 0) return;
     this.lodTimer = 0.2;
     const near2 = this.quality.treeLodDistance ** 2;
+    const mid2 = this.quality.treeFarDistance ** 2;
     const far2 = (this.quality.drawDistance * 0.9) ** 2;
     const list = this.world.scatter.trees;
     for (let i = 0; i < list.length; i++) {
@@ -344,15 +390,15 @@ export class Vegetation {
       const dx = t.x - eye.x;
       const dz = t.z - eye.z;
       const d2 = dx * dx + dz * dz;
-      const lod = d2 < near2 ? 0 : d2 < far2 ? 1 : 2;
+      const lod = d2 < near2 ? 0 : d2 < mid2 ? 1 : d2 < far2 ? 2 : HIDDEN;
       if (lod === this.treeLod[i]) continue;
       const id = this.treeIds[i];
-      if (lod === 2) this.trees.setVisibleAt(id, false);
+      if (lod === HIDDEN) this.trees.setVisibleAt(id, false);
       else {
-        if (this.treeLod[i] === 2) this.trees.setVisibleAt(id, true);
+        if (this.treeLod[i] === HIDDEN) this.trees.setVisibleAt(id, true);
         const si = SPECIES.indexOf(t.species);
         const variant = t.seed < 0.5 ? 0 : 1;
-        this.trees.setGeometryIdAt(id, this.treeGeo[si][variant * 2 + lod]);
+        this.trees.setGeometryIdAt(id, this.treeGeo[si][variant * 3 + lod]);
       }
       this.treeLod[i] = lod;
     }

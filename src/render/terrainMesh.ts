@@ -158,6 +158,9 @@ export class TerrainMesh {
     const want: Node[] = [];
     const requests: { n: Node; d: number }[] = [];
     const visit = (n: Node) => {
+      // Mark every node on the way down as used, not only the drawn ones, so the parents
+      // of the detailed chunks around the eye are never evicted (that made them thrash).
+      n.lastUsed = this.frame;
       const d = this.distance(n, eye);
       if (n.level > 0 && d < this.lodDistances[n.level - 1]) {
         const kids = this.children(n);
@@ -200,7 +203,7 @@ export class TerrainMesh {
       if (built.length <= this.cacheLimit[level]) continue;
       built.sort((a, b) => a.lastUsed - b.lastUsed);
       for (const n of built.slice(0, built.length - this.cacheLimit[level])) {
-        if (this.visible.has(n) || !n.mesh) continue;
+        if (this.visible.has(n) || n.lastUsed === this.frame || !n.mesh) continue;
         this.group.remove(n.mesh);
         n.mesh.geometry.dispose();
         n.mesh = null;

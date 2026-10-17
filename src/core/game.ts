@@ -9,6 +9,7 @@ import { loadRapier } from '../sim/physics';
 import { Simulation } from '../sim/sim';
 import type { Vehicle } from '../sim/vehicle/vehicle';
 import { InputManager } from '../sim/input/inputManager';
+import type { Autopilot } from '../sim/input/autopilot';
 import type { VehicleInput } from '../sim/input/vehicleInput';
 import type { PoiDef } from '../sim/world/mapTypes';
 import { poiApproach } from '../sim/world/poiApproach';
@@ -62,6 +63,10 @@ export class Game {
   settings: Settings;
   freeCamOn = false;
   scriptedInput: Partial<VehicleInput> | null = null;
+  /** Drives the car along a path (scripted test drives). */
+  autopilot: Autopilot | null = null;
+  /** Main-thread time spent in three.js rendering per frame (ms, smoothed). */
+  sceneMs = 0;
   /** Called when settings change (audio hooks in here). */
   onSettings: ((s: Settings) => void) | null = null;
   private readonly inputs = new Map<string, VehicleInput>();
@@ -359,6 +364,7 @@ export class Game {
   private step(dt: number): void {
     const inp = this.input.vehicleInput(dt);
     if (this.scriptedInput) Object.assign(inp, this.scriptedInput);
+    if (this.autopilot) Object.assign(inp, this.autopilot.input(this.vehicle, dt));
     // Park on the handbrake while placing planks, choosing an anchor or in the tool menu.
     if (this.tool.mode !== 'drive' || this.toolMenu.isOpen) {
       inp.throttle = 0;
@@ -439,6 +445,7 @@ export class Game {
     this.model.applyCondition(v.condition);
     this.model.setPlanksOnRack(tools.planks.carried);
     this.toolsView.update(v, tools, this.sim.probeGround, this.clock);
+    this.view.particles.update(v, this.loop.paused ? 0 : frameDt);
     if (this.freeCamOn) this.freeCam.update(frameDt);
     else if (!this.loop.paused) {
       this.chase.zoom(this.input.takeZoom(frameDt));
@@ -455,7 +462,9 @@ export class Game {
       });
     }
     this.view.focus.copy(this.model.root.position);
+    const t0 = performance.now();
     this.view.render();
+    this.sceneMs += (performance.now() - t0 - this.sceneMs) * 0.1;
     this.audio.update(buildAudioFrame(v, tools.winch, this.world, this.loop.paused, frameDt));
     this.hud.update(
       buildHudState({
@@ -476,7 +485,9 @@ export class Game {
         ...(this.debugTools?.update(v) ?? []),
         `winch ${w.anchor ? `${w.anchor.label} ${w.length.toFixed(1)} m ${(w.tension / 1000).toFixed(1)} kN` : 'off'}  planks ${tools.planks.carried}/2  jack ${tools.jack.state}`,
         `flood ${fl.timer.toFixed(1)} s${fl.stalled ? ' STALLED' : ''}  dirt ${v.condition.dirt.sides.toFixed(2)}  dents ${v.condition.dents.length}  mode ${this.tool.mode}`,
+        `cpu ${(this.loop.timings.sim + this.loop.timings.render).toFixed(1)} ms: sim ${this.loop.timings.sim.toFixed(1)} ms (${this.loop.timings.steps.toFixed(1)} steps)  frame ${this.loop.timings.render.toFixed(1)} ms (three.js ${this.sceneMs.toFixed(1)} ms)`,
         audioLine(this.audio),
+        `particles: ${this.view.particles.counts()}`,
       ]);
       this.overlay.frame(frameDt, this.view.renderer);
     }

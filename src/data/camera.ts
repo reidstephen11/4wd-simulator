@@ -26,5 +26,9 @@ export const cameraTuning = {
   crawlSpeed: 2.5,
   /** Keep this far from blocking geometry (m). */
   clearance: 0.45,
+  /** After being pushed in by an obstacle, ease back out at this rate (1/s). */
+  unblockRate: 2.2,
+  /** Vertical follow rate of the look target (1/s): smooths bumps on rough tracks. */
+  targetHeightRate: 9,
   groundClearance: 0.6,
 };

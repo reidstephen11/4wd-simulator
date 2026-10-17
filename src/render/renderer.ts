@@ -10,6 +10,7 @@ import { WaterMesh } from './water';
 import { Vegetation } from './vegetation';
 import { WorldProps } from './worldProps';
 import { TrackRuts } from './tracks';
+import { Particles } from './particles';
 import type { DynamicObject } from '../sim/sim';
 
 /** Owns the Three.js renderer, scene and camera, and the static world meshes. */
@@ -24,6 +25,7 @@ export class GameRenderer {
   readonly vegetation: Vegetation;
   readonly props: WorldProps;
   readonly ruts: TrackRuts;
+  readonly particles: Particles;
   private quality: QualityPreset;
   private lastFrame = performance.now();
   private firstFrame = true;
@@ -70,6 +72,9 @@ export class GameRenderer {
     this.scene.add(this.props.group);
     this.ruts = new TrackRuts(world);
     this.scene.add(this.ruts.group);
+    this.particles = new Particles(world.terrain, quality, env.waterLevelOffset);
+    this.particles.setWetness(env.wetness);
+    this.scene.add(this.particles.group);
 
     this.setQuality(quality);
     this.resize();
@@ -85,6 +90,7 @@ export class GameRenderer {
     this.camera.updateProjectionMatrix();
     this.terrainMesh.setLodDistances(q.terrainLod);
     this.vegetation?.setQuality(q);
+    this.particles?.setQuality(q);
     applyFogEnvironment(this.scene, this.env, q.drawDistance);
     this.resize();
   }
@@ -93,6 +99,7 @@ export class GameRenderer {
     this.env = env;
     this.lighting.setEnvironment(env);
     this.sky.setEnvironment(env);
+    this.particles.setWetness(env.wetness);
     applyFogEnvironment(this.scene, env, this.quality.drawDistance);
   }
 
@@ -109,6 +116,7 @@ export class GameRenderer {
   /** Build all detail around the camera now (after teleports and camera jumps). */
   snap(): void {
     this.firstFrame = true;
+    this.particles.clear();
   }
 
   render(): void {

@@ -31,6 +31,10 @@ export class ChaseCamera {
   private readonly dir = new THREE.Vector3();
   private slopeSmoothed = 0;
   private speedSmoothed = 0;
+  /** Smoothed height of the look target. */
+  private targetY = 0;
+  /** Current distance from the look target along the view line (shrinks when blocked). */
+  private viewDist = 0;
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -56,6 +60,7 @@ export class ChaseCamera {
       this.yaw = targetYaw;
       this.slopeSmoothed = t.slopeDeg;
       this.speedSmoothed = Math.abs(t.speed);
+      this.targetY = t.position.y;
     }
     let dy = targetYaw - this.yaw;
     dy = Math.atan2(Math.sin(dy), Math.cos(dy));
@@ -75,23 +80,35 @@ export class ChaseCamera {
 
     const back = this.tmp.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     this.look.copy(t.position).addScaledVector(t.forward, C.lookAhead + this.toolBlend * 3.5);
-    this.look.y = t.position.y + C.targetHeight;
+    this.targetY += (t.position.y - this.targetY) * Math.min(1, dt * C.targetHeightRate);
+    // Never let the smoothed target fall far behind (big drops, jack, teleports).
+    this.targetY = THREE.MathUtils.clamp(this.targetY, t.position.y - 0.6, t.position.y + 0.6);
+    this.look.y = this.targetY + C.targetHeight;
     const desired = new THREE.Vector3().copy(this.look).addScaledVector(back, dist);
     desired.y += height;
 
-    if (!this.initialised) {
+    const first = !this.initialised;
+    if (first) {
       this.pos.copy(desired);
       this.initialised = true;
     } else this.pos.lerp(desired, Math.min(1, dt * C.positionRate));
 
-    // Keep the view line clear: push the camera towards the target if anything is in the way.
+    // Keep the view line clear: push the camera towards the target if anything is in the
+    // way (straight away), then ease back out once it clears so it doesn't pop.
     const camPos = this.pos.clone();
     this.dir.copy(camPos).sub(this.look);
     const full = this.dir.length();
     if (full > 1e-3) {
       this.dir.divideScalar(full);
       const clear = this.blocker(this.look, this.dir, full);
-      if (clear < full) camPos.copy(this.look).addScaledVector(this.dir, Math.max(0.8, clear - C.clearance));
+      const allowed = clear < full ? Math.max(0.8, clear - C.clearance) : full;
+      if (first || allowed < this.viewDist) this.viewDist = allowed;
+      else
+        this.viewDist = Math.min(
+          allowed,
+          this.viewDist + (allowed - this.viewDist) * Math.min(1, dt * C.unblockRate),
+        );
+      camPos.copy(this.look).addScaledVector(this.dir, this.viewDist);
     }
     const ground = this.groundAt(camPos.x, camPos.z) + C.groundClearance;
     if (camPos.y < ground) camPos.y = ground;

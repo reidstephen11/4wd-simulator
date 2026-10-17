@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import type { VehicleInput } from '../sim/input/vehicleInput';
 import type { AudioInfo } from '../audio/audioSystem';
+import { Autopilot } from '../sim/input/autopilot';
+import { poiApproach } from '../sim/world/poiApproach';
+import { headingOf } from '../sim/vehicle/math';
 import type { Game } from './game';
 
 const LOCAL = 'player-1';
@@ -10,7 +13,19 @@ export interface GameHook {
   ready: boolean;
   setCamera(x: number, y: number, z: number, tx: number, ty: number, tz: number): void;
   useChaseCamera(): void;
-  stats(): { fps: number; frameMs: number; calls: number; triangles: number };
+  stats(): {
+    fps: number;
+    frameMs: number;
+    calls: number;
+    triangles: number;
+    particles: number;
+    /** Main-thread ms per frame: simulation steps, the rest of the frame, three.js render. */
+    simMs: number;
+    renderMs: number;
+    sceneMs: number;
+    /** Terrain chunks drawn per detail level (0 = finest). */
+    terrainLod: number[];
+  };
   heightAt(x: number, z: number): number;
   teleport(x: number, z: number, headingDeg: number): void;
   teleportPoi(id: string): void;
@@ -31,6 +46,15 @@ export interface GameHook {
   ui(): { map: boolean; pause: boolean; toolMenu: boolean; paused: boolean; mode: string };
   /** Seconds of simulated time so far. */
   simTime(): number;
+  /**
+   * Start the autopilot on the track leading to a POI, `back` metres out (teleports
+   * there first). Pass null to stop it.
+   */
+  autopilot(poiId: string | null, back?: number, speed?: number): void;
+  autopilotState(): { active: boolean; done: boolean; remaining: number };
+  setQuality(level: 'low' | 'medium' | 'high'): void;
+  /** Draw calls and triangles per top-level scene group (renders the scene once per group). */
+  breakdown(): Record<string, { calls: number; triangles: number }>;
   /** Audio state, levels and what's playing. */
   audio(): AudioInfo;
   /** Debug: play a bird call now. */
@@ -60,6 +84,52 @@ export function installHook(game: Game): void {
       frameMs: g.overlay?.frameMs ?? 0,
       calls: g.view.renderer.info.render.calls,
       triangles: g.view.renderer.info.render.triangles,
+      particles: g.view.particles.live,
+      simMs: g.loop.timings.sim,
+      renderMs: g.loop.timings.render,
+      sceneMs: g.sceneMs,
+      terrainLod: g.view.terrainMesh.lodCounts(),
+    }),
+    autopilot: (poiId, back = 300, speed = 8) => {
+      if (!poiId) {
+        g.autopilot = null;
+        return;
+      }
+      const poi = g.world.pois.find((p) => p.id === poiId);
+      if (!poi) throw new Error(`No POI ${poiId}`);
+      const path = poiApproach(poi, g.world.features.tracks, back);
+      const a = path[0];
+      const b = path[Math.min(3, path.length - 1)];
+      g.vehicle.teleport(g.sim.poseAt(a[0], a[1], headingOf(b[0] - a[0], b[1] - a[1])));
+      g.chase.reset();
+      g.view.snap();
+      g.autopilot = new Autopilot(path, speed);
+    },
+    setQuality: (level) => g.changeSettings({ quality: level }),
+    breakdown: () => {
+      const r = g.view.renderer;
+      const scene = g.view.scene;
+      const kids = scene.children.filter((c) => c.visible);
+      const out: Record<string, { calls: number; triangles: number }> = {};
+      const measure = (name: string, only: THREE.Object3D, siblings: THREE.Object3D[]) => {
+        for (const k of siblings) k.visible = k === only || k === g.view.camera || k.type.endsWith('Light');
+        r.render(scene, g.view.camera);
+        out[name] = { calls: r.info.render.calls, triangles: r.info.render.triangles };
+        for (const k of siblings) k.visible = true;
+      };
+      kids.forEach((c, i) => measure(c.name || `${c.type}#${i}`, c, kids));
+      // Vegetation by part (trees, rocks, ground cover...).
+      const veg = g.view.vegetation.group;
+      const parts = veg.children.filter((c) => c.visible);
+      for (const k of kids) k.visible = k === veg || k === g.view.camera || k.type.endsWith('Light');
+      parts.forEach((c, i) => measure(`vegetation/${c.name || c.type + '#' + i}`, c, parts));
+      for (const k of kids) k.visible = true;
+      return out;
+    },
+    autopilotState: () => ({
+      active: g.autopilot !== null,
+      done: g.autopilot?.done ?? false,
+      remaining: g.autopilot ? g.autopilot.remaining(g.vehicle) : 0,
     }),
     heightAt: (x, z) => g.world.terrain.heightAt(x, z),
     teleport: (x, z, h) => {
