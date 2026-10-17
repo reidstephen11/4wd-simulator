@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { ChaseCamera, type ChaseTarget, type Blocker } from '../src/render/chaseCamera';
-import { cameraTuning as C } from '../src/data/camera';
+import { cameraTuning as C, cameraPresets } from '../src/data/camera';
 import { InputManager } from '../src/sim/input/inputManager';
 import { Pad } from '../src/data/controls';
 
@@ -24,6 +24,59 @@ function fixture(blocker: Blocker = (_from, _dir, max) => max, ground = () => -1
 }
 
 describe('vehicle camera orbit', () => {
+  it('cycles front tyre views and a low rear view, then restores the selected follow zoom', () => {
+    const { camera, chase, t, settle } = fixture();
+    chase.zoom(2);
+    const distance = chase.distance;
+    chase.cyclePreset();
+    settle();
+    expect(chase.preset).toBe('frontLeft');
+    expect(camera.position.x).toBeLessThan(-2);
+    expect(camera.position.z).toBeLessThan(-2);
+    expect(camera.position.y).toBeLessThan(2);
+    camera.updateMatrixWorld();
+    for (const x of [-0.725, 0.725]) {
+      const tyre = new Vector3(x, -0.12, -1.15).project(camera);
+      expect(Math.abs(tyre.x)).toBeLessThan(0.9);
+      expect(Math.abs(tyre.y)).toBeLessThan(0.9);
+    }
+    chase.cyclePreset();
+    settle();
+    expect(chase.preset).toBe('frontRight');
+    expect(camera.position.x).toBeGreaterThan(2);
+    expect(camera.position.z).toBeLessThan(-2);
+    t.forward.set(1, 0, 0);
+    settle();
+    expect(camera.position.x).toBeGreaterThan(2);
+    expect(camera.position.z).toBeGreaterThan(2);
+    chase.cyclePreset();
+    settle();
+    expect(chase.preset).toBe('rear');
+    expect(camera.position.x).toBeLessThan(-3);
+    chase.cyclePreset();
+    expect(chase.preset).toBe('follow');
+    expect(chase.distance).toBe(distance);
+  });
+
+  it('keeps crawler presets above terrain and clear of blockers; reset restores follow view', () => {
+    const { camera, chase, settle } = fixture(
+      (_from, _dir, max) => Math.min(max, 3),
+      () => 0,
+    );
+    for (const preset of ['frontLeft', 'frontRight', 'rear'] as const) {
+      chase.selectPreset(preset);
+      chase.orbit(0.15, -0.05);
+      settle();
+      expect(camera.position.y).toBeGreaterThanOrEqual(C.groundClearance);
+      const profile = cameraPresets[preset];
+      const pivot = new Vector3(0, profile.targetHeight, -profile.lookAhead);
+      expect(camera.position.distanceTo(pivot)).toBeLessThan(3 - C.clearance + 0.1);
+      expect(camera.up.toArray()).toEqual([0, 1, 0]);
+    }
+    chase.recenter();
+    expect(chase.preset).toBe('follow');
+  });
+
   it('shows the side and front, keeping the vehicle in the centre of manual views', () => {
     const { camera, chase, settle } = fixture();
     expect(camera.position.z).toBeGreaterThan(0);
@@ -146,6 +199,10 @@ describe('camera keyboard and controller input', () => {
     pad.buttons[Pad.RS].pressed = true;
     input.poll();
     expect(input.pressed('cameraReset')).toBe(true);
+    send('keydown', { code: 'KeyC' });
+    expect(input.pressed('cameraPreset')).toBe(true);
+    input.consumeUi();
+    expect(input.pressed('cameraPreset')).toBe(false);
   });
 
   it('uses D-pad for driving zoom while giving tool adjustments priority, and drains the scroll wheel', () => {

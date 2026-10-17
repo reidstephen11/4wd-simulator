@@ -1,4 +1,5 @@
 import { icons, type PoiIcon } from './icons';
+import { cameraPresets, type CameraPreset } from '../data/camera';
 
 export interface Prompt {
   /** Key or button glyphs, e.g. "E" or "Hold J". */
@@ -39,6 +40,7 @@ export interface HudState {
 export class Hud {
   readonly el: HTMLElement;
   onCameraReset: (() => void) | null = null;
+  onCameraPreset: (() => void) | null = null;
   private readonly compass: HTMLCanvasElement;
   private readonly cctx: CanvasRenderingContext2D;
   private readonly status: HTMLElement;
@@ -54,6 +56,7 @@ export class Hud {
   private readonly cameraHelpEl: HTMLElement;
   private readonly cameraHint: HTMLElement;
   private readonly cameraResetKey: HTMLElement;
+  private readonly cameraPresetButton: HTMLButtonElement;
   private lastCompassKey = '';
   private lastPromptKey = '';
   private readonly iconImages = new Map<string, HTMLImageElement>();
@@ -76,7 +79,8 @@ export class Hud {
       <div class="prompts"></div>
       <div class="camera-help paper">
         <span class="camera-hint">Drag to orbit · Scroll to zoom</span>
-        <button type="button" title="Return behind the vehicle">Reset view <kbd>V</kbd></button>
+        <button type="button" class="camera-preset" aria-label="Camera view" title="Cycle wheel-placement views: C / hold LB + click right stick">View: <span>Follow</span> <kbd>C</kbd></button>
+        <button type="button" class="camera-reset" title="Return behind the vehicle">Reset view <kbd>V</kbd></button>
       </div>
       <div class="toasts"></div>
       <div class="discovery"></div>`;
@@ -100,8 +104,13 @@ export class Hud {
     this.discovery = this.el.querySelector('.discovery') as HTMLElement;
     this.cameraHelpEl = this.el.querySelector('.camera-help') as HTMLElement;
     this.cameraHint = this.el.querySelector('.camera-hint') as HTMLElement;
-    this.cameraResetKey = this.el.querySelector('.camera-help kbd') as HTMLElement;
-    this.el.querySelector('.camera-help button')?.addEventListener('click', (e) => {
+    this.cameraResetKey = this.el.querySelector('.camera-reset kbd') as HTMLElement;
+    this.cameraPresetButton = this.el.querySelector('.camera-preset') as HTMLButtonElement;
+    this.cameraPresetButton.addEventListener('click', () => {
+      this.onCameraPreset?.();
+      this.cameraPresetButton.blur();
+    });
+    this.el.querySelector('.camera-reset')?.addEventListener('click', (e) => {
       this.onCameraReset?.();
       // Return keyboard control to driving after a pointer click (Space is handbrake).
       if ((e as MouseEvent).detail > 0) (e.currentTarget as HTMLButtonElement).blur();
@@ -122,7 +131,7 @@ export class Hud {
     this.el.classList.toggle('hidden', !v);
   }
 
-  cameraHelp(device: 'keyboard' | 'gamepad', visible: boolean, driving: boolean): void {
+  cameraHelp(device: 'keyboard' | 'gamepad', visible: boolean, driving: boolean, preset: CameraPreset): void {
     this.cameraHelpEl.hidden = !visible;
     const hint =
       device === 'keyboard'
@@ -131,6 +140,9 @@ export class Hud {
     if (this.cameraHint.textContent !== hint) this.cameraHint.textContent = hint;
     const key = device === 'keyboard' ? 'V' : 'R3';
     if (this.cameraResetKey.textContent !== key) this.cameraResetKey.textContent = key;
+    this.cameraPresetButton.hidden = !driving;
+    this.cameraPresetButton.querySelector('span')!.textContent = cameraPresets[preset].label;
+    this.cameraPresetButton.querySelector('kbd')!.textContent = device === 'keyboard' ? 'C' : 'LB + R3';
   }
 
   update(s: HudState): void {

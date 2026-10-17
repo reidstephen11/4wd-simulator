@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { cameraTuning as C } from '../data/camera';
+import { cameraTuning as C, cameraPresets, cameraPresetOrder, type CameraPreset } from '../data/camera';
 
 export interface ChaseTarget {
   position: THREE.Vector3;
@@ -20,6 +20,8 @@ export type Blocker = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => 
  */
 export class ChaseCamera {
   distance = C.distance;
+  preset: CameraPreset = 'follow';
+  private followDistance = C.distance;
   /** Look down at the ground ahead (plank placement, picking an anchor). */
   toolView = false;
   private toolBlend = 0;
@@ -56,7 +58,8 @@ export class ChaseCamera {
   orbit(yaw: number, pitch: number): void {
     if (yaw === 0 && pitch === 0) return;
     this.orbitYaw = Math.atan2(Math.sin(this.orbitYaw + yaw), Math.cos(this.orbitYaw + yaw));
-    const base = Math.atan2(C.height, C.distance);
+    const profile = cameraPresets[this.preset];
+    const base = Math.atan2(profile.height, profile.distance);
     this.orbitPitch = THREE.MathUtils.clamp(
       this.orbitPitch + pitch,
       C.minElevation - base,
@@ -67,8 +70,27 @@ export class ChaseCamera {
 
   /** Ease back behind the vehicle, keeping the selected zoom distance. */
   recenter(): void {
+    if (this.preset !== 'follow') {
+      this.preset = 'follow';
+      this.distance = this.followDistance;
+    }
     this.orbitYaw = this.orbitPitch = 0;
     this.manualView = false;
+  }
+
+  selectPreset(preset: CameraPreset): void {
+    if (this.preset === 'follow') this.followDistance = this.distance;
+    this.preset = preset;
+    this.distance = preset === 'follow' ? this.followDistance : cameraPresets[preset].distance;
+    this.orbitYaw = cameraPresets[preset].yaw;
+    this.orbitPitch = 0;
+    this.manualView = preset !== 'follow';
+  }
+
+  cyclePreset(): void {
+    this.selectPreset(
+      cameraPresetOrder[(cameraPresetOrder.indexOf(this.preset) + 1) % cameraPresetOrder.length],
+    );
   }
 
   /** Jump straight to the follow position (after teleports). */
@@ -79,6 +101,7 @@ export class ChaseCamera {
   }
 
   update(dt: number, t: ChaseTarget): void {
+    const profile = cameraPresets[this.preset];
     const fx = t.forward.x;
     const fz = t.forward.z;
     const flat = Math.hypot(fx, fz);
@@ -107,7 +130,9 @@ export class ChaseCamera {
     let dist = this.distance * (1 + C.speedPullback * speedF);
     if (this.speedSmoothed < C.crawlSpeed)
       dist *= C.crawlCloser + (1 - C.crawlCloser) * (this.speedSmoothed / C.crawlSpeed);
-    let height = C.height * (dist / C.distance) ** 0.8 + C.slopeLift * Math.min(1, this.slopeSmoothed / 30);
+    let height =
+      profile.height * (dist / profile.distance) ** 0.8 +
+      C.slopeLift * Math.min(1, this.slopeSmoothed / 30) * (this.preset === 'follow' ? 1 : 0.25);
     const toolLift = this.toolBlend * (1 - this.manualBlend);
     height += toolLift * 4.5;
     dist += toolLift * 1.5;
@@ -122,11 +147,16 @@ export class ChaseCamera {
     // Orbit around the vehicle itself so side/front views keep the wheels in frame.
     this.look
       .copy(t.position)
-      .addScaledVector(t.forward, (C.lookAhead + this.toolBlend * 3.5) * (1 - this.manualBlend));
+      .addScaledVector(
+        t.forward,
+        this.preset === 'follow'
+          ? (C.lookAhead + this.toolBlend * 3.5) * (1 - this.manualBlend)
+          : profile.lookAhead,
+      );
     this.targetY += (t.position.y - this.targetY) * Math.min(1, dt * C.targetHeightRate);
     // Never let the smoothed target fall far behind (big drops, jack, teleports).
     this.targetY = THREE.MathUtils.clamp(this.targetY, t.position.y - 0.6, t.position.y + 0.6);
-    this.look.y = this.targetY + C.targetHeight;
+    this.look.y = this.targetY + profile.targetHeight;
     const desired = new THREE.Vector3().copy(this.look).addScaledVector(back, radius * Math.cos(elevation));
     desired.y += radius * Math.sin(elevation);
 

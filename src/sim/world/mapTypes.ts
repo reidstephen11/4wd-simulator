@@ -249,6 +249,20 @@ export interface VegetationDef {
   boulderDensity: number;
 }
 
+export interface CrawlTrailDef {
+  id: string;
+  name: string;
+  trackId: string;
+  bypassTrackId: string;
+  sections: ReadonlyArray<{
+    from: number;
+    to: number;
+    name: string;
+    hint: string;
+    rocks: CrawlCourseDef['lines'][number]['obstacles'];
+  }>;
+}
+
 export interface BorderDef {
   /** Distance from the map edge over which the border mountains rise. */
   width: number;
@@ -293,6 +307,7 @@ export interface MapDef {
   tors: readonly TorDef[];
   fallenTrees: readonly FallenTreeDef[];
   crawlCourses?: readonly CrawlCourseDef[];
+  crawlTrails?: readonly CrawlTrailDef[];
   vegetation: VegetationDef;
   /** POI id of the spawn campsite. */
   spawnCampsite: string;

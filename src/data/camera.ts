@@ -38,3 +38,27 @@ export const cameraTuning = {
   targetHeightRate: 9,
   groundClearance: 0.6,
 };
+
+export const cameraPresets = {
+  follow: { label: 'Follow', yaw: 0, distance: 7.5, height: 2.1, targetHeight: 1, lookAhead: 1.5 },
+  frontLeft: {
+    label: 'Front left',
+    yaw: -Math.PI * 0.75,
+    distance: 4.8,
+    height: 1.15,
+    targetHeight: 0.2,
+    lookAhead: 0.6,
+  },
+  frontRight: {
+    label: 'Front right',
+    yaw: Math.PI * 0.75,
+    distance: 4.8,
+    height: 1.15,
+    targetHeight: 0.2,
+    lookAhead: 0.6,
+  },
+  rear: { label: 'Rear close', yaw: 0, distance: 4.8, height: 1.25, targetHeight: 0.3, lookAhead: 0 },
+} as const;
+
+export type CameraPreset = keyof typeof cameraPresets;
+export const cameraPresetOrder: readonly CameraPreset[] = ['follow', 'frontLeft', 'frontRight', 'rear'];

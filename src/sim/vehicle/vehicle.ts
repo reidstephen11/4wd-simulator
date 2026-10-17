@@ -117,6 +117,7 @@ export class Vehicle {
   private readonly wheelContacts: WheelContacts;
   private readonly rawWheelRotation = [0, 0, 0, 0];
   private readonly wheelRotationDelta = [0, 0, 0, 0];
+  private articulationBlend = 0;
 
   constructor(
     readonly id: string,
@@ -438,6 +439,16 @@ export class Vehicle {
       c.setWheelSteering(i, STEER_SIGN * a);
     }
 
+    // Ease into softer low-range springs and bars. Match added sag with added rest
+    // length, preserving parked height and the physical bump-stop positions.
+    this.articulationBlend +=
+      ((this.drivetrain.range === 'low' ? 1 : 0) - this.articulationBlend) * Math.min(1, dt * 4);
+    const flex = this.articulationBlend;
+    const extraDroop = t.crawling.extraDroop * flex;
+    const parkedSag = 9.81 / (4 * t.springStiffness);
+    const stiffness = t.springStiffness / (1 + extraDroop / parkedSag);
+    const barScale = 1 + (t.crawling.antiRollScale - 1) * flex;
+
     // Suspension: condition multiplier, mud sink and anti-roll bars. A bar shifts load
     // from the less compressed wheel to the more compressed one on the same axle; we do
     // that by moving spring preload (rest length) between them.
@@ -449,8 +460,8 @@ export class Vehicle {
       const wj = this.wheels[j];
       let shift = 0;
       if (wi.contact && wj.contact) {
-        const springRate = t.springStiffness * t.mass;
-        shift = (k * (wj.suspension - wi.suspension)) / springRate;
+        const springRate = stiffness * t.mass;
+        shift = (k * barScale * (wj.suspension - wi.suspension)) / springRate;
         shift = Math.max(-0.08, Math.min(0.08, shift));
       }
       this.preload[i] = shift;
@@ -462,8 +473,17 @@ export class Vehicle {
         ? surfaces[w.surface].sink * Math.min(1, 0.4 + w.spin + (Math.abs(this.speed) < 2 ? 0.4 : 0))
         : 0;
       w.sink += (sinkTarget - w.sink) * Math.min(1, dt * (sinkTarget > w.sink ? 0.8 : 2.5));
-      c.setWheelSuspensionRestLength(i, t.suspensionRestLength + w.sink + this.preload[i]);
-      c.setWheelSuspensionStiffness(i, t.springStiffness * suspensionStiffnessMultiplier(this.condition, i));
+      c.setWheelMaxSuspensionTravel(i, t.suspensionTravel + extraDroop);
+      c.setWheelSuspensionCompression(
+        i,
+        t.damperCompression + (t.crawling.damperCompression - t.damperCompression) * flex,
+      );
+      c.setWheelSuspensionRelaxation(
+        i,
+        t.damperRelaxation + (t.crawling.damperRelaxation - t.damperRelaxation) * flex,
+      );
+      c.setWheelSuspensionRestLength(i, t.suspensionRestLength + extraDroop + w.sink + this.preload[i]);
+      c.setWheelSuspensionStiffness(i, stiffness * suspensionStiffnessMultiplier(this.condition, i));
     }
 
     this.wheelContacts.update(this.body, c, WHEEL_FILTER);

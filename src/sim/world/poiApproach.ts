@@ -3,6 +3,7 @@ import type { TrackInfo } from './features';
 
 /** Which track to arrive on, where the nearest one isn't the natural approach. */
 export const PREFERRED_APPROACH: Record<string, string> = {
+  'granite-link': 'mine-track',
   staircase: 'staircase',
   'dingo-gap': 'main-track',
   falls: 'bog-track',
