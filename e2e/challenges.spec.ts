@@ -3,6 +3,36 @@ import { challengeTrails, challengeTracks } from '../src/data/challenges';
 import { densify, pointAt } from '../src/sim/world/polyline';
 import { collectErrors, shot, waitReady, waitSim } from './helpers';
 
+test('clustered challenge discoveries render clearly on the paper map', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.addInitScript(
+    (ids) =>
+      localStorage.setItem(
+        '4wdsim.save.v1',
+        JSON.stringify({
+          version: 1,
+          exploration: { discovered: ids, lastCampsite: 'river-flat-camp' },
+          settings: { quality: 'low', masterVolume: 0 },
+        }),
+      ),
+    challengeTrails.map((t) => t.id),
+  );
+  await page.goto('/');
+  await waitReady(page);
+  await page.keyboard.press('KeyM');
+  await expect(page.locator('.paper-map-sheet')).toBeVisible();
+  await page
+    .locator('.paper-map-sheet')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('.paper-map canvas')!;
+    const p = canvas.getContext('2d')!.getImageData(700, 700, 1, 1).data;
+    return p[0] !== 243 || p[1] !== 235 || p[2] !== 218;
+  });
+  await shot(page, 'challenges', 'discovered-challenges-map');
+  expect(errors).toEqual([]);
+});
+
 test('all four 4WD challenges have obstacle guidance, easy bypasses, and map discovery', async ({ page }) => {
   test.setTimeout(300_000);
   const errors = collectErrors(page);
@@ -28,7 +58,14 @@ test('all four 4WD challenges have obstacle guidance, easy bypasses, and map dis
       track.points.map((p) => [p[0], p[1]] as const),
       1,
     );
-    const at = trail.id === 'log-steps' ? 6 : trail.id === 'boulder-gates' ? 7 : 12;
+    const at =
+      trail.id === 'sidewinder-shelf'
+        ? 2
+        : trail.id === 'log-steps'
+          ? 6
+          : trail.id === 'boulder-gates'
+            ? 7
+            : 12;
     const p = pointAt(poly, at);
     await page.evaluate(
       (p) => window.__game!.teleport(p.x, p.z, (Math.atan2(p.dx, -p.dz) * 180) / Math.PI),
@@ -38,6 +75,14 @@ test('all four 4WD challenges have obstacle guidance, easy bypasses, and map dis
       `${trail.name} · ${trail.difficulty === 'hard' ? 'Hard challenge' : 'Moderate challenge'}`,
     );
     await expect(page.locator('.course-hint span')).toHaveText(trail.sections[0].hint);
+    if (trail.id === 'sidewinder-shelf') {
+      // Enter the raised shelf from its ramp; a terrain-only teleport into its
+      // middle would start the chassis inside the solid rock.
+      await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
+      await waitSim(page, 8);
+      await page.evaluate(() => window.__game!.setInput({ handbrake: true }));
+      expect((await page.evaluate(() => window.__game!.vehicle())).tilt).toBeLessThan(35);
+    }
     await waitSim(page, 0.15);
     expect(await page.evaluate(() => window.__game!.discovered())).toContain(trail.id);
     await page.keyboard.press('KeyC');
@@ -67,6 +112,9 @@ test('all four 4WD challenges have obstacle guidance, easy bypasses, and map dis
   expect((await page.evaluate(() => window.__game!.pois())).length).toBe(20);
   await page.keyboard.press('KeyM');
   await expect.poll(() => page.evaluate(() => window.__game!.ui().map)).toBe(true);
+  await page
+    .locator('.paper-map-sheet')
+    .evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
   await shot(page, 'challenges', 'discovered-challenges-map');
   await page.keyboard.press('KeyM');
   await page.evaluate(() => {
