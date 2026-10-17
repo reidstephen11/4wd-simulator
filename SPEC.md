@@ -180,6 +180,7 @@ Keyboard steering is smoothed (ramps in and out) so it feels close to an analogu
 - Rolls if you corner hard above ~40 km/h on a side slope, or drive across a slope steeper than ~35°.
 - Slides on mud and loose gravel; grips well on dry rock at low speed.
 - Body visibly leans in corners, dips under braking, and wheels drop into holes.
+- Low range eases into softer springs and anti-roll resistance with 6 cm extra droop. Parked body height and bump stops remain unchanged; high range restores the normal suspension.
 - Landing from small jumps is bouncy but recoverable; big drops can roll the car.
 
 ### 6.3 Surfaces (`data/surfaces.ts`)
@@ -278,6 +279,7 @@ Keep the screen mostly clear. Use a warm, hand-drawn look: off-white paper tones
 | Orbit camera | Mouse drag / Num 4 6 8 2 | Right stick |
 | Camera distance | Scroll | D-pad left/right (driving) |
 | Recenter camera | V / Num 5 | Right stick click |
+| Cycle crawler camera views | C / View button | Hold LB + click right stick |
 | Horn | H | Left stick click |
 | Map | M | View / Select |
 | Pause | Esc | Start / Options |

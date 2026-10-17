@@ -3,7 +3,9 @@ import { floodTuning } from '../data/tools';
 import type { Device } from '../sim/input/inputManager';
 import type { VehicleTools } from '../sim/tools/tools';
 import type { Vehicle } from '../sim/vehicle/vehicle';
-import type { CrawlCourseDef, PoiDef } from '../sim/world/mapTypes';
+import type { CrawlCourseDef, CrawlTrailDef, PoiDef } from '../sim/world/mapTypes';
+import type { TrackInfo } from '../sim/world/features';
+import { trailProgress } from '../sim/world/crawlTrail';
 import { headingOf } from '../sim/vehicle/math';
 import type { CompassPoi, HudState, Prompt } from '../ui/hud';
 import type { ToolMode } from './toolController';
@@ -17,6 +19,8 @@ export interface HudInputs {
   discovered: ReadonlySet<string>;
   pois: readonly PoiDef[];
   crawlCourses?: readonly CrawlCourseDef[];
+  crawlTrails?: readonly CrawlTrailDef[];
+  tracks?: readonly TrackInfo[];
   /** Is there a winch anchor in reach (checked a few times a second)? */
   anchorInReach: boolean;
 }
@@ -87,8 +91,31 @@ export function buildHudState(i: HudInputs): HudState {
         text: line.hint,
         controls:
           i.device === 'gamepad'
-            ? 'Y low range · Hold LB for lockers and precision crawl'
-            : `${g.range} low range · ${g.frontDiff} front · ${g.rearDiff} rear · ${g.precision} crawl`,
+            ? 'Y low range · LB tools · LB + R3 views'
+            : `${g.range} low range · ${g.frontDiff} front · ${g.rearDiff} rear · ${g.precision} crawl · C views`,
+      };
+      break;
+    }
+
+  if (!courseHint && i.mode === 'drive')
+    for (const trail of i.crawlTrails ?? []) {
+      const near = (i.tracks ?? [])
+        .filter((t) => t.def.id === trail.trackId || t.def.id === trail.bypassTrackId)
+        .map((track) => ({ track, ...trailProgress(track, p.x, p.z) }))
+        .sort((a, b) => a.distance - b.distance)[0];
+      if (!near || near.distance > near.track.def.width / 2 + 1) continue;
+      const bypass = near.track.def.id === trail.bypassTrackId;
+      const section = trail.sections.find((s) => near.along >= s.from && near.along <= s.to);
+      courseHint = {
+        title: bypass
+          ? `Easy · ${trail.name} bypass`
+          : `${trail.name} · ${section?.name ?? 'Technical trail'}`,
+        text: bypass
+          ? 'Follow the green markers for the wider gravel route between the trail exit and camp. Amber markers lead through the technical rocks.'
+          : (section?.hint ?? 'Follow the amber markers. The green gravel bypass connects both ends.'),
+        controls: kb
+          ? 'L low range · P crawl · Z / X lockers · C views'
+          : 'Y low range · LB tools · LB + R3 views',
       };
       break;
     }

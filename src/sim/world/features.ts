@@ -29,6 +29,8 @@ export interface StaticBox {
   yaw: number;
   /** Tilt about the box's local z axis (radians), applied after yaw. */
   roll?: number;
+  /** Chamfered granite hull; rendering and collision share the same vertices. */
+  bevel?: number;
 }
 
 export interface GullyInfo {

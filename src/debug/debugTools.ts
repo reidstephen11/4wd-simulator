@@ -51,7 +51,7 @@ export class DebugTools {
     this.panel = document.createElement('div');
     this.panel.className = 'debug-panel';
     this.panel.innerHTML = `<details open><summary>Debug</summary>
-      <div class="debug-row"><button data-act="free">Free camera (C)</button><button data-act="coll">Colliders</button></div>
+      <div class="debug-row"><button data-act="free">Free camera (backtick)</button><button data-act="coll">Colliders</button></div>
       <details><summary>Teleport</summary><div class="debug-teleports"></div></details>
       <details><summary>Sounds</summary><div class="debug-row"><button data-bird="kookaburra">Kookaburra</button><button data-bird="magpie">Magpie</button></div></details>
       <details><summary>Vehicle tuning</summary><div class="debug-sliders"></div></details>

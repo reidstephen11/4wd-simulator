@@ -46,6 +46,7 @@ Sound starts after your first click or key press (browser rule).
 | Orbit camera                   | Mouse drag (left or right button), or Num 4/6/8/2     | Right stick                                          |
 | Camera distance                | Scroll                                                | D-pad left/right while driving                       |
 | Recenter camera                | V or Num 5, or the Reset view button                  | Right stick click                                    |
+| Cycle crawler views            | C, or the View button                                 | Hold LB + click right stick                          |
 | Horn                           | H                                                     | Left stick click                                     |
 | Map                            | M                                                     | View / Select                                        |
 | Pause                          | Esc                                                   | Start / Options                                      |
@@ -60,20 +61,27 @@ Select **low range (L)**, then toggle **precision crawl (P)**. Hold W for a forw
 
 Toggle the **rear locker with X** and **front locker with Z**. A locked axle keeps using the grounded tyre when its partner lifts. Engage below 5 km/h; unlocking is always allowed. Front lock increases the turning radius, so unlock it for tight manoeuvres. The status buttons show each axle's state and can also be clicked. On gamepad, hold LB, point the left stick at the front locker, rear locker or precision crawl option, then release LB to select it.
 
+Low range also softens the springs and anti-roll bars, adds 6 cm of suspension droop and adjusts the dampers. The tyres can stay loaded over diagonal rocks while parked body height and bump clearance stay the same. Returning to high range restores the normal suspension support.
+
+Press **C** or click **View** to cycle Follow → Front left → Front right → Rear close. The front views look low across the tyres for placing a wheel on a rock; the rear view helps judge the belly and rear axle. Mouse drag, right-stick orbit and zoom still work. **V / R3 / Reset view** returns to follow and restores its previous zoom. On gamepad, hold **LB and click R3** to cycle views without choosing a tool.
+
+The **Granite Link** starts just east of the camp course. Follow the amber markers through about 70 m of split rocks, an off-camber shelf and granite ledges. Marked boulders beside the trail provide winch anchors. The wider, green-marked gravel bypass connects the same entrance and exit, making a loop back to camp. Both routes work in either direction; section hints explain the obstacle nearby. The rocks' chamfered surfaces use the same vertices for rendering and collision.
+
 ## Debug mode
 
 Add `?debug` to the URL (for example `http://localhost:5173/?debug` or `https://reidstephen11.github.io/4wd-simulator/?debug`). You get:
 
 - An overlay with FPS, a frame-time graph, draw calls, triangles, main-thread time (simulation and rendering), vehicle state (speed, gear, rpm, surface and load per wheel), winch, flooding, dirt, sound levels and particle counts.
-- A panel with: free-fly camera (also **C**), physics collider wireframes and wheel contact points, a teleport button for every place on the map, buttons to play each bird call, and live sliders for the main vehicle tuning values.
+- A panel with: free-fly camera (also the **backtick key**), physics collider wireframes and wheel contact points, a teleport button for every place on the map, buttons to play each bird call, and live sliders for the main vehicle tuning values.
 
 ## What to test
 
 The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 
 - [ ] It loads from the Pages link in current Chrome, Firefox and Edge.
-- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (15 places; the map fills in as you find them).
+- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (16 places; the map fills in as you find them).
 - [ ] **Camp logs:** select low range (L) and crawl over both logs without a run-up. Try reverse and a line with only one wheel on each axle crossing the log; the tyres should climb before the body touches.
+- [ ] **Granite Link:** follow the amber trail through all three rock sections, then return on the green gravel bypass. Try C / View at a diagonal obstacle to see the axle flex; confirm V restores follow. Try the loop in the opposite direction.
 - [ ] **Deep Crossing:** drive into the deep channel and sit there — the engine sputters after about 5 s under water and stalls at 10 s. It restarts on throttle once the air intake has been clear for 20 s.
 - [ ] **The Staircase:** the rocky climb needs low range (press L while slow); high range shouldn't make it.
 - [ ] **Washout Gully:** the car can't cross the 1.2 m gap on its own. Lay both planks across it (tool menu → Place planks) or take the detour around the top end.

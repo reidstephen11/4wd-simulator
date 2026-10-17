@@ -1,4 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { rockShape } from './world/rockShape';
 import { PHYSICS_DT } from '../core/config';
 import { SurfaceId } from '../data/surfaces';
 import type { StaticBox } from './world/features';
@@ -97,8 +98,11 @@ export class Physics {
 
   addStaticBox(box: StaticBox, surface: SurfaceId, friction = 0.9): RAPIER.Collider {
     const q = boxQuat(box.yaw, box.roll ?? 0);
+    const shape = box.bevel
+      ? this.R.ColliderDesc.convexHull(rockShape(box.hx, box.hy, box.hz, box.bevel).vertices)!
+      : this.R.ColliderDesc.cuboid(box.hx, box.hy, box.hz);
     const c = this.world.createCollider(
-      this.R.ColliderDesc.cuboid(box.hx, box.hy, box.hz)
+      shape
         .setTranslation(box.x, box.y, box.z)
         .setRotation(q)
         .setFriction(friction)

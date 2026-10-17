@@ -69,6 +69,11 @@ export interface VehicleTuning {
     reverseKmh: number;
     speedGain: number;
     brakeGain: number;
+    /** Extra loaded sag and droop in low range; ride height and bump stops stay fixed. */
+    extraDroop: number;
+    antiRollScale: number;
+    damperCompression: number;
+    damperRelaxation: number;
   };
   /** Base lateral friction coefficient (multiplied by surface grip). */
   lateralGrip: number;
@@ -190,6 +195,10 @@ export const vehicleTuning: VehicleTuning = {
     reverseKmh: 2,
     speedGain: 3,
     brakeGain: 0.8,
+    extraDroop: 0.06,
+    antiRollScale: 0.18,
+    damperCompression: 2.1,
+    damperRelaxation: 3,
   },
   lateralGrip: 0.9,
   rollTorqueScale: 1.0,

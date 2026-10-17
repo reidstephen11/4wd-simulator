@@ -5,6 +5,7 @@ import { Autopilot } from '../sim/input/autopilot';
 import { poiApproach } from '../sim/world/poiApproach';
 import { headingOf } from '../sim/vehicle/math';
 import type { Game } from './game';
+import type { CameraPreset } from '../data/camera';
 
 const LOCAL = 'player-1';
 
@@ -13,7 +14,7 @@ export interface GameHook {
   ready: boolean;
   setCamera(x: number, y: number, z: number, tx: number, ty: number, tz: number): void;
   useChaseCamera(): void;
-  camera(): { position: number[]; direction: number[]; distance: number };
+  camera(): { position: number[]; direction: number[]; distance: number; preset: CameraPreset };
   stats(): {
     fps: number;
     frameMs: number;
@@ -97,6 +98,7 @@ export function installHook(game: Game): void {
       position: g.view.camera.position.toArray(),
       direction: g.view.camera.getWorldDirection(new THREE.Vector3()).toArray(),
       distance: g.chase.distance,
+      preset: g.chase.preset,
     }),
     stats: () => ({
       fps: g.overlay?.fps ?? 0,

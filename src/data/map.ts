@@ -1,5 +1,6 @@
 import type { MapDef } from '../sim/world/mapTypes';
 import { campCrawlCourse, campCourseSigns } from './crawlCourse';
+import { graniteLink, graniteLinkTracks, graniteLinkSigns, graniteLinkAnchors } from './crawlTrail';
 
 /**
  * High Country map (SPEC §5). Hand-authored main features; small detail comes
@@ -153,6 +154,7 @@ export const highCountryMap: MapDef = {
     ],
   },
   tracks: [
+    ...graniteLinkTracks,
     {
       id: 'entry-road',
       name: 'Entry road',
@@ -405,6 +407,16 @@ export const highCountryMap: MapDef = {
   gullies: [{ id: 'washout-gully', x: 90, z: 282, headingDeg: 0, length: 112, gap: 1.2, depth: 1.6 }],
   pois: [
     {
+      id: graniteLink.id,
+      name: graniteLink.name,
+      kind: 'feature',
+      x: -96,
+      z: 259,
+      radius: 12,
+      reset: { x: -99, z: 264, headingDeg: 34 },
+      note: 'Technical rock loop beside camp: split rocks, an off-camber shelf and granite steps. The wider gravel bypass reconnects both ends; marked boulders are winch anchors.',
+    },
+    {
       id: campCrawlCourse.id,
       name: campCrawlCourse.name,
       kind: 'feature',
@@ -488,6 +500,7 @@ export const highCountryMap: MapDef = {
     },
   ],
   props: [
+    ...graniteLinkSigns,
     ...campCourseSigns,
     { kind: 'fireRing', x: -164, z: 244, headingDeg: 0, flatten: 3 },
     { kind: 'logSeat', x: -168.5, z: 246.5, headingDeg: 60 },
@@ -506,6 +519,7 @@ export const highCountryMap: MapDef = {
     { kind: 'signpost', x: 32, z: 300, headingDeg: 180, text: 'Washout — detour' },
   ],
   boulders: [
+    ...graniteLinkAnchors,
     { x: 150, z: -20, radius: 1.3, anchor: true },
     { x: 204, z: -9, radius: 1.2, anchor: true },
     { x: 196, z: 18, radius: 1.1, anchor: true },
@@ -534,6 +548,7 @@ export const highCountryMap: MapDef = {
   ],
   fallenTrees: [{ id: 'fallen-tree', x: -489, z: -140, headingDeg: 82, length: 12, radius: 0.42, mass: 750 }],
   crawlCourses: [campCrawlCourse],
+  crawlTrails: [graniteLink],
   vegetation: {
     maxTreeDensity: 1.5,
     ashBelow: 48,

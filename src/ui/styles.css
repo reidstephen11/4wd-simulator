@@ -64,6 +64,10 @@ body {
   background: var(--paper-dark);
 }
 
+.camera-help button[hidden] {
+  display: none;
+}
+
 .camera-help kbd {
   margin-left: 5px;
   font: inherit;

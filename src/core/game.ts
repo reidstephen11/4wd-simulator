@@ -114,6 +114,7 @@ export class Game {
 
     this.hud = new Hud(uiRoot, (action) => this.input.requestDriveAction(action));
     this.hud.onCameraReset = () => this.chase.recenter();
+    this.hud.onCameraPreset = () => this.chase.cyclePreset();
     this.toolMenu = new ToolMenu(uiRoot);
     this.toolMenu.onPick = (id) => this.pickTool(id);
     this.map = new PaperMap(uiRoot, world);
@@ -145,7 +146,7 @@ export class Game {
         })
       : null;
     window.addEventListener('keydown', (e) => {
-      if (this.debug && e.code === 'KeyC') this.toggleFreeCam();
+      if (this.debug && e.code === 'Backquote' && !e.repeat) this.toggleFreeCam();
     });
 
     sim.events.on('tool', ({ event }) => this.onToolEvent(event));
@@ -474,21 +475,37 @@ export class Game {
   private renderFrame(alpha: number, frameDt: number): void {
     this.input.poll();
     this.clock += frameDt;
+    const cameraWasEnabled = !this.freeCamOn && !this.loop.paused && !this.toolMenu.isOpen;
     const usedByTool = this.tool.update(frameDt);
-    if (!usedByTool) this.handleUi();
+    const cameraChord =
+      this.input.pressed('cameraReset') &&
+      this.input.held('toolMenu') &&
+      !this.loop.paused &&
+      !this.freeCamOn &&
+      this.tool.mode === 'drive';
+    if (cameraChord) {
+      this.toolMenu.close(false);
+      this.chase.cyclePreset();
+    } else if (!usedByTool) this.handleUi();
     this.input.vehicleEnabled =
       !this.freeCamOn && !this.toolMenu.isOpen && !this.loop.paused && this.tool.mode === 'drive';
     const cameraEnabled = !this.freeCamOn && !this.loop.paused && !this.toolMenu.isOpen;
     this.cameraDrag.update();
     // Always drain the wheel, including while menus or the debug camera use it.
     const zoom = this.input.takeZoom(frameDt, this.tool.mode === 'drive');
-    if (cameraEnabled) {
+    if (cameraEnabled && cameraWasEnabled) {
       const orbit = this.input.cameraOrbit(frameDt);
       this.chase.orbit(orbit.yaw, orbit.pitch);
       this.chase.zoom(zoom);
-      if (this.input.pressed('cameraReset')) this.chase.recenter();
+      if (this.input.pressed('cameraReset') && !cameraChord) this.chase.recenter();
+      if (this.input.pressed('cameraPreset') && this.tool.mode === 'drive') this.chase.cyclePreset();
     }
-    this.hud.cameraHelp(this.input.activeDevice, cameraEnabled, this.tool.mode === 'drive');
+    this.hud.cameraHelp(
+      this.input.activeDevice,
+      cameraEnabled,
+      this.tool.mode === 'drive',
+      this.chase.preset,
+    );
     const v = this.vehicle;
     const tools = this.sim.toolsOf(LOCAL_VEHICLE);
     this.anchorCheck -= frameDt;
@@ -530,6 +547,8 @@ export class Game {
         discovered: this.exploration.discovered,
         pois: this.world.pois,
         crawlCourses: this.world.map.crawlCourses,
+        crawlTrails: this.world.map.crawlTrails,
+        tracks: this.world.features.tracks,
         anchorInReach: this.anchorInReach,
       }),
     );
