@@ -158,7 +158,7 @@ export const controlsTable: ReadonlyArray<readonly [string, string, string]> = [
   ['Handbrake', 'Space', 'X / Square'],
   ['Toggle high/low range', 'L', 'Y / Triangle'],
   ['Toggle front / rear diff lock', 'Z / X (below 5 km/h to engage)', 'Hold LB → front / rear diff'],
-  ['Toggle precision crawl', 'P (2.5 km/h forward, 2 km/h reverse)', 'Hold LB → precision crawl'],
+  ['Toggle precision crawl', 'P (3 km/h forward, 2.5 km/h reverse)', 'Hold LB → precision crawl'],
   ['Winch quick attach / detach', 'E', 'RB'],
   ['Winch in / out', 'R / F', 'D-pad up / down'],
   ['Tool menu', 'Hold Q', 'Hold LB'],

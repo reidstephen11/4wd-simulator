@@ -57,7 +57,7 @@ Placing planks: choose **Place planks** in the tool menu, move them with W/S, tu
 
 The **Camp Rock Course** is about 40 m east of River Flat Camp; follow the sign beside camp. Three marked lines progress from low warm-up steps to cross-axle rocks and a harder ledge line. Each line has entrance and exit markers, a difficulty sign and nearby driving hints. The course also appears on the map once discovered.
 
-Select **low range (L)**, then toggle **precision crawl (P)**. Hold W for a forward target of 2.5 km/h; S still brakes normally while moving forwards, then targets 2 km/h in reverse once stopped. Precision mode adjusts throttle and brakes to control descents while retaining full engine effort for climbing. Analogue triggers vary the target speed. Release the controls to stop, or press P again for normal driving.
+Select **low range (L)**, then toggle **precision crawl (P)**. Hold W for a forward target of 3 km/h; S still brakes normally while moving forwards, then targets 2.5 km/h in reverse once stopped. Precision mode adjusts throttle and brakes to control descents while retaining full engine effort for climbing. Analogue triggers vary the target speed. Release the controls to stop, or press P again for normal driving.
 
 Toggle the **rear locker with X** and **front locker with Z**. A locked axle keeps using the grounded tyre when its partner lifts. Engage below 5 km/h; unlocking is always allowed. Front lock increases the turning radius, so unlock it for tight manoeuvres. The status buttons show each axle's state and can also be clicked. On gamepad, hold LB, point the left stick at the front locker, rear locker or precision crawl option, then release LB to select it.
 
