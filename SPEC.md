@@ -2,7 +2,7 @@
 
 A relaxed, single-player off-road exploration game that runs in the browser. You drive a classic 1970s-style 4WD through a hand-designed patch of Australian high country, using a winch, planks and careful line choice to get over rough ground. There are no races, scores, currency or objectives. The point is the drive and finding what's over the next hill.
 
-Inspired by *Over The Hill* (Funselektor, 2026). Use none of its names, assets, logos or text. The vehicle is a generic design with no real-world brand.
+Inspired by *Over The Hill* (Funselektor, 2026). Use none of its names, assets, logos or text. At the user’s request, the vehicle now takes its shape from a 1970s Land Cruiser 40 Series, with original geometry and no copied badges or logos.
 
 ---
 
@@ -114,7 +114,7 @@ Vary each colour slightly per vertex/instance (±4% brightness, small hue shift)
 
 **Effects:** dust trail on dry dirt, mud spray from bog holes, water splash and wake in the creek. Particles are small flat-shaded quads or low-poly chunks in palette colours.
 
-**Vehicle look:** short-wheelbase 1970s 4WD silhouette (boxy body, round headlights, flat bonnet, roof rack, spare wheel on the back, front winch on the bumper). Generic, no badges. Visible suspension movement: wheels move independently, and the body leans and pitches.
+**Vehicle look:** a detailed, short-wheelbase 1970s Land Cruiser 40 Series-inspired design: narrow rounded bonnet, separate front wings and open wheel arches, cream hardtop, framed translucent glass, split rear doors and full cabin. Model lights and lens ribs, seals, latches, hinges, mirrors, six-stud steel wheels, tread blocks, spare carrier, jerry can, winch hardware and strapped roof gear. No copied logos or badges. Wheels, solid axles and dampers follow the simulation; brake lenses brighten when braking, and carried planks disappear individually as they are placed.
 
 ---
 

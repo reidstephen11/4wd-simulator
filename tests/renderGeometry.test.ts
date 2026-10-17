@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import type { BufferGeometry } from 'three';
+import {
+  DoubleSide,
+  Mesh,
+  MeshBasicMaterial,
+  Raycaster,
+  Vector3,
+  type BufferGeometry,
+  type MeshStandardMaterial,
+} from 'three';
 import { Terrain, GroundTint, NO_WATER } from '../src/sim/world/terrain';
 import { TerrainMesh } from '../src/render/terrainMesh';
 import { VehicleModel } from '../src/render/vehicleModel';
 import { vehicleTuning } from '../src/data/vehicle';
 import { createCondition } from '../src/sim/vehicle/condition';
+import { makeScene } from './helpers/scenes';
 
 function fixture(): Terrain {
   const size = 256,
@@ -87,5 +96,54 @@ describe('graphics geometry regression', () => {
     expect(geometry.getAttribute('color').array).not.toEqual(colors);
     expect(geometry.getAttribute('position').array).not.toEqual(positions);
     expect(Array.from(geometry.getAttribute('normal').array).every(Number.isFinite)).toBe(true);
+  });
+
+  it('leaves real clearance through each wheel opening and the inboard floor', () => {
+    const model = new VehicleModel(vehicleTuning);
+    const shell = new Mesh(model.body.geometry, new MeshBasicMaterial({ side: DoubleSide }));
+    shell.updateMatrixWorld();
+    for (const wheel of vehicleTuning.wheels) {
+      const side = Math.sign(wheel.x);
+      const ray = new Raycaster(new Vector3(side * 0.6, 0.25, wheel.z), new Vector3(side, 0, 0), 0, 0.36);
+      expect(ray.intersectObject(shell)).toHaveLength(0);
+    }
+  });
+
+  it('articulates the solid axles and hides only the boards that have been placed', () => {
+    const model = new VehicleModel(vehicleTuning);
+    model.suspension.update([0.11, -0.08, -0.04, 0.03]);
+    expect(model.suspension.axles[0].position.y).toBeCloseTo(0.015);
+    expect(model.suspension.axles[0].rotation.z).toBeLessThan(0);
+    expect(model.suspension.axles[1].position.y).toBeCloseTo(-0.005);
+    expect(model.suspension.axles[1].rotation.z).toBeGreaterThan(0);
+    expect(model.suspension.axles.map((axle) => axle.position.z)).toEqual([-1.15, 1.15]);
+    model.setPlanksOnRack(1);
+    expect(model.rackPlanks.children.filter((plank) => plank.visible)).toHaveLength(1);
+    model.setPlanksOnRack(0);
+    expect(model.rackPlanks.visible).toBe(false);
+    model.setPlanksOnRack(2);
+    expect(model.rackPlanks.visible).toBe(true);
+    expect(model.rackPlanks.children.filter((plank) => plank.visible)).toHaveLength(2);
+  });
+
+  it('updates the detailed model from real suspension, steering and brake input', async () => {
+    const scene = await makeScene({ speed: 5 });
+    const model = new VehicleModel(vehicleTuning);
+    const lenses = model.body.material as MeshStandardMaterial[];
+    model.update(scene.vehicle, 1, 1 / 60);
+    const running = lenses[5].emissiveIntensity;
+    scene.run(0.15, { brake: 1, steer: 0.5 });
+    model.update(scene.vehicle, 1, 1 / 60);
+    expect(lenses[5].emissiveIntensity).toBeGreaterThan(running);
+    expect(Math.abs(model.wheels[0].pivot.rotation.y)).toBeGreaterThan(0);
+    for (let i = 0; i < 4; i++) {
+      expect(model.wheels[i].pivot.position.y).toBeCloseTo(
+        vehicleTuning.wheels[i].y - scene.vehicle.wheels[i].suspension,
+      );
+    }
+    const position = scene.vehicle.body.translation();
+    expect(model.root.position.toArray()).toEqual([position.x, position.y, position.z]);
+    expect(model.suspension.axles.every((axle) => axle.position.toArray().every(Number.isFinite))).toBe(true);
+    scene.physics.world.free();
   });
 });

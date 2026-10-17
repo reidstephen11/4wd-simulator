@@ -1,6 +1,6 @@
 # 4WD Simulator
 
-A relaxed, single-player off-road exploration game that runs in the browser. Drive a classic short-wheelbase 4WD through a patch of Australian high country, using a winch, planks and careful line choice to get over rough ground. No races, no scores — just the drive and what's over the next hill.
+A relaxed, single-player off-road exploration game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD through a patch of Australian high country, using a winch, planks and careful line choice to get over rough ground. No races, no scores — just the drive and what's over the next hill.
 
 Built with Three.js, Rapier physics and TypeScript. Everything, including leaf textures, terrain detail and sound, is generated in code; there are no downloaded asset files. Graphics use smooth terrain lighting, fine eucalyptus foliage, reflective water and detailed vehicle materials. High quality uses the full resolution of displays with up to 2× pixel density.
 
