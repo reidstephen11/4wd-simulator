@@ -191,8 +191,8 @@ export const vehicleTuning: VehicleTuning = {
   crawling: {
     diffLockMaxKmh: 5,
     frontLockSteering: 0.72,
-    forwardKmh: 3,
-    reverseKmh: 2.5,
+    forwardKmh: 6,
+    reverseKmh: 5,
     speedGain: 3,
     brakeGain: 1.1,
     extraDroop: 0.06,

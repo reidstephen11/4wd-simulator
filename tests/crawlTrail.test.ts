@@ -3,6 +3,7 @@ import { BufferGeometry, Float32BufferAttribute, Mesh, MeshBasicMaterial, Raycas
 import { graniteLink } from '../src/data/crawlTrail';
 import { lateAfternoon } from '../src/data/environment';
 import { SurfaceId } from '../src/data/surfaces';
+import { vehicleTuning } from '../src/data/vehicle';
 import { Autopilot } from '../src/sim/input/autopilot';
 import { emptyInput } from '../src/sim/input/vehicleInput';
 import { flatDirt, loadRapier, Physics } from '../src/sim/physics';
@@ -62,7 +63,7 @@ describe('Granite Link trail and bypass', () => {
           expect(sections.size).toBe(3);
           expect(maxTilt).toBeLessThan(bypass ? 18 : 30);
           if (!bypass) expect(maxTilt).toBeGreaterThan(12);
-          expect(maxSpeed).toBeLessThan(1.5);
+          expect(maxSpeed).toBeLessThan(vehicleTuning.crawling.forwardKmh / 3.6 + 0.4);
           expect(maxDeviation).toBeLessThan(track.def.width / 2);
         } finally {
           sim.physics.free();
