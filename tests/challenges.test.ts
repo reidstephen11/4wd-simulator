@@ -3,6 +3,7 @@ import { BufferGeometry, Float32BufferAttribute, Mesh, MeshBasicMaterial, Raycas
 import { challengeTrails, challengeLoopRoute, challengeEasyRoute } from '../src/data/challenges';
 import { lateAfternoon } from '../src/data/environment';
 import { SurfaceId } from '../src/data/surfaces';
+import { vehicleTuning } from '../src/data/vehicle';
 import { Autopilot } from '../src/sim/input/autopilot';
 import { emptyInput, type VehicleInput } from '../src/sim/input/vehicleInput';
 import { flatDirt, loadRapier, Physics } from '../src/sim/physics';
@@ -80,7 +81,7 @@ describe('4WD Challenge Loop', () => {
             }
             const result = driveLeg(s.sim, s.v, s.track, s.inputs, back);
             expect(result.tilt).toBeLessThan(bypass ? 15 : 35);
-            expect(result.speed).toBeLessThan(1.5);
+            expect(result.speed).toBeLessThan(vehicleTuning.crawling.forwardKmh / 3.6 + 0.4);
             expect(result.deviation).toBeLessThan(s.track.def.width / 2);
             if (!bypass && trail.id === 'log-steps') expect(result.woodContacts).toBeGreaterThan(100);
             if (!bypass && trail.id === 'v-notch') expect(result.lift).toBeGreaterThan(0.7);

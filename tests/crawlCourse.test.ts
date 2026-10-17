@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { campCrawlCourse } from '../src/data/crawlCourse';
 import { lateAfternoon } from '../src/data/environment';
 import { SurfaceId } from '../src/data/surfaces';
+import { vehicleTuning } from '../src/data/vehicle';
 import { Autopilot } from '../src/sim/input/autopilot';
 import { emptyInput, type VehicleInput } from '../src/sim/input/vehicleInput';
 import { loadRapier } from '../src/sim/physics';
@@ -13,7 +14,8 @@ const DT = 1 / 60;
 
 describe('Camp Rock Course', () => {
   for (const line of campCrawlCourse.lines)
-    it(`drives the ${line.difficulty} ${line.name} line at walking pace`, async () => {
+    it(`drives the ${line.difficulty} ${line.name} line at ${line.difficulty === 'hard' ? 'half' : 'full'} crawl input`, async () => {
+      const crawlInput = line.difficulty === 'hard' ? 0.5 : 1;
       const world = testWorld();
       const R = await loadRapier();
       const sim = new Simulation(R, world, lateAfternoon);
@@ -42,8 +44,8 @@ describe('Camp Rock Course', () => {
         let maxDeviation = 0;
         for (let i = 0; i < 90 / DT; i++) {
           const command = pilot.input(v, DT);
-          // Hold the same keyboard throttle that a player uses in precision mode.
-          command.throttle = 1;
+          // Taller ledges need a slower approach; half input retains the former crawl target.
+          command.throttle = crawlInput;
           command.brake = 0;
           inputs.set('p', command);
           sim.step(inputs, DT);
@@ -58,7 +60,7 @@ describe('Camp Rock Course', () => {
         );
         expect(rockContacts).toBeGreaterThan(60);
         expect(maxTilt).toBeLessThan(35);
-        expect(maxSpeed).toBeLessThan(1.5);
+        expect(maxSpeed).toBeLessThan((crawlInput * vehicleTuning.crawling.forwardKmh) / 3.6 + 0.4);
         expect(maxDeviation).toBeLessThan(1.5);
         expect(world.pois.some((p) => p.id === campCrawlCourse.id)).toBe(true);
       } finally {

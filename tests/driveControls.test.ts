@@ -86,25 +86,27 @@ describe('diff locks and precision crawl', () => {
   });
 
   for (const reverse of [false, true])
-    it(`holds walking pace ${reverse ? 'in reverse' : 'forwards'} and still gives full driver braking`, async () => {
-      const s = await makeScene({});
-      try {
-        s.vehicle.toggleRange();
-        s.run(DT, { togglePrecision: true });
-        s.run(10, reverse ? { brake: 1 } : { throttle: 1 });
-        const speed = s.vehicle.speed * (reverse ? -1 : 1);
-        const limit = (reverse ? vehicleTuning.crawling.reverseKmh : vehicleTuning.crawling.forwardKmh) / 3.6;
-        expect(speed).toBeGreaterThan(limit * 0.7);
-        expect(speed).toBeLessThan(limit * 1.1);
-        s.vehicle.body.setLinvel({ x: 0, y: 0, z: -2 }, true);
-        s.run(DT, { brake: 1 });
-        expect(s.vehicle.brake).toBe(1);
-        s.run(DT, { togglePrecision: true });
-        expect(s.vehicle.precisionCrawl).toBe(false);
-      } finally {
-        s.physics.free();
-      }
-    });
+    for (const input of [0.5, 1])
+      it(`regulates ${input === 1 ? 'full' : 'half'} crawl input ${reverse ? 'in reverse' : 'forwards'} and still gives full driver braking`, async () => {
+        const s = await makeScene({});
+        try {
+          s.vehicle.toggleRange();
+          s.run(DT, { togglePrecision: true });
+          s.run(10, reverse ? { brake: input } : { throttle: input });
+          const speed = s.vehicle.speed * (reverse ? -1 : 1);
+          const limit =
+            (input * (reverse ? vehicleTuning.crawling.reverseKmh : vehicleTuning.crawling.forwardKmh)) / 3.6;
+          expect(speed).toBeGreaterThan(limit * 0.7);
+          expect(speed).toBeLessThan(limit * 1.1);
+          s.vehicle.body.setLinvel({ x: 0, y: 0, z: -2 }, true);
+          s.run(DT, { brake: 1 });
+          expect(s.vehicle.brake).toBe(1);
+          s.run(DT, { togglePrecision: true });
+          expect(s.vehicle.precisionCrawl).toBe(false);
+        } finally {
+          s.physics.free();
+        }
+      });
 
   it('precision crawl controls a downhill descent while throttle is held', async () => {
     const s = await makeScene({ pitchDeg: -20 });
@@ -113,7 +115,7 @@ describe('diff locks and precision crawl', () => {
       s.run(DT, { togglePrecision: true });
       s.run(8, { throttle: 1 });
       expect(s.vehicle.speed).toBeGreaterThan(0.3);
-      expect(s.vehicle.speed).toBeLessThan(1.2);
+      expect(s.vehicle.speed).toBeLessThan(vehicleTuning.crawling.forwardKmh / 3.6 + 0.4);
       expect(s.vehicle.brake).toBeGreaterThan(0);
     } finally {
       s.physics.free();

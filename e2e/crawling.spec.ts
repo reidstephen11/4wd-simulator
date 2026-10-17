@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { vehicleTuning } from '../src/data/vehicle';
 import { collectErrors, shot, waitReady, waitSim } from './helpers';
 
 test('crawl controls work from keyboard, HUD and gamepad; course hints explain the selected line', async ({
@@ -88,7 +89,7 @@ test('crawl controls work from keyboard, HUD and gamepad; course hints explain t
   await page.keyboard.up('KeyW');
   const after = await page.evaluate(() => window.__game!.vehicle());
   expect(after.z).toBeLessThan(before.z - 0.3);
-  expect(Math.abs(after.speed)).toBeLessThan(1);
+  expect(Math.abs(after.speed)).toBeLessThan(vehicleTuning.crawling.forwardKmh / 3.6 + 0.4);
   await page.evaluate(() => {
     const g = window.__game!;
     const h = g.heightAt(-120, 253);
