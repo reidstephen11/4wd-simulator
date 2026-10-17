@@ -2,7 +2,7 @@
 export const cameraTuning = {
   fov: 60,
   near: 0.25,
-  /** Default follow distance (m); scroll / right stick adjusts within min..max. */
+  /** Default follow distance (m); scroll / D-pad adjusts within min..max. */
   distance: 7.5,
   minDistance: 4.5,
   maxDistance: 16,
@@ -16,6 +16,12 @@ export const cameraTuning = {
   /** Heading follow rate (1/s): lower = more lag. */
   yawRate: 2.6,
   positionRate: 7,
+  /** Radians of orbit per mouse pixel. */
+  dragSensitivity: 0.006,
+  /** Orbit easing rate (1/s), including returning behind the vehicle. */
+  orbitRate: 12,
+  minElevation: (5 * Math.PI) / 180,
+  maxElevation: (78 * Math.PI) / 180,
   /** Extra distance at speed (fraction of distance at `speedRef`). */
   speedPullback: 0.3,
   speedRef: 22,

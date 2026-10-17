@@ -20,6 +20,7 @@ import type { ToolEvent } from '../sim/tools/tools';
 import { GameRenderer } from '../render/renderer';
 import { VehicleModel } from '../render/vehicleModel';
 import { ChaseCamera } from '../render/chaseCamera';
+import { CameraDrag } from '../render/cameraDrag';
 import { ToolsView } from '../render/tools';
 import { Hud } from '../ui/hud';
 import { ToolMenu, type ToolOption } from '../ui/toolMenu';
@@ -48,6 +49,7 @@ export class Game {
   readonly input: InputManager;
   readonly freeCam: FreeCamera;
   readonly chase: ChaseCamera;
+  private readonly cameraDrag: CameraDrag;
   readonly overlay: DebugOverlay | null;
   private readonly debugTools: DebugTools | null;
   readonly model: VehicleModel;
@@ -111,6 +113,7 @@ export class Game {
     this.freeCam = new FreeCamera(view.camera, view.renderer.domElement);
 
     this.hud = new Hud(uiRoot);
+    this.hud.onCameraReset = () => this.chase.recenter();
     this.toolMenu = new ToolMenu(uiRoot);
     this.toolMenu.onPick = (id) => this.pickTool(id);
     this.map = new PaperMap(uiRoot, world);
@@ -160,6 +163,14 @@ export class Game {
       step: (dt) => this.step(dt),
       render: (alpha, frameDt) => this.renderFrame(alpha, frameDt),
     });
+    this.cameraDrag = new CameraDrag(
+      view.renderer.domElement,
+      () => !this.freeCamOn && !this.loop.paused && !this.toolMenu.isOpen,
+      (yaw, pitch) => {
+        this.input.usePointer();
+        this.chase.orbit(yaw, pitch);
+      },
+    );
     installHook(this);
     // Draw the paper map in the background so the first open is instant.
     setTimeout(() => void this.map.prepare(), 2500);
@@ -434,6 +445,17 @@ export class Game {
     const usedByTool = this.tool.update(frameDt);
     if (!usedByTool) this.handleUi();
     this.input.vehicleEnabled = !this.freeCamOn && !this.toolMenu.isOpen;
+    const cameraEnabled = !this.freeCamOn && !this.loop.paused && !this.toolMenu.isOpen;
+    this.cameraDrag.update();
+    // Always drain the wheel, including while menus or the debug camera use it.
+    const zoom = this.input.takeZoom(frameDt, this.tool.mode === 'drive');
+    if (cameraEnabled) {
+      const orbit = this.input.cameraOrbit(frameDt);
+      this.chase.orbit(orbit.yaw, orbit.pitch);
+      this.chase.zoom(zoom);
+      if (this.input.pressed('cameraReset')) this.chase.recenter();
+    }
+    this.hud.cameraHelp(this.input.activeDevice, cameraEnabled, this.tool.mode === 'drive');
     const v = this.vehicle;
     const tools = this.sim.toolsOf(LOCAL_VEHICLE);
     this.anchorCheck -= frameDt;
@@ -448,7 +470,6 @@ export class Game {
     this.view.particles.update(v, this.loop.paused ? 0 : frameDt);
     if (this.freeCamOn) this.freeCam.update(frameDt);
     else if (!this.loop.paused) {
-      this.chase.zoom(this.input.takeZoom(frameDt));
       this.chase.toolView = this.tool.mode !== 'drive';
       const p = this.model.root.position;
       this.tmpPos.copy(p);

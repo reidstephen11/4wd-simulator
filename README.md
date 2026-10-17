@@ -41,7 +41,9 @@ Sound starts after your first click or key press (browser rule).
 | Tool menu (winch, planks)   | Hold Q, point with the mouse, arrows or WASD, release | Hold LB, point with the left stick or d-pad, release |
 | Interact (pick up planks)   | E (when prompted)                                     | A / Cross                                            |
 | Right vehicle               | Hold J (when prompted)                                | Hold B / Circle                                      |
-| Camera distance             | Scroll                                                | Right stick up/down                                  |
+| Orbit camera                | Mouse drag (left or right button), or Num 4/6/8/2     | Right stick                                          |
+| Camera distance             | Scroll                                                | D-pad left/right while driving                       |
+| Recenter camera             | V or Num 5, or the Reset view button                  | Right stick click                                    |
 | Horn                        | H                                                     | Left stick click                                     |
 | Map                         | M                                                     | View / Select                                        |
 | Pause                       | Esc                                                   | Start / Options                                      |

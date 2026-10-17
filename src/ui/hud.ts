@@ -34,6 +34,7 @@ export interface HudState {
  */
 export class Hud {
   readonly el: HTMLElement;
+  onCameraReset: (() => void) | null = null;
   private readonly compass: HTMLCanvasElement;
   private readonly cctx: CanvasRenderingContext2D;
   private readonly status: HTMLElement;
@@ -44,6 +45,9 @@ export class Hud {
   private readonly promptsEl: HTMLElement;
   private readonly toasts: HTMLElement;
   private readonly discovery: HTMLElement;
+  private readonly cameraHelpEl: HTMLElement;
+  private readonly cameraHint: HTMLElement;
+  private readonly cameraResetKey: HTMLElement;
   private lastCompassKey = '';
   private lastPromptKey = '';
   private readonly iconImages = new Map<string, HTMLImageElement>();
@@ -60,6 +64,10 @@ export class Hud {
         <div class="status-item status-engine" title="Engine flooding">${icons.engine}</div>
       </div>
       <div class="prompts"></div>
+      <div class="camera-help paper">
+        <span class="camera-hint">Drag to orbit · Scroll to zoom</span>
+        <button type="button" title="Return behind the vehicle">Reset view <kbd>V</kbd></button>
+      </div>
       <div class="toasts"></div>
       <div class="discovery"></div>`;
     root.appendChild(this.el);
@@ -73,6 +81,14 @@ export class Hud {
     this.promptsEl = this.el.querySelector('.prompts') as HTMLElement;
     this.toasts = this.el.querySelector('.toasts') as HTMLElement;
     this.discovery = this.el.querySelector('.discovery') as HTMLElement;
+    this.cameraHelpEl = this.el.querySelector('.camera-help') as HTMLElement;
+    this.cameraHint = this.el.querySelector('.camera-hint') as HTMLElement;
+    this.cameraResetKey = this.el.querySelector('.camera-help kbd') as HTMLElement;
+    this.el.querySelector('.camera-help button')?.addEventListener('click', (e) => {
+      this.onCameraReset?.();
+      // Return keyboard control to driving after a pointer click (Space is handbrake).
+      if ((e as MouseEvent).detail > 0) (e.currentTarget as HTMLButtonElement).blur();
+    });
     for (const k of ['campsite', 'viewpoint', 'landmark', 'feature'] as const) {
       const img = new Image();
       img.src = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -87,6 +103,17 @@ export class Hud {
 
   setVisible(v: boolean): void {
     this.el.classList.toggle('hidden', !v);
+  }
+
+  cameraHelp(device: 'keyboard' | 'gamepad', visible: boolean, driving: boolean): void {
+    this.cameraHelpEl.hidden = !visible;
+    const hint =
+      device === 'keyboard'
+        ? 'Drag to orbit · Scroll to zoom'
+        : `Right stick to orbit${driving ? ' · D-pad ←/→ to zoom' : ''}`;
+    if (this.cameraHint.textContent !== hint) this.cameraHint.textContent = hint;
+    const key = device === 'keyboard' ? 'V' : 'R3';
+    if (this.cameraResetKey.textContent !== key) this.cameraResetKey.textContent = key;
   }
 
   update(s: HudState): void {

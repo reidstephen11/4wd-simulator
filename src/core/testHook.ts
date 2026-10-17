@@ -13,6 +13,7 @@ export interface GameHook {
   ready: boolean;
   setCamera(x: number, y: number, z: number, tx: number, ty: number, tz: number): void;
   useChaseCamera(): void;
+  camera(): { position: number[]; direction: number[]; distance: number };
   stats(): {
     fps: number;
     frameMs: number;
@@ -79,6 +80,11 @@ export function installHook(game: Game): void {
     useChaseCamera: () => {
       if (g.freeCamOn) g.toggleFreeCam();
     },
+    camera: () => ({
+      position: g.view.camera.position.toArray(),
+      direction: g.view.camera.getWorldDirection(new THREE.Vector3()).toArray(),
+      distance: g.chase.distance,
+    }),
     stats: () => ({
       fps: g.overlay?.fps ?? 0,
       frameMs: g.overlay?.frameMs ?? 0,

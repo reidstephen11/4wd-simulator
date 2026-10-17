@@ -33,6 +33,53 @@ body {
   outline: none;
 }
 
+#game-canvas.orbiting {
+  cursor: grabbing;
+}
+
+.camera-help {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  padding: 8px 11px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  pointer-events: auto;
+}
+
+.camera-help button {
+  display: block;
+  margin: 5px 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.camera-help button:hover,
+.camera-help button:focus-visible {
+  background: var(--paper-dark);
+}
+
+.camera-help kbd {
+  margin-left: 5px;
+  font: inherit;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .camera-help .camera-hint {
+    display: none;
+  }
+
+  .camera-help button {
+    margin: 0;
+  }
+}
+
 #ui {
   position: fixed;
   inset: 0;

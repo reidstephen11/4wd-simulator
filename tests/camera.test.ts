@@ -1,0 +1,162 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PerspectiveCamera, Vector3 } from 'three';
+import { ChaseCamera, type ChaseTarget, type Blocker } from '../src/render/chaseCamera';
+import { cameraTuning as C } from '../src/data/camera';
+import { InputManager } from '../src/sim/input/inputManager';
+import { Pad } from '../src/data/controls';
+
+const target = (): ChaseTarget => ({
+  position: new Vector3(),
+  forward: new Vector3(0, 0, -1),
+  speed: 0,
+  slopeDeg: 0,
+});
+
+function fixture(blocker: Blocker = (_from, _dir, max) => max, ground = () => -10) {
+  const camera = new PerspectiveCamera();
+  const chase = new ChaseCamera(camera, blocker, ground);
+  const t = target();
+  const settle = () => {
+    for (let i = 0; i < 240; i++) chase.update(1 / 60, t);
+  };
+  settle();
+  return { camera, chase, t, settle };
+}
+
+describe('vehicle camera orbit', () => {
+  it('shows the side and front, keeping the vehicle in the centre of manual views', () => {
+    const { camera, chase, settle } = fixture();
+    expect(camera.position.z).toBeGreaterThan(0);
+    chase.orbit(Math.PI / 2, 0);
+    settle();
+    expect(camera.position.x).toBeGreaterThan(6);
+    expect(camera.position.z).toBeCloseTo(0, 3);
+    const toCar = new Vector3(0, C.targetHeight, 0).sub(camera.position).normalize();
+    expect(camera.getWorldDirection(new Vector3()).dot(toCar)).toBeCloseTo(1, 5);
+    chase.orbit(Math.PI / 2, 0);
+    settle();
+    expect(camera.position.z).toBeLessThan(-6);
+    expect(camera.position.x).toBeCloseTo(0, 3);
+  });
+
+  it('keeps the chosen relative angle while driving and turning, then recentres without changing zoom', () => {
+    const { camera, chase, t, settle } = fixture();
+    chase.zoom(3);
+    const distance = chase.distance;
+    chase.orbit(Math.PI / 2, 0.4);
+    settle();
+    t.position.set(15, 3, -20);
+    t.forward.set(1, 0, 0);
+    t.speed = 4;
+    settle();
+    expect(camera.position.z - t.position.z).toBeGreaterThan(6);
+    expect(camera.position.x).toBeCloseTo(t.position.x, 3);
+    chase.recenter();
+    settle();
+    expect(camera.position.x).toBeLessThan(t.position.x - 4);
+    expect(camera.position.z).toBeCloseTo(t.position.z, 3);
+    expect(chase.distance).toBe(distance);
+  });
+
+  it('clamps elevation below vertical and above the horizon, with no roll or flipped view', () => {
+    const { camera, chase, settle } = fixture();
+    for (const pitch of [100, -200, 100]) {
+      chase.orbit(0, pitch);
+      settle();
+      const dir = camera.position.clone().sub(new Vector3(0, C.targetHeight, 0));
+      const elevation = Math.atan2(dir.y, Math.hypot(dir.x, dir.z));
+      expect(elevation).toBeGreaterThanOrEqual(C.minElevation - 0.001);
+      expect(elevation).toBeLessThanOrEqual(C.maxElevation + 0.001);
+      expect(camera.up.toArray()).toEqual([0, 1, 0]);
+      expect(camera.getWorldDirection(new Vector3()).y).toBeLessThan(0);
+    }
+  });
+
+  it('respects blockers at side/front angles and eases back out when clear', () => {
+    let blocked = false;
+    const { camera, chase, settle } = fixture((_from, _dir, max) => (blocked ? Math.min(3, max) : max));
+    chase.orbit(Math.PI / 2, 0);
+    settle();
+    blocked = true;
+    settle();
+    const pivot = new Vector3(0, C.targetHeight, 0);
+    expect(camera.position.distanceTo(pivot)).toBeCloseTo(3 - C.clearance, 4);
+    chase.orbit(Math.PI / 2, 0);
+    settle();
+    expect(camera.position.z).toBeLessThan(0);
+    expect(camera.position.distanceTo(pivot)).toBeCloseTo(3 - C.clearance, 4);
+    blocked = false;
+    chase.update(1 / 60, target());
+    expect(camera.position.distanceTo(pivot)).toBeLessThan(3);
+    settle();
+    expect(camera.position.distanceTo(pivot)).toBeGreaterThan(6);
+  });
+
+  it('stays above terrain and returns to the default angle after a teleport', () => {
+    const { camera, chase, t, settle } = fixture(undefined, () => 4);
+    chase.orbit(2, -5);
+    settle();
+    expect(camera.position.y).toBeGreaterThanOrEqual(4 + C.groundClearance);
+    t.position.set(20, 5, 10);
+    chase.reset();
+    chase.update(1 / 60, t);
+    expect(camera.position.x).toBeCloseTo(t.position.x);
+    expect(camera.position.z).toBeGreaterThan(t.position.z);
+  });
+});
+
+function inputFixture() {
+  const events = new EventTarget();
+  const input = new InputManager(events as unknown as Window);
+  const send = (type: string, values: object) => events.dispatchEvent(Object.assign(new Event(type), values));
+  const pad = {
+    connected: true,
+    axes: [0, 0, 0, 0],
+    buttons: Array.from({ length: 16 }, () => ({ pressed: false, value: 0 })),
+  };
+  vi.stubGlobal('navigator', { getGamepads: () => [pad] });
+  return { input, send, pad };
+}
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe('camera keyboard and controller input', () => {
+  it('uses the right stick for orbit without steering or zooming, and ignores stick drift', () => {
+    const { input, pad } = inputFixture();
+    pad.axes = [0, 0, 0.08, -0.1];
+    input.poll();
+    expect(input.cameraOrbit(0.5)).toEqual({ yaw: -0, pitch: 0 });
+    pad.axes = [0, 0, 1, -1];
+    input.poll();
+    expect(input.cameraOrbit(0.5)).toEqual({ yaw: -0.9, pitch: -0.9 });
+    expect(input.takeZoom(0.5)).toBe(0);
+    expect(input.vehicleInput(0.5).steer).toBe(0);
+  });
+
+  it('offers numpad orbit and V / R3 recenter independently of driving controls', () => {
+    const { input, send, pad } = inputFixture();
+    send('keydown', { code: 'Numpad6' });
+    send('keydown', { code: 'Numpad2' });
+    expect(input.cameraOrbit(1)).toEqual({ yaw: -1.8, pitch: 1.8 });
+    expect(input.vehicleInput(1).throttle).toBe(0);
+    send('keydown', { code: 'KeyV' });
+    expect(input.pressed('cameraReset')).toBe(true);
+    input.consumeUi();
+    expect(input.pressed('cameraReset')).toBe(false);
+    pad.buttons[Pad.RS].pressed = true;
+    input.poll();
+    expect(input.pressed('cameraReset')).toBe(true);
+  });
+
+  it('uses D-pad for driving zoom while giving tool adjustments priority, and drains the scroll wheel', () => {
+    const { input, send, pad } = inputFixture();
+    pad.buttons[Pad.Right].pressed = true;
+    input.poll();
+    expect(input.takeZoom(0.5)).toBe(3);
+    expect(input.takeZoom(0.5, false)).toBe(0);
+    send('wheel', { deltaY: -100 });
+    expect(input.takeZoom(0.5, false)).toBe(-1);
+    expect(input.takeZoom(0.5, false)).toBe(0);
+    expect(input.held('menuRight')).toBe(true);
+  });
+});
