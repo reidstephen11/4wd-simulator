@@ -317,6 +317,53 @@ body {
   color: var(--paper);
 }
 
+.status-drive {
+  pointer-events: auto;
+  border: 1px solid var(--ink);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.status-drive[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.status-drive:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.course-hint {
+  position: absolute;
+  left: 14px;
+  bottom: 78px;
+  max-width: 290px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.course-hint strong {
+  font-family: var(--font-hand);
+  font-size: 22px;
+}
+
+.course-hint.hidden {
+  display: none;
+}
+
+.course-hint small {
+  color: var(--ink-soft);
+}
+
 .status-item {
   display: flex;
   align-items: center;

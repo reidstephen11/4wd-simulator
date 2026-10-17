@@ -12,6 +12,9 @@ export interface VehicleInput {
   handbrake: boolean;
   /** Edge-triggered: true for one step when pressed. */
   toggleRange: boolean;
+  toggleFrontDiff: boolean;
+  toggleRearDiff: boolean;
+  togglePrecision: boolean;
   winchAttach: boolean;
   winchIn: boolean;
   winchOut: boolean;
@@ -28,6 +31,9 @@ export function emptyInput(): VehicleInput {
     steer: 0,
     handbrake: false,
     toggleRange: false,
+    toggleFrontDiff: false,
+    toggleRearDiff: false,
+    togglePrecision: false,
     winchAttach: false,
     winchIn: false,
     winchOut: false,

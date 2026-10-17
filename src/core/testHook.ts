@@ -32,7 +32,20 @@ export interface GameHook {
   teleportPoi(id: string): void;
   /** Override driver input. Pass null to give control back to the devices. */
   setInput(input: Partial<VehicleInput> | null): void;
-  vehicle(): { x: number; y: number; z: number; speed: number; range: string; tilt: number; heading: number };
+  vehicle(): {
+    x: number;
+    y: number;
+    z: number;
+    speed: number;
+    range: string;
+    tilt: number;
+    heading: number;
+    frontLocked: boolean;
+    rearLocked: boolean;
+    precisionCrawl: boolean;
+    throttle: number;
+    brake: number;
+  };
   /** Park the vehicle on the approach to a POI and frame it with the free camera. */
   showPoi(id: string): void;
   tool(action: 'planks' | 'winch' | 'confirm' | 'cancel' | 'detach' | 'recall' | 'quick'): boolean;
@@ -212,6 +225,11 @@ export function installHook(game: Game): void {
         range: v.drivetrain.range,
         tilt: v.tiltDeg(),
         heading: ((Math.atan2(f.x, -f.z) * 180) / Math.PI + 360) % 360,
+        frontLocked: v.differentials.front,
+        rearLocked: v.differentials.rear,
+        precisionCrawl: v.precisionCrawl,
+        throttle: v.throttle,
+        brake: v.brake,
       };
     },
   };

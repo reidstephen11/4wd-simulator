@@ -6,6 +6,9 @@ export type Action =
   | 'steerRight'
   | 'handbrake'
   | 'range'
+  | 'frontDiff'
+  | 'rearDiff'
+  | 'precision'
   | 'winch'
   | 'winchIn'
   | 'winchOut'
@@ -30,6 +33,9 @@ export const keyBindings: Record<Action, readonly string[]> = {
   steerRight: ['KeyD', 'ArrowRight'],
   handbrake: ['Space'],
   range: ['KeyL'],
+  frontDiff: ['KeyZ'],
+  rearDiff: ['KeyX'],
+  precision: ['KeyP'],
   winch: ['KeyE'],
   winchIn: ['KeyR'],
   winchOut: ['KeyF'],
@@ -105,6 +111,9 @@ export const glyphs: Record<'keyboard' | 'gamepad', Partial<Record<Action, strin
     brake: 'S',
     handbrake: 'Space',
     range: 'L',
+    frontDiff: 'Z',
+    rearDiff: 'X',
+    precision: 'P',
     winch: 'E',
     winchIn: 'R',
     winchOut: 'F',
@@ -122,6 +131,9 @@ export const glyphs: Record<'keyboard' | 'gamepad', Partial<Record<Action, strin
     brake: 'LT',
     handbrake: 'X',
     range: 'Y',
+    frontDiff: 'LB menu',
+    rearDiff: 'LB menu',
+    precision: 'LB menu',
     winch: 'RB',
     winchIn: 'D-pad ↑',
     winchOut: 'D-pad ↓',
@@ -143,6 +155,8 @@ export const controlsTable: ReadonlyArray<readonly [string, string, string]> = [
   ['Steer', 'A D / ← →', 'Left stick'],
   ['Handbrake', 'Space', 'X / Square'],
   ['Toggle high/low range', 'L', 'Y / Triangle'],
+  ['Toggle front / rear diff lock', 'Z / X (below 5 km/h to engage)', 'Hold LB → front / rear diff'],
+  ['Toggle precision crawl', 'P (2.5 km/h forward, 2 km/h reverse)', 'Hold LB → precision crawl'],
   ['Winch quick attach / detach', 'E', 'RB'],
   ['Winch in / out', 'R / F', 'D-pad up / down'],
   ['Tool menu', 'Hold Q', 'Hold LB'],

@@ -13,6 +13,8 @@ import { createDrivetrainState, engineBrakeForce, updateDrivetrain } from './dri
 import { floodPower, updateFlood, type FloodEvent } from './flooding';
 import { mulberry32 } from '../world/rng';
 import { type Quat, type Vec3, dot, headingToYaw, rotate, v3, yawQuat } from './math';
+import { WheelContacts } from './wheelContacts';
+import { axleDriveCapacity } from './differential';
 
 /** How readily each surface lets a stuck wheel spin (visual, dirt and sound only). */
 const LOOSENESS: Partial<Record<SurfaceId, number>> = {
@@ -75,6 +77,8 @@ export class Vehicle {
   readonly colliders: RAPIER.Collider[] = [];
   readonly drivetrain = createDrivetrainState();
   readonly condition = createCondition();
+  readonly differentials = { front: false, rear: false };
+  precisionCrawl = false;
   readonly wheels: WheelState[];
   /** Speed along the heading (m/s, + forward). */
   speed = 0;
@@ -110,6 +114,9 @@ export class Vehicle {
   private caps = [0, 0, 0, 0];
   private requests = [0, 0, 0, 0];
   private preload = [0, 0, 0, 0];
+  private readonly wheelContacts: WheelContacts;
+  private readonly rawWheelRotation = [0, 0, 0, 0];
+  private readonly wheelRotationDelta = [0, 0, 0, 0];
 
   constructor(
     readonly id: string,
@@ -174,6 +181,7 @@ export class Vehicle {
       );
     });
     this.applyTuning();
+    this.wheelContacts = new WheelContacts(physics, tuning);
     this.wheels = t.wheels.map(() => ({
       contact: false,
       surface: SurfaceId.Dirt,
@@ -243,6 +251,17 @@ export class Vehicle {
     return true;
   }
 
+  /** Engage at walking pace; unlocking is always allowed. */
+  toggleDiff(axle: 'front' | 'rear'): boolean {
+    if (
+      !this.differentials[axle] &&
+      Math.abs(dot(this.body.linvel(), this.forward())) > this.tuning.crawling.diffLockMaxKmh / 3.6
+    )
+      return false;
+    this.differentials[axle] = !this.differentials[axle];
+    return true;
+  }
+
   teleport(pose: SpawnPose): void {
     this.body.setTranslation({ x: pose.x, y: pose.y, z: pose.z }, true);
     this.body.setRotation(yawQuat(headingToYaw(pose.headingDeg)), true);
@@ -283,6 +302,9 @@ export class Vehicle {
     this.horn = input.horn;
     this.handbrake = input.handbrake;
     if (input.toggleRange) this.toggleRange();
+    if (input.toggleFrontDiff) this.toggleDiff('front');
+    if (input.toggleRearDiff) this.toggleDiff('rear');
+    if (input.togglePrecision) this.precisionCrawl = !this.precisionCrawl;
 
     // Throttle / brake / reverse, automatic-style.
     let throttle = 0;
@@ -303,6 +325,14 @@ export class Vehicle {
         throttle = b;
         reverse = true;
       }
+    }
+    if (this.precisionCrawl && throttle > 0) {
+      const crawl = t.crawling;
+      const target = (throttle * (reverse ? crawl.reverseKmh : crawl.forwardKmh)) / 3.6;
+      const error = target - this.speed * (reverse ? -1 : 1);
+      throttle = Math.max(0, Math.min(1, error * crawl.speedGain));
+      // Regulate descents as well as level ground. Driver braking above still has full authority.
+      if (error < -0.05) brake = Math.min(1, -error * crawl.brakeGain);
     }
     this.throttle = throttle;
     this.brake = brake;
@@ -333,8 +363,7 @@ export class Vehicle {
       c.setWheelSideFrictionStiffness(i, input.handbrake && !t.wheels[i].front ? t.handbrakeSideGrip : 1);
     }
 
-    // Open differentials: each axle can only push as hard as its weaker wheel allows,
-    // plus a little leak. Torque then splits by available grip.
+    // Open axles are limited by the weak tyre; locked axles can use both tyres' grip.
     const perAxle = drive / 2;
     for (const [i, j] of [
       [0, 1],
@@ -342,9 +371,8 @@ export class Vehicle {
     ]) {
       const a = this.caps[i];
       const bb = this.caps[j];
-      const lo = Math.min(a, bb);
-      const hi = Math.max(a, bb);
-      const axleCap = 2 * lo + t.openDiffLeak * (hi - lo);
+      const locked = this.differentials[t.wheels[i].front ? 'front' : 'rear'];
+      const axleCap = axleDriveCapacity(a, bb, locked, t.openDiffLeak);
       const deliver = Math.sign(perAxle) * Math.min(Math.abs(perAxle), axleCap);
       const sum = a + bb;
       this.requests[i] = sum > 0 ? (deliver * a) / sum : 0;
@@ -360,6 +388,10 @@ export class Vehicle {
           spin = Math.max(spin, loose * throttle * (1 - Math.abs(this.speed) / 1.2));
         }
         w.spin += (spin - w.spin) * Math.min(1, dt * 8);
+      }
+      if (locked) {
+        const spin = Math.min(this.wheels[i].spin, this.wheels[j].spin);
+        this.wheels[i].spin = this.wheels[j].spin = spin;
       }
     }
 
@@ -387,7 +419,11 @@ export class Vehicle {
       ((t.steering.maxAngleDeg + (t.steering.minAngleDeg - t.steering.maxAngleDeg) * sp * sp * (3 - 2 * sp)) *
         Math.PI) /
       180;
-    const angle = Math.max(-1, Math.min(1, input.steer)) * maxA;
+    // A locked front axle resists the different wheel speeds needed for a tight turn.
+    const angle =
+      Math.max(-1, Math.min(1, input.steer)) *
+      maxA *
+      (this.differentials.front ? t.crawling.frontLockSteering : 1);
     const wb = Math.abs(t.wheels[0].z - t.wheels[2].z);
     const halfTrack = Math.abs(t.wheels[0].x);
     for (let i = 0; i < 4; i++) {
@@ -430,7 +466,8 @@ export class Vehicle {
       c.setWheelSuspensionStiffness(i, t.springStiffness * suspensionStiffnessMultiplier(this.condition, i));
     }
 
-    c.updateVehicle(dt, undefined, WHEEL_FILTER);
+    this.wheelContacts.update(this.body, c, WHEEL_FILTER);
+    c.updateVehicle(dt, this.physics.R.QueryFilterFlags.EXCLUDE_SENSORS, WHEEL_FILTER);
     this.addRollTorque(q);
     this.pushDynamicGround(q, dt);
 
@@ -563,7 +600,10 @@ export class Vehicle {
         this.wheelImpacts[i] = w.compression;
         this.impactCooldown[i] = 0.12;
       }
-      w.rotation = c.wheelRotation(i) ?? w.rotation;
+      const rotation = c.wheelRotation(i) ?? this.rawWheelRotation[i];
+      this.wheelRotationDelta[i] = rotation - this.rawWheelRotation[i];
+      this.rawWheelRotation[i] = rotation;
+      w.rotation += this.wheelRotationDelta[i];
       w.load = w.contact ? Math.min(this.tuning.maxSuspensionForce, c.wheelSuspensionForce(i) ?? 0) : 0;
       const cp = c.wheelContactPoint(i);
       if (cp) {
@@ -588,6 +628,22 @@ export class Vehicle {
       } else w.slide = 0;
       const ws = this.physics.ground.waterSurfaceAt(w.contactPoint.x, w.contactPoint.z);
       w.water = ws === null ? 0 : Math.max(0, ws + this.env.waterLevelOffset - w.contactPoint.y);
+    }
+    // Locked wheels share angular travel, including a tyre hanging in the air.
+    for (const [i, j] of [
+      [0, 1],
+      [2, 3],
+    ]) {
+      if (!this.differentials[this.tuning.wheels[i].front ? 'front' : 'rear']) continue;
+      const a = this.wheels[i],
+        b = this.wheels[j];
+      const load = a.load + b.load;
+      const delta =
+        load > 0
+          ? (this.wheelRotationDelta[i] * a.load + this.wheelRotationDelta[j] * b.load) / load
+          : (this.wheelRotationDelta[i] + this.wheelRotationDelta[j]) / 2;
+      a.rotation += delta - this.wheelRotationDelta[i];
+      b.rotation += delta - this.wheelRotationDelta[j];
     }
     // Impact detection: sudden change in velocity.
     const dvx = vel.x - this.lastVel.x;

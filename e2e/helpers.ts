@@ -7,8 +7,9 @@ export function collectErrors(page: Page): string[] {
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
     const text = m.text();
-    if (/fonts\.(googleapis|gstatic)\.com/.test(text)) return;
-    errors.push(text);
+    const source = m.location().url;
+    if (/fonts\.(googleapis|gstatic)\.com/.test(`${text} ${source}`)) return;
+    errors.push(source ? `${text} (${source})` : text);
   });
   page.on('pageerror', (e) => errors.push(e.message));
   return errors;

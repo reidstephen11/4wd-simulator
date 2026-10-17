@@ -112,7 +112,7 @@ export class Game {
     );
     this.freeCam = new FreeCamera(view.camera, view.renderer.domElement);
 
-    this.hud = new Hud(uiRoot);
+    this.hud = new Hud(uiRoot, (action) => this.input.requestDriveAction(action));
     this.hud.onCameraReset = () => this.chase.recenter();
     this.toolMenu = new ToolMenu(uiRoot);
     this.toolMenu.onPick = (id) => this.pickTool(id);
@@ -156,6 +156,16 @@ export class Game {
       this.hud.toast(event === 'stalled' ? 'Engine stalled — flooded' : 'Engine restarted');
       this.audio.engineEvent(event);
     });
+    sim.events.on('diffChanged', ({ axle, locked }) =>
+      this.hud.toast(
+        `${axle === 'front' ? 'Front' : 'Rear'} differential ${locked ? 'locked' : 'open'}`,
+        1600,
+      ),
+    );
+    sim.events.on('diffBlocked', () => this.hud.toast('Slow below 5 km/h to engage diff locks'));
+    sim.events.on('precisionChanged', ({ enabled }) =>
+      this.hud.toast(enabled ? 'Precision crawl — hold throttle for walking pace' : 'Precision crawl off'),
+    );
     sim.events.on('wheelImpact', ({ id, speed }) => id === LOCAL_VEHICLE && this.audio.wheelImpact(speed));
     sim.events.on('dent', ({ id, impact }) => id === LOCAL_VEHICLE && this.audio.dent(impact));
 
@@ -327,8 +337,26 @@ export class Game {
           : { id: 'planks', label: 'Planks are out', icon: 'planks', enabled: false };
     return [
       { id: 'winch', label: 'Winch', icon: 'winch', enabled: this.anchorInReach },
+      {
+        id: 'frontDiff',
+        label: v.differentials.front ? 'Unlock front diff' : 'Lock front diff',
+        icon: 'feature',
+        enabled: v.differentials.front || Math.abs(v.speed) <= vehicleTuning.crawling.diffLockMaxKmh / 3.6,
+      },
       { id: 'detach', label: 'Detach winch', icon: 'detach', enabled: t.winch.attached },
+      {
+        id: 'rearDiff',
+        label: v.differentials.rear ? 'Unlock rear diff' : 'Lock rear diff',
+        icon: 'feature',
+        enabled: v.differentials.rear || Math.abs(v.speed) <= vehicleTuning.crawling.diffLockMaxKmh / 3.6,
+      },
       planks,
+      {
+        id: 'precision',
+        label: v.precisionCrawl ? 'Disable precision crawl' : 'Enable precision crawl',
+        icon: 'feature',
+        enabled: true,
+      },
     ];
   }
 
@@ -337,6 +365,7 @@ export class Game {
     else if (id === 'planks') this.tool.startPlanks();
     else if (id === 'recall') this.sim.recallPlanks(LOCAL_VEHICLE);
     else if (id === 'detach') this.sim.detachWinch(LOCAL_VEHICLE);
+    else if (id === 'frontDiff' || id === 'rearDiff' || id === 'precision') this.input.requestDriveAction(id);
   }
 
   private onToolEvent(e: ToolEvent): void {
@@ -384,6 +413,9 @@ export class Game {
       inp.handbrake = this.tool.mode !== 'drive';
       inp.winchAttach = false;
       inp.interact = false;
+      inp.toggleFrontDiff = false;
+      inp.toggleRearDiff = false;
+      inp.togglePrecision = false;
     }
     this.inputs.set(LOCAL_VEHICLE, inp);
     this.sim.step(this.inputs, dt);
@@ -444,7 +476,8 @@ export class Game {
     this.clock += frameDt;
     const usedByTool = this.tool.update(frameDt);
     if (!usedByTool) this.handleUi();
-    this.input.vehicleEnabled = !this.freeCamOn && !this.toolMenu.isOpen;
+    this.input.vehicleEnabled =
+      !this.freeCamOn && !this.toolMenu.isOpen && !this.loop.paused && this.tool.mode === 'drive';
     const cameraEnabled = !this.freeCamOn && !this.loop.paused && !this.toolMenu.isOpen;
     this.cameraDrag.update();
     // Always drain the wheel, including while menus or the debug camera use it.
@@ -496,6 +529,7 @@ export class Game {
         cameraHeading: this.cameraHeading(),
         discovered: this.exploration.discovered,
         pois: this.world.pois,
+        crawlCourses: this.world.map.crawlCourses,
         anchorInReach: this.anchorInReach,
       }),
     );

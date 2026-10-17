@@ -20,6 +20,10 @@ export interface HudState {
   heading: number;
   pois: CompassPoi[];
   range: 'high' | 'low';
+  frontLocked: boolean;
+  rearLocked: boolean;
+  precisionCrawl: boolean;
+  courseHint: { title: string; text: string; controls: string } | null;
   planksCarried: number;
   planksTotal: number;
   winchAttached: boolean;
@@ -39,6 +43,8 @@ export class Hud {
   private readonly cctx: CanvasRenderingContext2D;
   private readonly status: HTMLElement;
   private readonly rangeEl: HTMLElement;
+  private readonly driveButtons: HTMLButtonElement[];
+  private readonly courseHint: HTMLElement;
   private readonly planksEl: HTMLElement;
   private readonly winchEl: HTMLElement;
   private readonly engineEl: HTMLElement;
@@ -52,17 +58,21 @@ export class Hud {
   private lastPromptKey = '';
   private readonly iconImages = new Map<string, HTMLImageElement>();
 
-  constructor(root: HTMLElement) {
+  constructor(root: HTMLElement, driveAction: (action: 'frontDiff' | 'rearDiff' | 'precision') => void) {
     this.el = document.createElement('div');
     this.el.className = 'hud';
     this.el.innerHTML = `
       <div class="compass paper"><canvas width="840" height="76"></canvas></div>
       <div class="status paper">
         <div class="status-range" title="Transfer range">H</div>
+        <button type="button" class="status-drive" data-drive="frontDiff" aria-label="Front differential lock" aria-pressed="false" title="Front diff lock: Z / LB menu">F OPEN</button>
+        <button type="button" class="status-drive" data-drive="rearDiff" aria-label="Rear differential lock" aria-pressed="false" title="Rear diff lock: X / LB menu">R OPEN</button>
+        <button type="button" class="status-drive" data-drive="precision" aria-label="Precision crawl" aria-pressed="false" title="Precision crawl: P / LB menu. Hold throttle for walking pace.">CRAWL</button>
         <div class="status-item status-planks" title="Planks">${icons.planks}<span>2/2</span></div>
         <div class="status-item status-winch" title="Winch attached">${icons.winch}</div>
         <div class="status-item status-engine" title="Engine flooding">${icons.engine}</div>
       </div>
+      <div class="course-hint paper hidden"><strong></strong><span></span><small></small></div>
       <div class="prompts"></div>
       <div class="camera-help paper">
         <span class="camera-hint">Drag to orbit · Scroll to zoom</span>
@@ -75,6 +85,13 @@ export class Hud {
     this.cctx = this.compass.getContext('2d') as CanvasRenderingContext2D;
     this.status = this.el.querySelector('.status') as HTMLElement;
     this.rangeEl = this.el.querySelector('.status-range') as HTMLElement;
+    this.driveButtons = [...this.el.querySelectorAll<HTMLButtonElement>('[data-drive]')];
+    this.courseHint = this.el.querySelector('.course-hint') as HTMLElement;
+    for (const button of this.driveButtons)
+      button.addEventListener('click', () => {
+        driveAction(button.dataset.drive as 'frontDiff' | 'rearDiff' | 'precision');
+        button.blur();
+      });
     this.planksEl = this.el.querySelector('.status-planks span') as HTMLElement;
     this.winchEl = this.el.querySelector('.status-winch') as HTMLElement;
     this.engineEl = this.el.querySelector('.status-engine') as HTMLElement;
@@ -120,6 +137,17 @@ export class Hud {
     this.drawCompass(s);
     this.rangeEl.textContent = s.range === 'high' ? 'H' : 'L';
     this.rangeEl.classList.toggle('low', s.range === 'low');
+    const active = [s.frontLocked, s.rearLocked, s.precisionCrawl];
+    this.driveButtons.forEach((button, index) => {
+      button.setAttribute('aria-pressed', String(active[index]));
+      if (index < 2) button.textContent = `${index === 0 ? 'F' : 'R'} ${active[index] ? 'LOCK' : 'OPEN'}`;
+    });
+    this.courseHint.classList.toggle('hidden', !s.courseHint);
+    if (s.courseHint) {
+      this.courseHint.querySelector('strong')!.textContent = s.courseHint.title;
+      this.courseHint.querySelector('span')!.textContent = s.courseHint.text;
+      this.courseHint.querySelector('small')!.textContent = s.courseHint.controls;
+    }
     this.planksEl.textContent = `${s.planksCarried}/${s.planksTotal}`;
     this.winchEl.classList.toggle('shown', s.winchAttached);
     this.engineEl.classList.toggle('shown', s.engine > 0);
