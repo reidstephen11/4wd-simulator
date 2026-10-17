@@ -1,32 +1,61 @@
 import * as THREE from 'three';
 import { NO_WATER, type Terrain } from '../sim/world/terrain';
-import { hash2 } from '../sim/world/rng';
-import { pal, varyColor } from './colors';
+import { pal } from './colors';
 import { patchFog } from './fog';
 
 const TILE = 128;
 
 /**
- * Creek water surface built from the terrain's water grid: flat-shaded, see-through,
+ * Creek water surface built from the terrain's water grid: reflective, animated and translucent,
  * coloured from shallow to deep, with pale foam where the surface is steep (the Falls).
  */
 export class WaterMesh {
   readonly group = new THREE.Group();
-  readonly material: THREE.MeshLambertMaterial;
+  readonly material: THREE.MeshStandardMaterial;
+  private readonly time = { value: 0 };
 
-  constructor(terrain: Terrain, seed: number, levelOffset = 0) {
-    this.material = patchFog(
-      new THREE.MeshLambertMaterial({
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.82,
-        depthWrite: false,
-        flatShading: true,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnits: -2,
-      }),
-    );
+  constructor(terrain: Terrain, _seed: number, levelOffset = 0) {
+    this.material = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.82,
+      depthWrite: false,
+      roughness: 0.22,
+      metalness: 0.12,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -2,
+    });
+    this.material.onBeforeCompile = (shader) => {
+      shader.uniforms.waterTime = this.time;
+      shader.vertexShader = `varying vec3 vWaterPosition;\n${shader.vertexShader}`.replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nvWaterPosition = (modelMatrix * vec4(position, 1.0)).xyz;',
+      );
+      shader.fragmentShader =
+        `uniform float waterTime; varying vec3 vWaterPosition;\n${shader.fragmentShader}`
+          .replace(
+            '#include <normal_fragment_maps>',
+            `
+          #include <normal_fragment_maps>
+          vec2 p = vWaterPosition.xz;
+          float waveX = cos(p.x * 3.1 + p.y * 1.8 + waterTime * 1.3) * 0.045
+                      + cos(p.x * 8.0 - p.y * 3.0 - waterTime * 2.1) * 0.018;
+          float waveZ = sin(p.y * 4.2 - p.x * 1.2 + waterTime * 1.6) * 0.04;
+          normal = normalize(normal + mat3(viewMatrix) * vec3(waveX, 0.0, waveZ));
+        `,
+          )
+          .replace(
+            '#include <opaque_fragment>',
+            `
+          float fresnel = pow(1.0 - max(dot(normal, normalize(vViewPosition)), 0.0), 3.0);
+          outgoingLight = mix(outgoingLight, vec3(0.39, 0.51, 0.52), fresnel * 0.35);
+          diffuseColor.a = 0.68 + fresnel * 0.29;
+          #include <opaque_fragment>
+        `,
+          );
+    };
+    patchFog(this.material, 'flowing-water-v1');
     this.group.name = 'water';
     const res = terrain.res;
     const half = terrain.half;
@@ -36,7 +65,6 @@ export class WaterMesh {
     const deep = pal('waterDeep');
     const foam = pal('barkPale');
     const tmp = new THREE.Color();
-    const tmp2 = new THREE.Color();
     const tiles = terrain.size / TILE;
     for (let tz = 0; tz < tiles; tz++)
       for (let tx = 0; tx < tiles; tx++) {
@@ -61,17 +89,16 @@ export class WaterMesh {
             if (steep > 0.35) tmp.lerp(foam, Math.min(0.85, (steep - 0.35) * 0.6));
             const x0 = ix - half;
             const z0 = iz - half;
-            const tri = (a: number[], b: number[], c: number[], salt: number) => {
+            const tri = (a: number[], b: number[], c: number[]) => {
               pos.push(...a, ...b, ...c);
-              varyColor(tmp, hash2(ix * 2 + salt, iz, seed + 9), 0.5, tmp2);
-              for (let k = 0; k < 3; k++) col.push(tmp2.r, tmp2.g, tmp2.b);
+              for (let k = 0; k < 3; k++) col.push(tmp.r, tmp.g, tmp.b);
             };
             const p00 = [x0, w00, z0];
             const p10 = [x0 + 1, w10, z0];
             const p01 = [x0, w01, z0 + 1];
             const p11 = [x0 + 1, w11, z0 + 1];
-            tri(p00, p11, p10, 0);
-            tri(p00, p01, p11, 1);
+            tri(p00, p11, p10);
+            tri(p00, p01, p11);
           }
         if (pos.length === 0) continue;
         const geo = new THREE.BufferGeometry();
@@ -85,5 +112,8 @@ export class WaterMesh {
         mesh.matrixAutoUpdate = false;
         this.group.add(mesh);
       }
+  }
+  update(dt: number): void {
+    this.time.value += dt;
   }
 }

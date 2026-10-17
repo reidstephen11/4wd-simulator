@@ -28,6 +28,12 @@ uniform vec3 sunGlow;
 uniform vec3 sunDir;
 uniform float glowSize;
 varying vec3 vDir;
+float cloudHash(vec2 p) { return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+float cloudNoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+  return mix(mix(cloudHash(i),cloudHash(i+vec2(1,0)),f.x),
+             mix(cloudHash(i+vec2(0,1)),cloudHash(i+vec2(1,1)),f.x),f.y);
+}
 void main() {
   vec3 d = normalize( vDir );
   float up = d.y;
@@ -35,6 +41,12 @@ void main() {
   col = mix( col, ground, smoothstep( 0.0, -0.08, up ) );
   float s = max( dot( d, sunDir ), 0.0 );
   col += sunGlow * ( pow( s, 1.0 / glowSize ) * 0.55 + pow( s, 900.0 ) * 1.6 );
+  if (up > 0.025) {
+    vec2 p = d.xz / (up + 0.16) * 2.8;
+    float n = cloudNoise(p) * 0.6 + cloudNoise(p * 2.1) * 0.27 + cloudNoise(p * 4.3) * 0.13;
+    float cloud = smoothstep(0.57, 0.78, n) * smoothstep(0.025, 0.17, up);
+    col = mix(col, mix(horizon, vec3(0.91, 0.93, 0.91), 0.55), cloud * 0.6);
+  }
   gl_FragColor = vec4( col, 1.0 );
   #include <colorspace_fragment>
 }

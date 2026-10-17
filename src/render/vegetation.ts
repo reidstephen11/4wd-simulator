@@ -8,6 +8,8 @@ import { hash2, mulberry32 } from '../sim/world/rng';
 import { pal } from './colors';
 import { patchFog } from './fog';
 import { MeshBuilder } from './lowpoly';
+import { createFoliageMaterials } from './foliage';
+import { Meadow } from './meadow';
 
 const SPECIES: TreeSpecies[] = ['ash', 'candlebark', 'snowgum', 'dead'];
 /** Nominal model heights; instances scale to their own height. */
@@ -43,10 +45,16 @@ export function buildTree(species: TreeSpecies, variant: number, lod: number): T
   const trunkR = (def.trunkRadius[0] + def.trunkRadius[1]) / 2;
   const bark = species === 'dead' ? pal('barkPale').clone().multiplyScalar(0.85) : pal('barkPale');
   const ochre = pal('barkOchre');
-  const sides = lod === 0 ? 6 : 4;
+  const sides = lod === 0 ? 10 : 6;
   const blob = (x: number, y: number, z: number, r: number, dark: boolean, squash = 0.75) => {
     b.push().translate(x, y, z);
-    b.blob(r, canopyColor(rand, dark), lod === 0 ? 0.3 : 0.15, 0, squash);
+    const color = canopyColor(rand, dark);
+    const count = lod === 0 ? 5 : 3;
+    for (let i = 0; i < count; i++) {
+      b.push().rotate((rand() - 0.5) * 1.7, (i / count) * Math.PI + rand() * 0.3, (rand() - 0.5) * 0.6);
+      b.foliageCard(r * 2.5, r * 2.2 * squash, color);
+      b.pop();
+    }
     b.pop();
   };
   const limb = (
@@ -157,17 +165,12 @@ function buildFarTree(species: TreeSpecies, variant: number): THREE.BufferGeomet
   if (canopy) {
     const [cy, rx, ry] = canopy;
     const c = canopyColor(rand, false).lerp(pal('foliageDark'), 0.25);
-    const top = { x: 0, y: H * (cy + ry), z: 0 };
-    const bottom = { x: 0, y: H * (cy - ry), z: 0 };
-    const ring = [0, 1, 2, 3].map((k) => {
-      const a = (k / 4) * Math.PI * 2 + variant;
-      return { x: Math.cos(a) * H * rx, y: H * cy, z: Math.sin(a) * H * rx };
-    });
-    for (let k = 0; k < 4; k++) {
-      const p = ring[k];
-      const q = ring[(k + 1) % 4];
-      b.tri(top, q, p, c);
-      b.tri(bottom, p, q, c.clone().multiplyScalar(0.85));
+    for (let i = 0; i < 2; i++) {
+      b.push()
+        .translate(0, H * cy, 0)
+        .rotate(0, variant + (i * Math.PI) / 2, 0);
+      b.foliageCard(H * rx * 2.6, H * ry * 3, c);
+      b.pop();
     }
   }
   return b.build();
@@ -215,7 +218,7 @@ function buildLog(): THREE.BufferGeometry {
 function buildTussock(variant: number): THREE.BufferGeometry {
   const b = new MeshBuilder(300 + variant);
   const rand = mulberry32(variant + 7);
-  const blades = 6;
+  const blades = 15;
   for (let i = 0; i < blades; i++) {
     const a = (i / blades) * Math.PI * 2 + rand();
     const lean = 0.25 + rand() * 0.3;
@@ -224,7 +227,7 @@ function buildTussock(variant: number): THREE.BufferGeometry {
       .clone()
       .lerp(pal('grassDry'), rand() * 0.5);
     const tip = { x: Math.cos(a) * lean, y: h, z: Math.sin(a) * lean };
-    const w = 0.09;
+    const w = 0.025 + rand() * 0.025;
     const p0 = { x: Math.cos(a + 1.6) * w, y: 0, z: Math.sin(a + 1.6) * w };
     const p1 = { x: Math.cos(a - 1.6) * w, y: 0, z: Math.sin(a - 1.6) * w };
     b.tri(p0, tip, p1, col);
@@ -243,8 +246,8 @@ function buildShrub(variant: number): THREE.BufferGeometry {
       pal('foliage')
         .clone()
         .lerp(pal('grassSage'), rand() * 0.5),
-      0.3,
-      0,
+      0.15,
+      1,
       0.8,
     );
     b.pop();
@@ -265,6 +268,7 @@ export class Vegetation {
   readonly group = new THREE.Group();
   readonly material: THREE.MeshLambertMaterial;
   private readonly trees: THREE.BatchedMesh;
+  private readonly meadow: Meadow;
   private readonly treeGeo: number[][] = [];
   private readonly treeIds: number[] = [];
   private readonly treeLod: Uint8Array;
@@ -287,14 +291,18 @@ export class Vegetation {
     this.quality = quality;
     this.material = patchFog(new THREE.MeshLambertMaterial({ vertexColors: true }));
     this.group.name = 'vegetation';
+    this.meadow = new Meadow(world, quality);
+    this.group.add(this.meadow.mesh);
 
     // --- Trees ---
+    const foliage = createFoliageMaterials();
     const geos: THREE.BufferGeometry[][] = SPECIES.map((s) =>
       [0, 1].flatMap((v) => [buildTree(s, v, 0), buildTree(s, v, 1), buildTree(s, v, 2)]),
     );
     const all = geos.flat();
     const list = world.scatter.trees;
-    this.trees = new THREE.BatchedMesh(list.length, geometrySize(all), 0, this.material);
+    this.trees = new THREE.BatchedMesh(list.length, geometrySize(all), 0, foliage.material);
+    this.trees.customDepthMaterial = foliage.depth;
     this.trees.castShadow = true;
     this.trees.receiveShadow = true;
     this.trees.sortObjects = false;
@@ -373,11 +381,13 @@ export class Vegetation {
 
   setQuality(q: QualityPreset): void {
     this.quality = q;
+    this.meadow.setQuality(q);
     for (const ids of this.coverTiles.values()) for (const id of ids) this.cover.deleteInstance(id);
     this.coverTiles.clear();
   }
 
   update(eye: THREE.Vector3, dt: number): void {
+    this.meadow.update(eye, dt);
     this.lodTimer -= dt;
     if (this.lodTimer > 0) return;
     this.lodTimer = 0.2;

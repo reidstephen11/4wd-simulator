@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { GroundTint, type Terrain } from '../sim/world/terrain';
-import { hash2 } from '../sim/world/rng';
-import { pal, varyColor } from './colors';
-import { patchFog } from './fog';
+import { pal } from './colors';
+import { createGroundMaterial } from './groundMaterial';
 
 /** Quadtree levels: node size (m) and grid step (m). Level 0 matches the physics triangles. */
 const LEVELS = [
@@ -12,6 +11,13 @@ const LEVELS = [
   { size: 256, step: 8 },
 ] as const;
 const ROOT = 3;
+const TINT_SAMPLES = [
+  [0, 0, 0.6],
+  [-1, 0, 0.1],
+  [1, 0, 0.1],
+  [0, -1, 0.1],
+  [0, 1, 0.1],
+] as const;
 
 /** Linear colour per ground tint. */
 function tintColors(): THREE.Color[] {
@@ -52,7 +58,7 @@ interface Node {
  */
 export class TerrainMesh {
   readonly group = new THREE.Group();
-  readonly material: THREE.MeshLambertMaterial;
+  readonly material: THREE.MeshStandardMaterial;
   private readonly colors = tintColors();
   private readonly nodes = new Map<string, Node>();
   private readonly roots: Node[] = [];
@@ -65,9 +71,9 @@ export class TerrainMesh {
 
   constructor(
     private readonly terrain: Terrain,
-    private readonly seed: number,
+    _seed: number,
   ) {
-    this.material = patchFog(new THREE.MeshLambertMaterial({ vertexColors: true }));
+    this.material = createGroundMaterial();
     this.group.name = 'terrain';
     const rootSize = LEVELS[ROOT].size;
     const n = terrain.size / rootSize;
@@ -142,7 +148,7 @@ export class TerrainMesh {
     const mesh = new THREE.Mesh(geo, this.material);
     mesh.receiveShadow = true;
     // Terrain doesn't cast: at a low sun its long shadows get clipped at the edge of the
-    // shadow area around the car. Flat shading already shows the relief.
+    // shadow area around the car. Smooth terrain normals show the relief.
     mesh.castShadow = false;
     mesh.matrixAutoUpdate = false;
     mesh.visible = false;
@@ -221,119 +227,69 @@ export class TerrainMesh {
   buildGeometry(ix0: number, iz0: number, size: number, step: number): THREE.BufferGeometry {
     const t = this.terrain;
     const cells = size / step;
-    const triCount = cells * cells * 2 + cells * 4 * 4;
-    const pos = new Float32Array(triCount * 9);
-    const nrm = new Int8Array(triCount * 9);
-    const col = new Uint8Array(triCount * 9);
-    const res = t.res;
-    const H = t.heights;
-    const half = t.half;
-    const tmp = new THREE.Color();
+    const count = (cells * cells * 2 + cells * 16) * 3;
+    const pos = new Float32Array(count * 3);
+    const nrm = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    const ground = new Float32Array(count * 2);
+    const color = new THREE.Color();
     let v = 0;
-
-    const colorFor = (sx: number, sz: number, slopeY: number, salt: number): THREE.Color => {
-      const i = Math.min(res - 1, sz) * res + Math.min(res - 1, sx);
-      const base = this.colors[t.tint[i]] ?? this.colors[0];
-      varyColor(base, hash2(sx * 2 + salt, sz, this.seed), hash2(sz, sx * 2 + salt, this.seed + 1), tmp);
-      // Steeper faces read a touch darker so slopes stand out.
-      const shade = 0.88 + 0.12 * Math.min(1, Math.max(0, (slopeY - 0.55) / 0.45));
-      return tmp.multiplyScalar(shade);
-    };
-
-    const pushTri = (
-      ax: number,
-      ay: number,
-      az: number,
-      bx: number,
-      by: number,
-      bz: number,
-      cx: number,
-      cy: number,
-      cz: number,
-      color: THREE.Color,
-      up: boolean,
-    ) => {
-      let nx = 0;
-      let ny = 1;
-      let nz = 0;
-      if (!up) {
-        const ux = bx - ax;
-        const uy = by - ay;
-        const uz = bz - az;
-        const wx = cx - ax;
-        const wy = cy - ay;
-        const wz = cz - az;
-        nx = uy * wz - uz * wy;
-        ny = uz * wx - ux * wz;
-        nz = ux * wy - uy * wx;
-        const l = Math.hypot(nx, ny, nz) || 1;
-        nx /= l;
-        ny /= l;
-        nz /= l;
+    const vertex = (sx: number, sz: number, drop = 0) => {
+      const ix = Math.max(0, Math.min(t.size, sx));
+      const iz = Math.max(0, Math.min(t.size, sz));
+      pos.set([sx - t.half, t.sample(ix, iz) - drop, sz - t.half], v * 3);
+      // The same central-difference normal at every shared vertex, including LOD seams.
+      const dx = t.sample(ix - 1, iz) - t.sample(ix + 1, iz);
+      const dz = t.sample(ix, iz - 1) - t.sample(ix, iz + 1);
+      const length = Math.hypot(dx, 2, dz);
+      nrm.set([dx / length, 2 / length, dz / length], v * 3);
+      color.setRGB(0, 0, 0);
+      let rock = 0,
+        wet = 0;
+      // A narrow blend softens the square edge of track and biome paint.
+      for (const [ox, oz, weight] of TINT_SAMPLES) {
+        const x = Math.max(0, Math.min(t.size, ix + ox));
+        const z = Math.max(0, Math.min(t.size, iz + oz));
+        const tint = t.tint[z * t.res + x];
+        const base = this.colors[tint] ?? this.colors[0];
+        color.r += base.r * weight;
+        color.g += base.g * weight;
+        color.b += base.b * weight;
+        if (tint === GroundTint.Rock || tint === GroundTint.Scree || tint === GroundTint.Gravel)
+          rock += weight;
+        if (tint === GroundTint.Mud || tint === GroundTint.CreekBed) wet += weight;
       }
-      const r = Math.round(Math.min(1, color.r) * 255);
-      const g = Math.round(Math.min(1, color.g) * 255);
-      const b = Math.round(Math.min(1, color.b) * 255);
-      const NX = Math.round(nx * 127);
-      const NY = Math.round(ny * 127);
-      const NZ = Math.round(nz * 127);
-      pos[v] = ax;
-      pos[v + 1] = ay;
-      pos[v + 2] = az;
-      pos[v + 3] = bx;
-      pos[v + 4] = by;
-      pos[v + 5] = bz;
-      pos[v + 6] = cx;
-      pos[v + 7] = cy;
-      pos[v + 8] = cz;
-      for (let k = 0; k < 9; k += 3) {
-        nrm[v + k] = NX;
-        nrm[v + k + 1] = NY;
-        nrm[v + k + 2] = NZ;
-        col[v + k] = r;
-        col[v + k + 1] = g;
-        col[v + k + 2] = b;
-      }
-      v += 9;
+      col.set([color.r, color.g, color.b], v * 3);
+      ground.set([rock, wet], v * 2);
+      v++;
     };
-
-    const hs = (ix: number, iz: number) => H[Math.min(res - 1, iz) * res + Math.min(res - 1, ix)];
-
     for (let j = 0; j < cells; j++) {
       for (let i = 0; i < cells; i++) {
-        const sx = ix0 + i * step;
-        const sz = iz0 + j * step;
-        const x0 = sx - half;
-        const z0 = sz - half;
-        const x1 = x0 + step;
-        const z1 = z0 + step;
-        const h00 = hs(sx, sz);
-        const h10 = hs(sx + step, sz);
-        const h01 = hs(sx, sz + step);
-        const h11 = hs(sx + step, sz + step);
-        const cs = step >> 1;
-        // Triangle A (00, 01, 10) and B (10, 01, 11): split along the 10–01 diagonal like Rapier.
-        const nA = step / Math.hypot(h10 - h00, step, h01 - h00);
-        pushTri(x0, h00, z0, x0, h01, z1, x1, h10, z0, colorFor(sx, sz, nA, 0), false);
-        const nB = step / Math.hypot(h11 - h01, step, h11 - h10);
-        pushTri(x1, h10, z0, x0, h01, z1, x1, h11, z1, colorFor(sx + cs, sz + cs, nB, 1), false);
+        const x = ix0 + i * step,
+          z = iz0 + j * step;
+        // Keep the exact Rapier diagonal and heights; only shading changes.
+        vertex(x, z);
+        vertex(x, z + step);
+        vertex(x + step, z);
+        vertex(x + step, z);
+        vertex(x, z + step);
+        vertex(x + step, z + step);
       }
     }
-
-    // Skirts along the four edges, both windings, so cracks between levels never show.
     const skirt = 1.5 * step + 1;
     const edge = (ax: number, az: number, bx: number, bz: number) => {
-      const ha = hs(ax, az);
-      const hb = hs(bx, bz);
-      const c = colorFor(ax, az, 0.9, 0);
-      const X0 = ax - half;
-      const Z0 = az - half;
-      const X1 = bx - half;
-      const Z1 = bz - half;
-      pushTri(X0, ha, Z0, X1, hb - skirt, Z1, X1, hb, Z1, c, true);
-      pushTri(X0, ha, Z0, X0, ha - skirt, Z0, X1, hb - skirt, Z1, c, true);
-      pushTri(X0, ha, Z0, X1, hb, Z1, X1, hb - skirt, Z1, c, true);
-      pushTri(X0, ha, Z0, X1, hb - skirt, Z1, X0, ha - skirt, Z0, c, true);
+      vertex(ax, az);
+      vertex(bx, bz, skirt);
+      vertex(bx, bz);
+      vertex(ax, az);
+      vertex(ax, az, skirt);
+      vertex(bx, bz, skirt);
+      vertex(ax, az);
+      vertex(bx, bz);
+      vertex(bx, bz, skirt);
+      vertex(ax, az);
+      vertex(bx, bz, skirt);
+      vertex(ax, az, skirt);
     };
     for (let i = 0; i < cells; i++) {
       const a = i * step;
@@ -342,11 +298,11 @@ export class TerrainMesh {
       edge(ix0, iz0 + a, ix0, iz0 + a + step);
       edge(ix0 + size, iz0 + a, ix0 + size, iz0 + a + step);
     }
-
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos.subarray(0, v), 3));
-    geo.setAttribute('normal', new THREE.BufferAttribute(nrm.subarray(0, v), 3, true));
-    geo.setAttribute('color', new THREE.BufferAttribute(col.subarray(0, v), 3, true));
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geo.setAttribute('ground', new THREE.BufferAttribute(ground, 2));
     geo.computeBoundingSphere();
     geo.computeBoundingBox();
     return geo;

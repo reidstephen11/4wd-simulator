@@ -22,7 +22,7 @@ export class VehicleModel {
   readonly body: THREE.Mesh;
   readonly rackPlanks: THREE.Mesh;
   readonly wheels: { pivot: THREE.Group; spin: THREE.Group }[] = [];
-  readonly bodyMaterial: THREE.MeshLambertMaterial;
+  readonly bodyMaterial: THREE.MeshPhysicalMaterial;
   private readonly tmpQ = { x: 0, y: 0, z: 0, w: 1 };
   private readonly wheelGeo: THREE.BufferGeometry;
   private readonly basePos: Float32Array;
@@ -35,8 +35,24 @@ export class VehicleModel {
   private readonly spinExtra = [0, 0, 0, 0];
 
   constructor(private readonly tuning: VehicleTuning) {
-    this.bodyMaterial = patchFog(new THREE.MeshLambertMaterial({ vertexColors: true }));
-    this.body = new THREE.Mesh(this.buildBody().build(true), this.bodyMaterial);
+    this.bodyMaterial = patchFog(
+      new THREE.MeshPhysicalMaterial({
+        vertexColors: true,
+        roughness: 0.42,
+        metalness: 0.16,
+        clearcoat: 0.65,
+        clearcoatRoughness: 0.28,
+      }),
+    );
+    const trimMaterial = patchFog(
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0.25 }),
+    );
+    const glassMaterial = patchFog(
+      new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.1, metalness: 0.35, clearcoat: 1 }),
+    );
+    const bodyGeometry = this.buildBody().build(true);
+    this.groupByTag(bodyGeometry, (tag) => (tag === BodyZone.Glass ? 2 : tag === BodyZone.Trim ? 1 : 0), 3);
+    this.body = new THREE.Mesh(bodyGeometry, [this.bodyMaterial, trimMaterial, glassMaterial]);
     const bg = this.body.geometry;
     this.basePos = Float32Array.from(bg.getAttribute('position').array as Float32Array);
     this.baseCol = Float32Array.from(bg.getAttribute('color').array as Float32Array);
@@ -58,14 +74,21 @@ export class VehicleModel {
       planks.box(0.3, 0.05, 2.4, pal('barkOchre'));
       planks.pop();
     }
-    this.rackPlanks = new THREE.Mesh(planks.build(), this.bodyMaterial);
+    this.rackPlanks = new THREE.Mesh(
+      planks.build(),
+      patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 })),
+    );
     this.rackPlanks.castShadow = true;
     this.bodyGroup.add(this.rackPlanks);
 
-    const wheelGeo = this.buildWheel().build();
+    const wheelGeo = this.buildWheel().build(true);
+    this.groupByTag(wheelGeo, (tag) => tag, 2);
     this.wheelGeo = wheelGeo;
     this.wheelBaseCol = Float32Array.from(wheelGeo.getAttribute('color').array as Float32Array);
-    const wheelMat = this.bodyMaterial;
+    const wheelMat = [
+      patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.98 })),
+      patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0.65 })),
+    ];
     for (const w of tuning.wheels) {
       const pivot = new THREE.Group();
       pivot.position.set(w.x, 0, w.z);
@@ -83,10 +106,11 @@ export class VehicleModel {
 
   private buildBody(): MeshBuilder {
     const b = new MeshBuilder(42);
+    b.vary = false;
     const body = pal('vehicleBody');
     const roof = pal('vehicleRoof');
     const trim = pal('vehicleTrim');
-    const glass = pal('vehicleTrim').clone().lerp(pal('waterDeep'), 0.35);
+    const glass = pal('vehicleTrim').clone().lerp(pal('waterDeep'), 0.65);
     const lamp = pal('vehicleRoof')
       .clone()
       .lerp(new THREE.Color(1, 0.95, 0.8), 0.4);
@@ -123,7 +147,12 @@ export class VehicleModel {
       b.push()
         .translate(x, 0.46, -1.88)
         .rotate(Math.PI / 2, 0, 0);
-      b.cylinder(0.12, 0.12, 0.06, 10, trim, true, lamp);
+      b.cylinder(0.12, 0.12, 0.06, 24, trim, true, lamp);
+      b.pop();
+    }
+    for (let x = -0.25; x <= 0.26; x += 0.085) {
+      b.push().translate(x, 0.44, -1.906);
+      b.box(0.025, 0.26, 0.025, roof.clone().multiplyScalar(0.65));
       b.pop();
     }
     // Cabin and hardtop.
@@ -191,12 +220,49 @@ export class VehicleModel {
     b.push()
       .translate(0, 0.86, 2.05)
       .rotate(Math.PI / 2, 0, 0);
-    b.cylinder(0.36, 0.36, 0.24, 12, trim, true, trim.clone().multiplyScalar(1.4));
+    b.cylinder(0.36, 0.36, 0.24, 32, trim, true, trim.clone().multiplyScalar(1.4));
     b.pop();
     // Wheel arch flares.
     for (const w of this.tuning.wheels) {
       b.push().translate(Math.sign(w.x) * 0.84, 0.5, w.z);
       b.box(0.1, 0.1, 0.95, trim);
+      b.pop();
+    }
+    // Door hardware, windscreen seals, wipers and a spare with a visible steel rim.
+    for (const side of [-1, 1]) {
+      b.push().translate(side * 0.826, 0.82, 0.33);
+      b.box(0.035, 0.045, 0.18, trim);
+      b.pop();
+      for (const y of [0.37, 0.68]) {
+        b.push().translate(side * 0.83, y, -0.48);
+        b.box(0.035, 0.055, 0.12, roof);
+        b.pop();
+      }
+      b.push()
+        .translate(side * 0.37, 0.87, -0.71)
+        .rotate(0, 0, side * 0.35);
+      b.box(0.42, 0.018, 0.025, trim);
+      b.pop();
+      b.push().translate(side * 0.62, 1.16, 1.862);
+      b.box(0.022, 0.45, 0.025, trim);
+      b.pop();
+    }
+    b.push()
+      .translate(0, 0.86, 2.182)
+      .rotate(Math.PI / 2, 0, 0);
+    b.cylinder(0.22, 0.22, 0.025, 24, roof, true, roof);
+    b.pop();
+    b.push()
+      .translate(0, 0.86, 2.202)
+      .rotate(Math.PI / 2, 0, 0);
+    b.cylinder(0.075, 0.075, 0.04, 16, trim);
+    b.pop();
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * Math.PI * 2;
+      b.push()
+        .translate(Math.cos(a) * 0.355, 0.86 + Math.sin(a) * 0.355, 2.05)
+        .rotate(0, 0, a);
+      b.box(0.035, 0.062, 0.25, trim);
       b.pop();
     }
     // Chassis rails and axles (seen when the car tips).
@@ -235,19 +301,57 @@ export class VehicleModel {
 
   private buildWheel(): MeshBuilder {
     const b = new MeshBuilder(3);
+    b.vary = false;
     const t = this.tuning;
-    const tyre = pal('vehicleTrim');
+    const tyre = pal('vehicleTrim').clone().multiplyScalar(0.65);
     const rim = pal('vehicleRoof').clone().multiplyScalar(0.8);
     b.push().rotate(0, 0, Math.PI / 2);
-    b.cylinder(t.wheelRadius, t.wheelRadius, t.wheelWidth, 12, tyre, true, tyre);
+    b.cylinder(t.wheelRadius * 0.97, t.wheelRadius * 0.97, t.wheelWidth, 32, tyre, true, tyre);
     b.pop();
-    // Rim on the outer face (+x) and a few tread blocks.
+    // Two rows of staggered off-road tread blocks.
+    for (let i = 0; i < 28; i++) {
+      for (const side of [-1, 1]) {
+        const a = ((i + (side > 0 ? 0.4 : 0)) / 28) * Math.PI * 2;
+        b.push()
+          .translate(side * t.wheelWidth * 0.25, Math.cos(a) * t.wheelRadius, Math.sin(a) * t.wheelRadius)
+          .rotate(a, side * 0.18, 0);
+        b.box(t.wheelWidth * 0.47, 0.045, 0.065, tyre);
+        b.pop();
+      }
+    }
+    b.tag = 1;
     b.push()
-      .translate(t.wheelWidth / 2 + 0.005, 0, 0)
-      .rotate(0, 0, Math.PI / 2);
-    b.cylinder(0.2, 0.22, 0.02, 8, rim, true, rim);
+      .translate(t.wheelWidth / 2 + 0.008, 0, 0)
+      .rotate(0, 0, -Math.PI / 2);
+    b.cylinder(0.2, 0.22, 0.028, 24, rim, true, rim);
     b.pop();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      b.push()
+        .translate(t.wheelWidth / 2 + 0.03, Math.cos(a) * 0.11, Math.sin(a) * 0.11)
+        .rotate(0, 0, -Math.PI / 2);
+      b.cylinder(0.019, 0.019, 0.02, 6, tyre);
+      b.pop();
+    }
     return b;
+  }
+
+  /** Group indexed triangles without moving the vertices used by dirt and dents. */
+  private groupByTag(
+    geometry: THREE.BufferGeometry,
+    materialFor: (tag: number) => number,
+    count: number,
+  ): void {
+    const tags = geometry.getAttribute('tag');
+    const indices: number[] = [];
+    for (let m = 0; m < count; m++) {
+      const start = indices.length;
+      for (let i = 0; i < tags.count; i += 3) {
+        if (materialFor(tags.getX(i)) === m) indices.push(i, i + 1, i + 2);
+      }
+      geometry.addGroup(start, indices.length - start, m);
+    }
+    geometry.setIndex(indices);
   }
 
   /** Blend in dirt and push in dents from the vehicle's condition (cheap when unchanged). */

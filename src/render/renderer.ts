@@ -29,6 +29,7 @@ export class GameRenderer {
   private quality: QualityPreset;
   private lastFrame = performance.now();
   private firstFrame = true;
+  private reflectionMap: THREE.WebGLRenderTarget | null = null;
   /** Point the shadow camera follows (the vehicle). */
   readonly focus = new THREE.Vector3();
 
@@ -60,6 +61,7 @@ export class GameRenderer {
     this.lighting = new Lighting(this.scene, env);
     this.sky = new Sky(env);
     this.scene.add(this.sky.mesh);
+    this.updateReflections(env);
     this.scene.add(createBackdrop(world.map.seed));
 
     this.terrainMesh = new TerrainMesh(world.terrain, world.map.seed);
@@ -95,10 +97,30 @@ export class GameRenderer {
     this.resize();
   }
 
+  private updateReflections(env: EnvironmentConfig): void {
+    // A filtered sky supplies coherent highlights on paint, glass and water.
+    const scene = new THREE.Scene();
+    const sky = new Sky(env);
+    scene.add(sky.mesh);
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    const next = pmrem.fromScene(scene, 0.04, 0.1, 200, { size: 128 });
+    this.scene.environment = next.texture;
+    this.scene.environmentIntensity = 0.45;
+    this.reflectionMap?.dispose();
+    this.reflectionMap = next;
+    sky.mesh.geometry.dispose();
+    (sky.mesh.material as THREE.Material).dispose();
+    pmrem.dispose();
+  }
+
   setEnvironment(env: EnvironmentConfig): void {
     this.env = env;
     this.lighting.setEnvironment(env);
     this.sky.setEnvironment(env);
+    this.updateReflections(env);
+    this.renderer.toneMapping =
+      env.toneMapping === 'agx' ? THREE.AgXToneMapping : THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = env.exposure;
     this.particles.setWetness(env.wetness);
     applyFogEnvironment(this.scene, env, this.quality.drawDistance);
   }
@@ -130,6 +152,7 @@ export class GameRenderer {
     this.firstFrame = false;
     this.lighting.follow(this.focus);
     this.sky.update(this.camera);
+    this.water.update(dt);
     this.renderer.render(this.scene, this.camera);
   }
 }

@@ -14,7 +14,7 @@ Inspired by *Over The Hill* (Funselektor, 2026). Use none of its names, assets, 
 | Players | Single-player. Code structured so co-op can be added later (see §11). |
 | Scope | Small slice: one map (~1.5 × 1.5 km), one vehicle. |
 | Driving feel | Between arcade and sim. Heavy, visible suspension, can slide and roll. High/low range, always 4WD, no diff locks, automatic gears within a range. |
-| Visual style | Low-poly, flat-shaded, vertex colours, soft warm light. Own palette (§4). |
+| Visual style | Stylised landscapes, smooth terrain shading, detailed foliage, soft warm light. Own palette (§4). |
 | Setting | Australian high country: eucalyptus forest, red-brown dirt tracks, granite ridges, a creek. |
 | Purpose | Pure exploration. Discoverable places are marked on the map; no rewards, no challenges. |
 | Navigation | Fold-out paper map (key press) + small compass strip. No minimap. |
@@ -74,7 +74,7 @@ Rules:
 
 ## 4. Visual language
 
-**Overall look:** low-poly, faceted, flat-shaded (non-indexed geometry or `flatShading: true`). Colours come from vertex colours and the palette, not image textures. Shapes are simple and slightly chunky. Detail comes from silhouettes, light and colour changes, not from polygon count. Readability first: the player must be able to see slope, rock and mud at a glance.
+**Overall look (graphics refinement):** polished, stylised landscapes guided by the *Over The Hill* reference. Use smooth terrain shading, softly blended ground colours, fine eucalyptus foliage and grass, reflective vehicle materials and animated creek water. Keep clear, slightly chunky vehicle and rock silhouettes, the original palette, warm afternoon light and cool distant haze. Procedural surface detail and generated foliage cutouts are allowed; do not use the reference game’s assets. Readability first: the player must be able to see slope, rock and mud at a glance. See [graphics decisions](docs/DECISIONS.md#graphics-refinement-over-the-hill-reference).
 
 **Lighting (late afternoon):**
 - One directional sun, low (~25° elevation), warm (`#FFD9A0`), casting soft shadows (PCF soft) from a shadow camera that follows the vehicle.
@@ -108,7 +108,7 @@ Rules:
 Vary each colour slightly per vertex/instance (±4% brightness, small hue shift) so large areas don't look flat.
 
 **Vegetation and props (all low-poly, instanced):**
-- Trees: 3–4 eucalypt variants. Tall straight mountain ash in valleys, twisted snow gums on the high plain. Pale trunks, clumped canopies made of a few faceted blobs.
+- Trees: 3–4 eucalypt variants. Tall straight mountain ash in valleys, twisted snow gums on the high plain. Pale trunks, clumped canopies made of generated branch cutouts with matching shadow silhouettes.
 - Shrubs, tussock grass clumps, fallen logs, scattered granite boulders and tors.
 - Man-made: weathered timber hut, rusted abandoned ute, fire lookout tower, wooden signposts, campsite fire ring and log seats, a cattle grid at the map entrance.
 

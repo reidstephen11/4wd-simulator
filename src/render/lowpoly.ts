@@ -9,6 +9,8 @@ import { varyColor } from './colors';
 export class MeshBuilder {
   readonly positions: number[] = [];
   readonly colors: number[] = [];
+  /** Negative UVs identify solid geometry; foliage cards use the 0..1 texture square. */
+  readonly uvs: number[] = [];
   /** Optional per-vertex tag (e.g. body zone for dirt). */
   readonly tags: number[] = [];
   private readonly stack: THREE.Matrix4[] = [new THREE.Matrix4()];
@@ -62,6 +64,7 @@ export class MeshBuilder {
     const pb = this.vb.set(b.x, b.y, b.z).applyMatrix4(m);
     const pc = this.vc.set(c.x, c.y, c.z).applyMatrix4(m);
     this.positions.push(pa.x, pa.y, pa.z, pb.x, pb.y, pb.z, pc.x, pc.y, pc.z);
+    this.uvs.push(-1, -1, -1, -1, -1, -1);
     const col = this.vary ? varyColor(color, this.rand(), this.rand(), this.tmpC) : color;
     for (let k = 0; k < 3; k++) {
       this.colors.push(col.r, col.g, col.b);
@@ -79,6 +82,20 @@ export class MeshBuilder {
   ): this {
     this.tri(a, b, c, color);
     return this.tri(a, c, d, color);
+  }
+
+  /** A textured branch cluster, transformed like the other builder shapes. */
+  foliageCard(width: number, height: number, color: THREE.Color): this {
+    const start = this.uvs.length;
+    this.quad(
+      { x: -width / 2, y: -height / 2, z: 0 },
+      { x: width / 2, y: -height / 2, z: 0 },
+      { x: width / 2, y: height / 2, z: 0 },
+      { x: -width / 2, y: height / 2, z: 0 },
+      color,
+    );
+    this.uvs.splice(start, 12, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1);
+    return this;
   }
 
   /** Axis-aligned box centred on the current origin, optionally subdivided (for dents). */
@@ -186,6 +203,7 @@ export class MeshBuilder {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(this.positions, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(this.colors, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(this.uvs, 2));
     if (withTags) geo.setAttribute('tag', new THREE.Float32BufferAttribute(this.tags, 1));
     geo.computeVertexNormals();
     geo.computeBoundingSphere();

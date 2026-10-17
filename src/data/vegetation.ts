@@ -39,7 +39,7 @@ export const scatterTuning = {
 /** Decorative ground cover drawn near the camera (render only, no colliders). */
 export const groundCover = {
   /** Tussocks per 100 m² on open grass at full density. */
-  tussockDensity: 9,
+  tussockDensity: 20,
   shrubDensity: 1.6,
   tile: 32,
 };
