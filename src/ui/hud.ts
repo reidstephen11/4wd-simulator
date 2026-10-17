@@ -1,0 +1,201 @@
+import { icons, type PoiIcon } from './icons';
+
+export interface Prompt {
+  /** Key or button glyphs, e.g. "E" or "Hold J". */
+  keys: string;
+  text: string;
+  /** 0..1 progress ring (hold actions). */
+  progress?: number;
+}
+
+export interface CompassPoi {
+  id: string;
+  kind: PoiIcon;
+  /** Bearing from the player (degrees, 0 = north). */
+  bearing: number;
+}
+
+export interface HudState {
+  /** Camera heading (degrees, 0 = north). */
+  heading: number;
+  pois: CompassPoi[];
+  range: 'high' | 'low';
+  planksCarried: number;
+  planksTotal: number;
+  winchAttached: boolean;
+  /** 0 = fine, 1 = flooding (warning), 2 = stalled. */
+  engine: 0 | 1 | 2;
+  prompts: Prompt[];
+}
+
+/**
+ * In-game HUD (SPEC §9): compass strip (top centre), status cluster (bottom left),
+ * context prompts (bottom centre) and toasts. Plain DOM; mostly-clear screen.
+ */
+export class Hud {
+  readonly el: HTMLElement;
+  private readonly compass: HTMLCanvasElement;
+  private readonly cctx: CanvasRenderingContext2D;
+  private readonly status: HTMLElement;
+  private readonly rangeEl: HTMLElement;
+  private readonly planksEl: HTMLElement;
+  private readonly winchEl: HTMLElement;
+  private readonly engineEl: HTMLElement;
+  private readonly promptsEl: HTMLElement;
+  private readonly toasts: HTMLElement;
+  private readonly discovery: HTMLElement;
+  private lastCompassKey = '';
+  private lastPromptKey = '';
+  private readonly iconImages = new Map<string, HTMLImageElement>();
+
+  constructor(root: HTMLElement) {
+    this.el = document.createElement('div');
+    this.el.className = 'hud';
+    this.el.innerHTML = `
+      <div class="compass paper"><canvas width="840" height="76"></canvas></div>
+      <div class="status paper">
+        <div class="status-range" title="Transfer range">H</div>
+        <div class="status-item status-planks" title="Planks">${icons.planks}<span>2/2</span></div>
+        <div class="status-item status-winch" title="Winch attached">${icons.winch}</div>
+        <div class="status-item status-engine" title="Engine flooding">${icons.engine}</div>
+      </div>
+      <div class="prompts"></div>
+      <div class="toasts"></div>
+      <div class="discovery"></div>`;
+    root.appendChild(this.el);
+    this.compass = this.el.querySelector('.compass canvas') as HTMLCanvasElement;
+    this.cctx = this.compass.getContext('2d') as CanvasRenderingContext2D;
+    this.status = this.el.querySelector('.status') as HTMLElement;
+    this.rangeEl = this.el.querySelector('.status-range') as HTMLElement;
+    this.planksEl = this.el.querySelector('.status-planks span') as HTMLElement;
+    this.winchEl = this.el.querySelector('.status-winch') as HTMLElement;
+    this.engineEl = this.el.querySelector('.status-engine') as HTMLElement;
+    this.promptsEl = this.el.querySelector('.prompts') as HTMLElement;
+    this.toasts = this.el.querySelector('.toasts') as HTMLElement;
+    this.discovery = this.el.querySelector('.discovery') as HTMLElement;
+    for (const k of ['campsite', 'viewpoint', 'landmark', 'feature'] as const) {
+      const img = new Image();
+      img.src = `data:image/svg+xml;utf8,${encodeURIComponent(
+        icons[k]
+          .replace('currentColor', '#3B2A1E')
+          .replace(/currentColor/g, '#3B2A1E')
+          .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '),
+      )}`;
+      this.iconImages.set(k, img);
+    }
+  }
+
+  setVisible(v: boolean): void {
+    this.el.classList.toggle('hidden', !v);
+  }
+
+  update(s: HudState): void {
+    this.drawCompass(s);
+    this.rangeEl.textContent = s.range === 'high' ? 'H' : 'L';
+    this.rangeEl.classList.toggle('low', s.range === 'low');
+    this.planksEl.textContent = `${s.planksCarried}/${s.planksTotal}`;
+    this.winchEl.classList.toggle('shown', s.winchAttached);
+    this.engineEl.classList.toggle('shown', s.engine > 0);
+    this.engineEl.classList.toggle('stalled', s.engine === 2);
+    this.status.dataset.engine = String(s.engine);
+    const key = s.prompts.map((p) => `${p.keys}|${p.text}|${p.progress?.toFixed(2) ?? ''}`).join('#');
+    if (key !== this.lastPromptKey) {
+      this.lastPromptKey = key;
+      this.promptsEl.innerHTML = '';
+      for (const p of s.prompts) {
+        const el = document.createElement('div');
+        el.className = 'prompt paper';
+        const k = document.createElement('span');
+        k.className = 'key';
+        k.textContent = p.keys;
+        if (p.progress !== undefined) k.style.setProperty('--progress', `${Math.round(p.progress * 100)}%`);
+        el.append(k, document.createTextNode(` ${p.text}`));
+        this.promptsEl.appendChild(el);
+      }
+    }
+  }
+
+  private drawCompass(s: HudState): void {
+    const key = `${s.heading.toFixed(1)}|${s.pois.map((p) => `${p.id}${p.bearing.toFixed(0)}`).join(',')}`;
+    if (key === this.lastCompassKey) return;
+    this.lastCompassKey = key;
+    const c = this.cctx;
+    const w = this.compass.width;
+    const h = this.compass.height;
+    c.clearRect(0, 0, w, h);
+    const span = 180;
+    const pxPerDeg = w / span;
+    const x = (bearing: number) => {
+      let d = bearing - s.heading;
+      d = ((((d + 180) % 360) + 360) % 360) - 180;
+      return w / 2 + d * pxPerDeg;
+    };
+    c.strokeStyle = '#3B2A1E';
+    c.fillStyle = '#3B2A1E';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    const labels: Record<number, string> = {
+      0: 'N',
+      45: 'NE',
+      90: 'E',
+      135: 'SE',
+      180: 'S',
+      225: 'SW',
+      270: 'W',
+      315: 'NW',
+    };
+    for (let b = 0; b < 360; b += 5) {
+      const px = x(b);
+      if (px < -10 || px > w + 10) continue;
+      const major = b % 45 === 0;
+      c.lineWidth = major ? 3 : b % 15 === 0 ? 2 : 1.2;
+      c.beginPath();
+      c.moveTo(px, h - 6);
+      c.lineTo(px, h - (major ? 22 : b % 15 === 0 ? 16 : 11));
+      c.stroke();
+      if (labels[b] !== undefined) {
+        c.font = `${labels[b].length === 1 ? 'bold 30px' : '22px'} "Patrick Hand", "Nunito", sans-serif`;
+        c.fillStyle = b === 0 ? '#B5653A' : '#3B2A1E';
+        c.fillText(labels[b], px, 24);
+        c.fillStyle = '#3B2A1E';
+      }
+    }
+    for (const p of s.pois) {
+      const px = x(p.bearing);
+      if (px < 12 || px > w - 12) continue;
+      const img = this.iconImages.get(p.kind);
+      if (img?.complete) c.drawImage(img, px - 13, 32, 26, 26);
+    }
+    // Centre marker.
+    c.fillStyle = '#B5653A';
+    c.beginPath();
+    c.moveTo(w / 2 - 9, h);
+    c.lineTo(w / 2 + 9, h);
+    c.lineTo(w / 2, h - 12);
+    c.closePath();
+    c.fill();
+  }
+
+  /** Short message card (range change, winch attached...). */
+  toast(text: string, ms = 2200): void {
+    const el = document.createElement('div');
+    el.className = 'toast paper';
+    el.textContent = text;
+    this.toasts.appendChild(el);
+    while (this.toasts.children.length > 3) this.toasts.firstElementChild?.remove();
+    setTimeout(() => el.classList.add('out'), ms);
+    setTimeout(() => el.remove(), ms + 500);
+  }
+
+  /** "Discovered: …" paper card that unfolds near the top of the screen. */
+  discovered(name: string, kind: PoiIcon): void {
+    const el = document.createElement('div');
+    el.className = 'discovery-card paper';
+    el.innerHTML = `<div class="discovery-icon">${icons[kind]}</div><div><div class="discovery-label">Discovered</div><div class="discovery-name"></div></div>`;
+    (el.querySelector('.discovery-name') as HTMLElement).textContent = name;
+    this.discovery.innerHTML = '';
+    this.discovery.appendChild(el);
+    setTimeout(() => el.classList.add('out'), 3800);
+    setTimeout(() => el.remove(), 4500);
+  }
+}
