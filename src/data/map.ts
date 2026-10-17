@@ -1,6 +1,14 @@
 import type { MapDef } from '../sim/world/mapTypes';
 import { campCrawlCourse, campCourseSigns } from './crawlCourse';
 import { graniteLink, graniteLinkTracks, graniteLinkSigns, graniteLinkAnchors } from './crawlTrail';
+import {
+  challengeTracks,
+  challengeTrails,
+  challengeFlats,
+  challengePois,
+  challengeSigns,
+  challengeAnchors,
+} from './challenges';
 
 /**
  * High Country map (SPEC §5). Hand-authored main features; small detail comes
@@ -112,6 +120,7 @@ export const highCountryMap: MapDef = {
     },
   ],
   flats: [
+    ...challengeFlats,
     { id: 'camp', x: -160, z: 246, radius: 26, blend: 26 },
     { id: 'crawl-course', x: -120, z: 253, radius: 19, blend: 8 },
     { id: 'hut', x: -200, z: -436, radius: 16, blend: 16 },
@@ -154,6 +163,7 @@ export const highCountryMap: MapDef = {
     ],
   },
   tracks: [
+    ...challengeTracks,
     ...graniteLinkTracks,
     {
       id: 'entry-road',
@@ -406,6 +416,7 @@ export const highCountryMap: MapDef = {
   bogs: [{ id: 'bog-hole', x: 174, z: 3, radiusX: 15, radiusZ: 8, rotationDeg: 12, depth: 0.45 }],
   gullies: [{ id: 'washout-gully', x: 90, z: 282, headingDeg: 0, length: 112, gap: 1.2, depth: 1.6 }],
   pois: [
+    ...challengePois,
     {
       id: graniteLink.id,
       name: graniteLink.name,
@@ -500,6 +511,7 @@ export const highCountryMap: MapDef = {
     },
   ],
   props: [
+    ...challengeSigns,
     ...graniteLinkSigns,
     ...campCourseSigns,
     { kind: 'fireRing', x: -164, z: 244, headingDeg: 0, flatten: 3 },
@@ -519,6 +531,7 @@ export const highCountryMap: MapDef = {
     { kind: 'signpost', x: 32, z: 300, headingDeg: 180, text: 'Washout — detour' },
   ],
   boulders: [
+    ...challengeAnchors,
     ...graniteLinkAnchors,
     { x: 150, z: -20, radius: 1.3, anchor: true },
     { x: 204, z: -9, radius: 1.2, anchor: true },
@@ -548,7 +561,7 @@ export const highCountryMap: MapDef = {
   ],
   fallenTrees: [{ id: 'fallen-tree', x: -489, z: -140, headingDeg: 82, length: 12, radius: 0.42, mass: 750 }],
   crawlCourses: [campCrawlCourse],
-  crawlTrails: [graniteLink],
+  crawlTrails: [graniteLink, ...challengeTrails],
   vegetation: {
     maxTreeDensity: 1.5,
     ashBelow: 48,

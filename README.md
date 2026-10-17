@@ -67,6 +67,15 @@ Press **C** or click **View** to cycle Follow → Front left → Front right →
 
 The **Granite Link** starts just east of the camp course. Follow the amber markers through about 70 m of split rocks, an off-camber shelf and granite ledges. Marked boulders beside the trail provide winch anchors. The wider, green-marked gravel bypass connects the same entrance and exit, making a loop back to camp. Both routes work in either direction; section hints explain the obstacle nearby. The rocks' chamfered surfaces use the same vertices for rendering and collision.
 
+Continue past Granite Link to the signed **4WD Challenge Loop**. Four new obstacles each have their own wider gravel bypass and a marked winch anchor:
+
+- **V-Notch — moderate:** keep a tyre on each sloping bank and straddle the channel.
+- **Log Steps — moderate:** three angled, staggered logs lift alternating wheels. Try low range and precision crawl, adding lockers as needed.
+- **Boulder Gates — hard:** align the vehicle through two 2.15 m rock gaps. More throttle cannot make the gaps wider; use the front-corner camera and back up to correct the line.
+- **Sidewinder Shelf — hard:** climb onto a raised shelf tilted up to 20°, stay centred, and ease down the far end.
+
+Amber markers identify moderate obstacles, red markers identify hard ones, and green markers follow the links and bypasses. Signs and nearby hints point to the next challenge and back to Granite Link. Both the obstacle loop and the complete easy route are driveable without resetting. All four challenges appear on the paper map once discovered. The obstacle logs share their exact rendered mesh with collision.
+
 ## Debug mode
 
 Add `?debug` to the URL (for example `http://localhost:5173/?debug` or `https://reidstephen11.github.io/4wd-simulator/?debug`). You get:
@@ -79,9 +88,10 @@ Add `?debug` to the URL (for example `http://localhost:5173/?debug` or `https://
 The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 
 - [ ] It loads from the Pages link in current Chrome, Firefox and Edge.
-- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (16 places; the map fills in as you find them).
+- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (20 places; the map fills in as you find them).
 - [ ] **Camp logs:** select low range (L) and crawl over both logs without a run-up. Try reverse and a line with only one wheel on each axle crossing the log; the tyres should climb before the body touches.
 - [ ] **Granite Link:** follow the amber trail through all three rock sections, then return on the green gravel bypass. Try C / View at a diagonal obstacle to see the axle flex; confirm V restores follow. Try the loop in the opposite direction.
+- [ ] **4WD Challenge Loop:** continue from Granite Link through V-Notch, Log Steps, Boulder Gates and Sidewinder Shelf, then return. Try every green bypass with open diffs. At the gates, a poor line should catch the visible rock; reverse and realign to pass.
 - [ ] **Deep Crossing:** drive into the deep channel and sit there — the engine sputters after about 5 s under water and stalls at 10 s. It restarts on throttle once the air intake has been clear for 20 s.
 - [ ] **The Staircase:** the rocky climb needs low range (press L while slow); high range shouldn't make it.
 - [ ] **Washout Gully:** the car can't cross the 1.2 m gap on its own. Lay both planks across it (tool menu → Place planks) or take the detour around the top end.

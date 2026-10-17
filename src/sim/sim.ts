@@ -139,6 +139,8 @@ export class Simulation {
       const ez = Math.cos(l.yaw) * l.length * 0.5;
       batcher.prism('wood', [l.x - ex, l.y, l.z - ez], [l.x + ex, l.y, l.z + ez], l.radius, 6);
     }
+    for (const log of this.world.features.logs)
+      batcher.prism('wood', log.a, log.b, log.radius, 9, -Math.PI / 2);
     for (const p of this.world.map.props) {
       for (const ps of placedPropShapes(p, this.world.terrain)) {
         const s = ps.shape;

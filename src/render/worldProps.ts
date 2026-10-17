@@ -8,7 +8,7 @@ import { pal } from './colors';
 import { patchFog } from './fog';
 import { MeshBuilder } from './lowpoly';
 import { coursePoint } from '../sim/world/crawlCourse';
-import { trailPoint } from '../sim/world/crawlTrail';
+import { trailPoint, staticLogMesh } from '../sim/world/crawlTrail';
 import { rockShape } from '../sim/world/rockShape';
 
 const timber = () => pal('barkPale').clone().lerp(pal('barkOchre'), 0.35).multiplyScalar(0.82);
@@ -380,21 +380,42 @@ export class WorldProps {
             b.pop();
           }
       }
-    for (const trail of world.map.crawlTrails ?? [])
-      for (const id of [trail.trackId, trail.bypassTrackId]) {
-        const track = world.features.tracks.find((t) => t.def.id === id)!;
-        const colour = new THREE.Color(id === trail.trackId ? '#CEA348' : '#72975A');
-        for (let at = 2; at < track.poly.length; at += 10) {
-          const p = trailPoint(track, at, -(track.def.width / 2 + 0.7));
-          const y = world.terrain.heightAt(p.x, p.z);
-          b.push().translate(p.x, y + 0.25, p.z);
-          b.cylinder(0.035, 0.045, 0.5, 6, timber());
-          b.pop();
-          b.push().translate(p.x, y + 0.46, p.z);
-          b.box(0.15, 0.13, 0.1, colour);
-          b.pop();
-        }
+    const markedTracks = new Map<string, string>();
+    for (const trail of world.map.crawlTrails ?? []) {
+      markedTracks.set(trail.trackId, trail.difficulty === 'hard' ? '#B45D49' : '#CEA348');
+      markedTracks.set(trail.bypassTrackId, '#72975A');
+    }
+    for (const track of world.features.tracks)
+      if (track.def.markerColor)
+        markedTracks.set(
+          track.def.id,
+          { green: '#72975A', amber: '#CEA348', red: '#B45D49' }[track.def.markerColor],
+        );
+    for (const [id, hex] of markedTracks) {
+      const track = world.features.tracks.find((t) => t.def.id === id)!;
+      const colour = new THREE.Color(hex);
+      for (let at = 2; at < track.poly.length; at += 10) {
+        const p = trailPoint(track, at, -(track.def.width / 2 + 0.7));
+        const y = world.terrain.heightAt(p.x, p.z);
+        b.push().translate(p.x, y + 0.25, p.z);
+        b.cylinder(0.035, 0.045, 0.5, 6, timber());
+        b.pop();
+        b.push().translate(p.x, y + 0.46, p.z);
+        b.box(0.15, 0.13, 0.1, colour);
+        b.pop();
       }
+    }
+    for (const log of world.features.logs) {
+      const shape = staticLogMesh(log);
+      const vertex = (i: number) => new THREE.Vector3().fromArray(shape.vertices, i * 3);
+      for (let i = 0; i < shape.indices.length; i += 3)
+        b.tri(
+          vertex(shape.indices[i]),
+          vertex(shape.indices[i + 1]),
+          vertex(shape.indices[i + 2]),
+          i % 12 >= 6 ? pal('barkPale') : pal('dirtDark'),
+        );
+    }
     // Staircase ledges and chamfered trail rocks share their collision dimensions.
     const rand = mulberry32(99);
     for (const box of world.features.boxes) {

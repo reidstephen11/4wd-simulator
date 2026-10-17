@@ -111,7 +111,8 @@ export function buildHudState(i: HudInputs): HudState {
           ? `Easy · ${trail.name} bypass`
           : `${trail.name} · ${section?.name ?? 'Technical trail'}`,
         text: bypass
-          ? 'Follow the green markers for the wider gravel route between the trail exit and camp. Amber markers lead through the technical rocks.'
+          ? (trail.bypassHint ??
+            'Follow the green markers for the wider gravel route between the trail exit and camp. Amber markers lead through the technical rocks.')
           : (section?.hint ?? 'Follow the amber markers. The green gravel bypass connects both ends.'),
         controls: kb
           ? 'L low range · P crawl · Z / X lockers · C views'
@@ -119,6 +120,19 @@ export function buildHudState(i: HudInputs): HudState {
       };
       break;
     }
+
+  if (!courseHint && i.mode === 'drive') {
+    const link = (i.tracks ?? [])
+      .filter((t) => t.def.routeHint)
+      .map((track) => ({ track, ...trailProgress(track, p.x, p.z) }))
+      .sort((a, b) => a.distance - b.distance)[0];
+    if (link && link.distance < link.track.def.width / 2 + 1)
+      courseHint = {
+        title: link.track.def.name ?? '4WD Challenge Loop',
+        text: link.track.def.routeHint!,
+        controls: kb ? 'L low range · P crawl · C views' : 'Y low range · LB tools · LB + R3 views',
+      };
+  }
 
   return {
     heading: i.cameraHeading,
