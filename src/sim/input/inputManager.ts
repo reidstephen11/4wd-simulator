@@ -46,6 +46,7 @@ export class InputManager {
       'wheel',
       (e) => {
         this.wheelDelta += Math.sign(e.deltaY);
+        this.setDevice('keyboard');
       },
       { passive: true },
     );
@@ -56,7 +57,11 @@ export class InputManager {
   }
 
   requestDriveAction(action: 'frontDiff' | 'rearDiff' | 'precision'): void {
-    if (this.vehicleEnabled) this.vehicleEdges.add(action);
+    this.vehicleEdges.add(action);
+  }
+
+  usePointer(): void {
+    this.setDevice('keyboard');
   }
 
   private setDevice(d: Device): void {
@@ -175,10 +180,19 @@ export class InputManager {
   }
 
   /** Camera zoom steps since last call (+ = further away). */
-  takeZoom(dt: number): number {
+  takeZoom(dt: number, allowPad = true): number {
     const d = this.wheelDelta;
     this.wheelDelta = 0;
-    return d + this.padAxes[3] * padTuning.cameraZoomRate * dt;
+    const pad = allowPad ? (this.padButtons[Pad.Right] ? 1 : 0) - (this.padButtons[Pad.Left] ? 1 : 0) : 0;
+    return d + pad * padTuning.cameraZoomRate * dt;
+  }
+
+  /** Radians this frame; independent of steering and tool/menu navigation. */
+  cameraOrbit(dt: number): { yaw: number; pitch: number } {
+    const horizontal = (this.keys.has('Numpad6') ? 1 : 0) - (this.keys.has('Numpad4') ? 1 : 0);
+    const vertical = (this.keys.has('Numpad2') ? 1 : 0) - (this.keys.has('Numpad8') ? 1 : 0);
+    const rate = padTuning.cameraOrbitRate * dt;
+    return { yaw: -(this.padAxes[2] + horizontal) * rate, pitch: (this.padAxes[3] + vertical) * rate };
   }
 
   /** Raw stick (for radial menus). */

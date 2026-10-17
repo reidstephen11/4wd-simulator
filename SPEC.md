@@ -21,7 +21,7 @@ Inspired by *Over The Hill* (Funselektor, 2026). Use none of its names, assets, 
 | Recovery | Winch, two planks, jack to right the vehicle. "Return to last campsite" in the pause menu as a backup. |
 | Damage | Light: visual dirt and dents, engine flooding in deep water. Full mechanical damage is a future update (§11). |
 | Weather / time | Fixed late afternoon, clear sky. Lighting built so day/night and rain can be added later. |
-| Camera | Chase camera only. |
+| Camera | Chase camera with manual orbit. |
 | Audio | All sounds generated in code with the Web Audio API. No audio files. |
 | Input | Keyboard and gamepad (Gamepad API). |
 | Map creation | Main features placed by hand in data; small detail (bumps, rocks, trees) generated from a fixed seed. |
@@ -239,7 +239,9 @@ Include a `wetness` input (0 for now) that lowers grip, so rain can be added lat
 - Raises and pulls back slightly on steep slopes and at speed; moves closer when crawling slowly.
 - Never clips into terrain or rocks (push forward along the view line when blocked).
 - Follows the vehicle's heading with lag, not its roll, so the horizon stays steady when the car tilts.
-- Scroll wheel / right stick up-down adjusts follow distance within limits.
+- Drag with either mouse button / right stick to orbit 360° and tilt between low and overhead views. Num 4/6/8/2 provides a keyboard alternative. The chosen angle follows the vehicle until recentered; manual views pivot around the vehicle for wheel placement.
+- Scroll wheel / D-pad left-right (while driving) adjusts follow distance within limits. D-pad tool adjustments keep priority during placement/targeting.
+- V / Num 5 / right-stick click / HUD Reset view returns smoothly behind the vehicle, retaining zoom. Camera input is disabled in menus and map, and during debug free flight.
 
 ---
 
@@ -273,7 +275,9 @@ Keep the screen mostly clear. Use a warm, hand-drawn look: off-white paper tones
 | Tool menu | Hold Q | Hold LB |
 | Interact (pick up planks) | E (when prompted) | A / Cross |
 | Right vehicle | Hold J | Hold B / Circle |
-| Camera distance | Scroll | Right stick up/down |
+| Orbit camera | Mouse drag / Num 4 6 8 2 | Right stick |
+| Camera distance | Scroll | D-pad left/right (driving) |
+| Recenter camera | V / Num 5 | Right stick click |
 | Horn | H | Left stick click |
 | Map | M | View / Select |
 | Pause | Esc | Start / Options |

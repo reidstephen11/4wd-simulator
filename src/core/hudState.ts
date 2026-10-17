@@ -85,7 +85,10 @@ export function buildHudState(i: HudInputs): HudState {
       courseHint = {
         title: `${line.difficulty[0].toUpperCase()}${line.difficulty.slice(1)} · ${line.name}`,
         text: line.hint,
-        controls: `${g.range} low range · ${g.frontDiff} front · ${g.rearDiff} rear · ${g.precision} crawl`,
+        controls:
+          i.device === 'gamepad'
+            ? 'Y low range · Hold LB for lockers and precision crawl'
+            : `${g.range} low range · ${g.frontDiff} front · ${g.rearDiff} rear · ${g.precision} crawl`,
       };
       break;
     }

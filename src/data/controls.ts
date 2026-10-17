@@ -18,6 +18,7 @@ export type Action =
   | 'horn'
   | 'map'
   | 'pause'
+  | 'cameraReset'
   | 'confirm'
   | 'back'
   | 'menuUp'
@@ -44,6 +45,7 @@ export const keyBindings: Record<Action, readonly string[]> = {
   horn: ['KeyH'],
   map: ['KeyM'],
   pause: ['Escape'],
+  cameraReset: ['KeyV', 'Numpad5'],
   confirm: ['Enter', 'KeyE'],
   back: ['Escape', 'Backspace'],
   menuUp: ['ArrowUp', 'KeyW'],
@@ -75,9 +77,6 @@ export const Pad = {
 export const padBindings: Partial<Record<Action, readonly number[]>> = {
   handbrake: [Pad.X],
   range: [Pad.Y],
-  frontDiff: [Pad.Left],
-  rearDiff: [Pad.Right],
-  precision: [Pad.RS],
   winch: [Pad.RB],
   winchIn: [Pad.Up],
   winchOut: [Pad.Down],
@@ -87,6 +86,7 @@ export const padBindings: Partial<Record<Action, readonly number[]>> = {
   horn: [Pad.LS],
   map: [Pad.View],
   pause: [Pad.Start],
+  cameraReset: [Pad.RS],
   confirm: [Pad.A],
   back: [Pad.B],
   menuUp: [Pad.Up],
@@ -98,8 +98,10 @@ export const padBindings: Partial<Record<Action, readonly number[]>> = {
 export const padTuning = {
   stickDeadzone: 0.12,
   triggerDeadzone: 0.05,
-  /** Camera distance change per second at full right-stick deflection (m). */
+  /** Camera zoom steps per second while holding D-pad left/right. */
   cameraZoomRate: 6,
+  /** Camera orbit radians per second at full stick/key deflection. */
+  cameraOrbitRate: 1.8,
 };
 
 /** Short glyphs shown in prompts for the active device. */
@@ -129,9 +131,9 @@ export const glyphs: Record<'keyboard' | 'gamepad', Partial<Record<Action, strin
     brake: 'LT',
     handbrake: 'X',
     range: 'Y',
-    frontDiff: 'D-pad ←',
-    rearDiff: 'D-pad →',
-    precision: 'R3',
+    frontDiff: 'LB menu',
+    rearDiff: 'LB menu',
+    precision: 'LB menu',
     winch: 'RB',
     winchIn: 'D-pad ↑',
     winchOut: 'D-pad ↓',
@@ -153,14 +155,16 @@ export const controlsTable: ReadonlyArray<readonly [string, string, string]> = [
   ['Steer', 'A D / ← →', 'Left stick'],
   ['Handbrake', 'Space', 'X / Square'],
   ['Toggle high/low range', 'L', 'Y / Triangle'],
-  ['Toggle front / rear diff lock', 'Z / X (below 5 km/h to engage)', 'D-pad left / right'],
-  ['Toggle precision crawl', 'P (2.5 km/h forward, 2 km/h reverse)', 'Right stick click'],
+  ['Toggle front / rear diff lock', 'Z / X (below 5 km/h to engage)', 'Hold LB → front / rear diff'],
+  ['Toggle precision crawl', 'P (2.5 km/h forward, 2 km/h reverse)', 'Hold LB → precision crawl'],
   ['Winch quick attach / detach', 'E', 'RB'],
   ['Winch in / out', 'R / F', 'D-pad up / down'],
   ['Tool menu', 'Hold Q', 'Hold LB'],
   ['Interact (pick up planks)', 'E (when prompted)', 'A / Cross'],
   ['Right vehicle', 'Hold J', 'Hold B / Circle'],
-  ['Camera distance', 'Scroll', 'Right stick up/down'],
+  ['Orbit camera', 'Mouse drag / Num 4 6 8 2', 'Right stick'],
+  ['Camera distance', 'Scroll', 'D-pad left/right (driving)'],
+  ['Recenter camera', 'V / Num 5', 'Right stick click'],
   ['Horn', 'H', 'Left stick click'],
   ['Map', 'M', 'View / Select'],
   ['Pause', 'Esc', 'Start / Options'],

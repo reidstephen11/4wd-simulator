@@ -20,6 +20,7 @@ import type { ToolEvent } from '../sim/tools/tools';
 import { GameRenderer } from '../render/renderer';
 import { VehicleModel } from '../render/vehicleModel';
 import { ChaseCamera } from '../render/chaseCamera';
+import { CameraDrag } from '../render/cameraDrag';
 import { ToolsView } from '../render/tools';
 import { Hud } from '../ui/hud';
 import { ToolMenu, type ToolOption } from '../ui/toolMenu';
@@ -48,6 +49,7 @@ export class Game {
   readonly input: InputManager;
   readonly freeCam: FreeCamera;
   readonly chase: ChaseCamera;
+  private readonly cameraDrag: CameraDrag;
   readonly overlay: DebugOverlay | null;
   private readonly debugTools: DebugTools | null;
   readonly model: VehicleModel;
@@ -111,6 +113,7 @@ export class Game {
     this.freeCam = new FreeCamera(view.camera, view.renderer.domElement);
 
     this.hud = new Hud(uiRoot, (action) => this.input.requestDriveAction(action));
+    this.hud.onCameraReset = () => this.chase.recenter();
     this.toolMenu = new ToolMenu(uiRoot);
     this.toolMenu.onPick = (id) => this.pickTool(id);
     this.map = new PaperMap(uiRoot, world);
@@ -170,6 +173,14 @@ export class Game {
       step: (dt) => this.step(dt),
       render: (alpha, frameDt) => this.renderFrame(alpha, frameDt),
     });
+    this.cameraDrag = new CameraDrag(
+      view.renderer.domElement,
+      () => !this.freeCamOn && !this.loop.paused && !this.toolMenu.isOpen,
+      (yaw, pitch) => {
+        this.input.usePointer();
+        this.chase.orbit(yaw, pitch);
+      },
+    );
     installHook(this);
     // Draw the paper map in the background so the first open is instant.
     setTimeout(() => void this.map.prepare(), 2500);
@@ -326,8 +337,26 @@ export class Game {
           : { id: 'planks', label: 'Planks are out', icon: 'planks', enabled: false };
     return [
       { id: 'winch', label: 'Winch', icon: 'winch', enabled: this.anchorInReach },
+      {
+        id: 'frontDiff',
+        label: v.differentials.front ? 'Unlock front diff' : 'Lock front diff',
+        icon: 'feature',
+        enabled: v.differentials.front || Math.abs(v.speed) <= vehicleTuning.crawling.diffLockMaxKmh / 3.6,
+      },
       { id: 'detach', label: 'Detach winch', icon: 'detach', enabled: t.winch.attached },
+      {
+        id: 'rearDiff',
+        label: v.differentials.rear ? 'Unlock rear diff' : 'Lock rear diff',
+        icon: 'feature',
+        enabled: v.differentials.rear || Math.abs(v.speed) <= vehicleTuning.crawling.diffLockMaxKmh / 3.6,
+      },
       planks,
+      {
+        id: 'precision',
+        label: v.precisionCrawl ? 'Disable precision crawl' : 'Enable precision crawl',
+        icon: 'feature',
+        enabled: true,
+      },
     ];
   }
 
@@ -336,6 +365,7 @@ export class Game {
     else if (id === 'planks') this.tool.startPlanks();
     else if (id === 'recall') this.sim.recallPlanks(LOCAL_VEHICLE);
     else if (id === 'detach') this.sim.detachWinch(LOCAL_VEHICLE);
+    else if (id === 'frontDiff' || id === 'rearDiff' || id === 'precision') this.input.requestDriveAction(id);
   }
 
   private onToolEvent(e: ToolEvent): void {
@@ -448,6 +478,17 @@ export class Game {
     if (!usedByTool) this.handleUi();
     this.input.vehicleEnabled =
       !this.freeCamOn && !this.toolMenu.isOpen && !this.loop.paused && this.tool.mode === 'drive';
+    const cameraEnabled = !this.freeCamOn && !this.loop.paused && !this.toolMenu.isOpen;
+    this.cameraDrag.update();
+    // Always drain the wheel, including while menus or the debug camera use it.
+    const zoom = this.input.takeZoom(frameDt, this.tool.mode === 'drive');
+    if (cameraEnabled) {
+      const orbit = this.input.cameraOrbit(frameDt);
+      this.chase.orbit(orbit.yaw, orbit.pitch);
+      this.chase.zoom(zoom);
+      if (this.input.pressed('cameraReset')) this.chase.recenter();
+    }
+    this.hud.cameraHelp(this.input.activeDevice, cameraEnabled, this.tool.mode === 'drive');
     const v = this.vehicle;
     const tools = this.sim.toolsOf(LOCAL_VEHICLE);
     this.anchorCheck -= frameDt;
@@ -462,7 +503,6 @@ export class Game {
     this.view.particles.update(v, this.loop.paused ? 0 : frameDt);
     if (this.freeCamOn) this.freeCam.update(frameDt);
     else if (!this.loop.paused) {
-      this.chase.zoom(this.input.takeZoom(frameDt));
       this.chase.toolView = this.tool.mode !== 'drive';
       const p = this.model.root.position;
       this.tmpPos.copy(p);

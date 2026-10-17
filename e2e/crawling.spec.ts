@@ -31,23 +31,38 @@ test('crawl controls work from keyboard, HUD and gamepad; course hints explain t
     };
     Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => [pad] });
     Object.assign(window, { crawlPad: pad });
-    pad.buttons[14] = { pressed: true, value: 1 };
-    pad.buttons[15] = { pressed: true, value: 1 };
   });
+  const chooseWithPad = async (label: string, x: number, y: number) => {
+    await page.evaluate(
+      ({ x, y }) => {
+        const pad = (
+          window as unknown as {
+            crawlPad: { axes: number[]; buttons: { pressed: boolean; value: number }[] };
+          }
+        ).crawlPad;
+        pad.axes = [x, y, 0, 0];
+        pad.buttons[4] = { pressed: true, value: 1 };
+      },
+      { x, y },
+    );
+    await expect(page.locator('.tool-option.selected')).toHaveText(label);
+    await page.evaluate(() => {
+      const pad = (
+        window as unknown as {
+          crawlPad: { axes: number[]; buttons: { pressed: boolean; value: number }[] };
+        }
+      ).crawlPad;
+      pad.axes = [0, 0, 0, 0];
+      pad.buttons[4] = { pressed: false, value: 0 };
+    });
+    await expect(page.locator('.tool-menu')).toHaveClass(/hidden/);
+  };
+  await chooseWithPad('Lock front diff', 0.866, -0.5);
   await expect(front).toHaveAttribute('aria-pressed', 'true');
+  await chooseWithPad('Unlock rear diff', 0, 1);
   await expect(rear).toHaveAttribute('aria-pressed', 'false');
-  await page.evaluate(() => {
-    const pad = (window as unknown as { crawlPad: { buttons: { pressed: boolean; value: number }[] } })
-      .crawlPad;
-    pad.buttons[14] = pad.buttons[15] = { pressed: false, value: 0 };
-    pad.buttons[11] = { pressed: true, value: 1 };
-  });
+  await chooseWithPad('Disable precision crawl', -0.866, -0.5);
   await expect(crawl).toHaveAttribute('aria-pressed', 'false');
-  await page.evaluate(() => {
-    const pad = (window as unknown as { crawlPad: { buttons: { pressed: boolean; value: number }[] } })
-      .crawlPad;
-    pad.buttons[11] = { pressed: false, value: 0 };
-  });
   await crawl.click();
   await expect(crawl).toHaveAttribute('aria-pressed', 'true');
   await rear.click();

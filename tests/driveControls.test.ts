@@ -148,7 +148,7 @@ describe('crawl input bindings', () => {
     expect(input.vehicleInput(DT).toggleFrontDiff).toBe(false);
   });
 
-  it('D-pad left/right and R3 reach the same vehicle commands', () => {
+  it('camera buttons leave crawling unchanged; menu selections queue single-step drive commands', () => {
     const { input } = keyboard();
     const buttons = Array.from({ length: 17 }, (_, i) => ({
       pressed: [11, 14, 15].includes(i),
@@ -159,6 +159,19 @@ describe('crawl input bindings', () => {
       input.poll();
       const command = input.vehicleInput(DT);
       expect([command.toggleFrontDiff, command.toggleRearDiff, command.togglePrecision]).toEqual([
+        false,
+        false,
+        false,
+      ]);
+      expect(input.pressed('cameraReset')).toBe(true);
+      // A radial menu selection is queued as the menu closes and driving resumes.
+      input.vehicleEnabled = false;
+      input.requestDriveAction('frontDiff');
+      input.requestDriveAction('rearDiff');
+      input.requestDriveAction('precision');
+      input.vehicleEnabled = true;
+      const selected = input.vehicleInput(DT);
+      expect([selected.toggleFrontDiff, selected.toggleRearDiff, selected.togglePrecision]).toEqual([
         true,
         true,
         true,

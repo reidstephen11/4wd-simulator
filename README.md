@@ -29,24 +29,26 @@ Sound starts after your first click or key press (browser rule).
 
 ## Controls
 
-| Action                      | Keyboard                                              | Gamepad                                              |
-| --------------------------- | ----------------------------------------------------- | ---------------------------------------------------- |
-| Accelerate                  | W / ↑                                                 | RT                                                   |
-| Brake / reverse             | S / ↓ (hold when stopped to reverse)                  | LT                                                   |
-| Steer                       | A D / ← →                                             | Left stick                                           |
-| Handbrake                   | Space                                                 | X / Square                                           |
-| Toggle high/low range       | L (below 20 km/h)                                     | Y / Triangle                                         |
-| Front / rear diff lock      | Z / X (below 5 km/h to engage)                        | D-pad left / right                                   |
-| Precision crawl             | P                                                     | Right stick click                                    |
-| Winch quick attach / detach | E                                                     | RB                                                   |
-| Winch in / out              | R / F                                                 | D-pad up / down                                      |
-| Tool menu (winch, planks)   | Hold Q, point with the mouse, arrows or WASD, release | Hold LB, point with the left stick or d-pad, release |
-| Interact (pick up planks)   | E (when prompted)                                     | A / Cross                                            |
-| Right vehicle               | Hold J (when prompted)                                | Hold B / Circle                                      |
-| Camera distance             | Scroll                                                | Right stick up/down                                  |
-| Horn                        | H                                                     | Left stick click                                     |
-| Map                         | M                                                     | View / Select                                        |
-| Pause                       | Esc                                                   | Start / Options                                      |
+| Action                         | Keyboard                                              | Gamepad                                              |
+| ------------------------------ | ----------------------------------------------------- | ---------------------------------------------------- |
+| Accelerate                     | W / ↑                                                 | RT                                                   |
+| Brake / reverse                | S / ↓ (hold when stopped to reverse)                  | LT                                                   |
+| Steer                          | A D / ← →                                             | Left stick                                           |
+| Handbrake                      | Space                                                 | X / Square                                           |
+| Toggle high/low range          | L (below 20 km/h)                                     | Y / Triangle                                         |
+| Front / rear diff lock         | Z / X (below 5 km/h to engage)                        | Hold LB → front / rear diff                          |
+| Precision crawl                | P                                                     | Hold LB → precision crawl                            |
+| Winch quick attach / detach    | E                                                     | RB                                                   |
+| Winch in / out                 | R / F                                                 | D-pad up / down                                      |
+| Tool menu (recovery, crawling) | Hold Q, point with the mouse, arrows or WASD, release | Hold LB, point with the left stick or d-pad, release |
+| Interact (pick up planks)      | E (when prompted)                                     | A / Cross                                            |
+| Right vehicle                  | Hold J (when prompted)                                | Hold B / Circle                                      |
+| Orbit camera                   | Mouse drag (left or right button), or Num 4/6/8/2     | Right stick                                          |
+| Camera distance                | Scroll                                                | D-pad left/right while driving                       |
+| Recenter camera                | V or Num 5, or the Reset view button                  | Right stick click                                    |
+| Horn                           | H                                                     | Left stick click                                     |
+| Map                            | M                                                     | View / Select                                        |
+| Pause                          | Esc                                                   | Start / Options                                      |
 
 Placing planks: choose **Place planks** in the tool menu, move them with W/S, turn them with A/D, place with E, cancel with Esc. Prompts on screen switch between keyboard and gamepad glyphs depending on what you last touched.
 
@@ -56,7 +58,7 @@ The **Camp Rock Course** is about 40 m east of River Flat Camp; follow the sign 
 
 Select **low range (L)**, then toggle **precision crawl (P)**. Hold W for a forward target of 2.5 km/h; S still brakes normally while moving forwards, then targets 2 km/h in reverse once stopped. Precision mode adjusts throttle and brakes to control descents while retaining full engine effort for climbing. Analogue triggers vary the target speed. Release the controls to stop, or press P again for normal driving.
 
-Toggle the **rear locker with X** and **front locker with Z**. A locked axle keeps using the grounded tyre when its partner lifts. Engage below 5 km/h; unlocking is always allowed. Front lock increases the turning radius, so unlock it for tight manoeuvres. The status buttons show each axle's state and can also be clicked. On gamepad, use D-pad right for rear lock, D-pad left for front lock and right-stick click for precision crawl.
+Toggle the **rear locker with X** and **front locker with Z**. A locked axle keeps using the grounded tyre when its partner lifts. Engage below 5 km/h; unlocking is always allowed. Front lock increases the turning radius, so unlock it for tight manoeuvres. The status buttons show each axle's state and can also be clicked. On gamepad, hold LB, point the left stick at the front locker, rear locker or precision crawl option, then release LB to select it.
 
 ## Debug mode
 
