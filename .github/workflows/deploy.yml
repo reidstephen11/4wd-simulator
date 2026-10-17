@@ -2,7 +2,7 @@ name: Build and deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/quirky-cori-b7b0s8]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

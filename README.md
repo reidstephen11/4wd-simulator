@@ -6,7 +6,7 @@ Built with Three.js, Rapier physics and TypeScript. Everything, including the so
 
 ## Play
 
-**Online:** https://reidstephen11.github.io/4wd-simulator/ (deployed from the `claude/quirky-cori-b7b0s8` branch by GitHub Actions).
+**Online:** https://reidstephen11.github.io/4wd-simulator/ (deployed from `main` by GitHub Actions).
 
 **Locally** (Node 20 or newer):
 
@@ -90,4 +90,4 @@ docs/      DECISIONS.md (choices made where the spec was open) and screenshots p
 
 ## Deployment
 
-`.github/workflows/deploy.yml` runs lint and unit tests, builds `dist/` and deploys it to GitHub Pages on every push to `claude/quirky-cori-b7b0s8`. The build uses relative asset paths, so it works under the repository's Pages URL. Pages has to be switched on once in the repository settings: **Settings → Pages → Source: GitHub Actions**, and **Settings → Environments → github-pages → Deployment branches** must allow `claude/quirky-cori-b7b0s8`.
+`.github/workflows/deploy.yml` runs lint and unit tests, builds `dist/` and deploys it to GitHub Pages on every push to `main`. The build uses relative asset paths, so it works under the repository's Pages URL. Pages has to be switched on once in the repository settings: **Settings → Pages → Source: GitHub Actions**.
