@@ -475,6 +475,7 @@ export class Game {
   private renderFrame(alpha: number, frameDt: number): void {
     this.input.poll();
     this.clock += frameDt;
+    const cameraWasEnabled = !this.freeCamOn && !this.loop.paused && !this.toolMenu.isOpen;
     const usedByTool = this.tool.update(frameDt);
     const cameraChord =
       this.input.pressed('cameraReset') &&
@@ -492,12 +493,12 @@ export class Game {
     this.cameraDrag.update();
     // Always drain the wheel, including while menus or the debug camera use it.
     const zoom = this.input.takeZoom(frameDt, this.tool.mode === 'drive');
-    if (cameraEnabled) {
+    if (cameraEnabled && cameraWasEnabled) {
       const orbit = this.input.cameraOrbit(frameDt);
       this.chase.orbit(orbit.yaw, orbit.pitch);
       this.chase.zoom(zoom);
       if (this.input.pressed('cameraReset') && !cameraChord) this.chase.recenter();
-      if (this.input.pressed('cameraPreset')) this.chase.cyclePreset();
+      if (this.input.pressed('cameraPreset') && this.tool.mode === 'drive') this.chase.cyclePreset();
     }
     this.hud.cameraHelp(
       this.input.activeDevice,
