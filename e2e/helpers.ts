@@ -28,3 +28,16 @@ export async function shot(page: Page, milestone: string, name: string): Promise
   mkdirSync(dir, { recursive: true });
   await page.screenshot({ path: `${dir}/${name}.png` });
 }
+
+/**
+ * Wait until the game has simulated `seconds` more. Use this instead of a fixed real-time
+ * wait for anything that depends on the car moving: on a slow machine (or a software
+ * renderer) the simulation runs slower than real time.
+ */
+export async function waitSim(page: Page, seconds: number, timeoutMs = 300_000): Promise<void> {
+  const t0 = await page.evaluate(() => window.__game!.simTime());
+  await page.waitForFunction((end) => window.__game!.simTime() >= end, t0 + seconds, {
+    timeout: timeoutMs,
+    polling: 100,
+  });
+}

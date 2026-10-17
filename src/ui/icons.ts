@@ -1,6 +1,6 @@
 /** Small inline SVG icons in the ink colour (no image files). */
 export const icons = {
-  campsite: `<svg viewBox="0 0 24 24"><path d="M3 20 L12 4 L21 20 Z M12 4 L12 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  campsite: `<svg viewBox="0 0 24 24"><path d="M2 20 H22 M4.5 20 L12 6.5 L19.5 20 M9.5 3.5 L12 6.5 L14.5 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 11 L8.8 20 H15.2 Z" fill="currentColor"/></svg>`,
   viewpoint: `<svg viewBox="0 0 24 24"><path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>`,
   landmark: `<svg viewBox="0 0 24 24"><path d="M12 2 L14.6 9 L22 9.3 L16.2 13.8 L18.2 21 L12 16.8 L5.8 21 L7.8 13.8 L2 9.3 L9.4 9 Z" fill="currentColor"/></svg>`,
   feature: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>`,

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { collectErrors, shot, waitReady } from './helpers';
+import { collectErrors, shot, waitReady, waitSim } from './helpers';
 
 type VState = {
   position: { x: number; y: number; z: number };
@@ -21,10 +21,10 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   // --- Winch out of the Bog Hole ---
   await page.evaluate(() => window.__game!.teleport(174, 3, 95));
   await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
-  await page.waitForTimeout(9000);
+  await waitSim(page, 9);
   await page.evaluate(() => window.__game!.setInput(null));
   await page.keyboard.press('KeyE');
-  await page.waitForTimeout(500);
+  await waitSim(page, 0.5);
   const attached = await vstate(page);
   expect(attached.winch.anchor).not.toBeNull();
   const p0 = await page.evaluate(() => window.__game!.vehicle());
@@ -33,7 +33,7 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   await shot(page, 'M4', 'winch-attached-in-bog');
   await page.evaluate(() => window.__game!.useChaseCamera());
   await page.keyboard.down('KeyR');
-  await page.waitForTimeout(12000);
+  await waitSim(page, 12);
   await page.keyboard.up('KeyR');
   const reeled = await vstate(page);
   expect(reeled.winch.length).toBeLessThan(attached.winch.length - 1);
@@ -47,7 +47,7 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   await page.waitForTimeout(800);
   await shot(page, 'M4', 'plank-preview');
   await page.evaluate(() => window.__game!.tool('confirm'));
-  await page.waitForTimeout(1500);
+  await waitSim(page, 1.5);
   expect((await vstate(page)).planks.placed.length).toBe(2);
   await page.evaluate(() => window.__game!.setCamera(82, 27, 309, 90.5, 21.8, 316));
   await page.waitForTimeout(1000);
@@ -74,7 +74,7 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   await expect.poll(jackState, { timeout: 60_000 }).toBe('righting');
   await page.keyboard.up('KeyJ');
   await expect.poll(jackState, { timeout: 60_000 }).toBe('idle');
-  await page.waitForTimeout(2000);
+  await waitSim(page, 2);
   expect((await page.evaluate(() => window.__game!.vehicle())).tilt).toBeLessThan(20);
   await shot(page, 'M4', 'righted-by-jack');
 
