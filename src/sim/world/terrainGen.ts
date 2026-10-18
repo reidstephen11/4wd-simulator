@@ -424,7 +424,9 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
     heights[i] = h + (target - h) * w;
   }
 
-  // Staircase ledges: granite steps across the track (static boxes).
+  // Staircase ledges: granite steps across the track (static boxes). Each leans with the
+  // graded track across it and reaches below the ground under its whole footprint, so an
+  // end over a falling hillside juts out of the slope instead of floating above it.
   const boxes: StaticBox[] = [];
   for (const t of tracks) {
     for (const st of t.def.steps ?? []) {
@@ -433,22 +435,39 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
         const dx = t.poly.xs[k + 1] - t.poly.xs[k];
         const dz = t.poly.zs[k + 1] - t.poly.zs[k];
         const len = Math.hypot(dx, dz) || 1;
+        const [ux, uz] = [dx / len, dz / len];
         const grade = Math.max(0.12, (t.profile[Math.min(t.poly.count - 1, k + 3)] - t.profile[k]) / 3);
         const depthAlong = clamp(st.rise / grade, 0.5, 2.4);
         const yTop = t.profile[k] + st.rise;
-        const thick = st.rise + 0.8;
-        // Box centred half its length uphill of the step face.
-        const cx = t.poly.xs[k] + (dx / len) * (depthAlong / 2);
-        const cz = t.poly.zs[k] + (dz / len) * (depthAlong / 2);
+        const hx = t.def.width / 2 + 0.9;
+        const hz = depthAlong / 2;
+        // Box centred half its length uphill of the step face; local +x is (uz, -ux).
+        const cx = t.poly.xs[k] + ux * hz;
+        const cz = t.poly.zs[k] + uz * hz;
+        const edge = t.def.width / 2;
+        const roll = Math.atan2(
+          sampleH(cx + uz * edge, cz - ux * edge) - sampleH(cx - uz * edge, cz + ux * edge),
+          2 * edge,
+        );
+        const [cr, sr] = [Math.cos(roll), Math.sin(roll)];
+        let hy = (st.rise + 0.8) / 2;
+        for (let u = -hx; u <= hx + 1e-6; u += hx / 8)
+          for (let w = -hz; w <= hz + 1e-6; w += hz / 2) {
+            // Bottom point across from the top centre (the box centre sits hy·sin(roll) out).
+            const across = u * cr + 2 * hy * sr;
+            const ground = sampleH(cx + uz * across + ux * w, cz - ux * across + uz * w);
+            hy = Math.max(hy, (yTop + u * sr - ground + 0.15) / (2 * cr));
+          }
         boxes.push({
           kind: 'ledge',
-          x: cx,
-          y: yTop - thick / 2,
-          z: cz,
-          hx: t.def.width / 2 + 0.9,
-          hy: thick / 2,
-          hz: depthAlong / 2,
+          x: cx + uz * hy * sr,
+          y: yTop - hy * cr,
+          z: cz - ux * hy * sr,
+          hx,
+          hy,
+          hz,
           yaw: Math.atan2(dx, dz),
+          roll,
         });
       }
     }

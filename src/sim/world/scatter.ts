@@ -201,7 +201,17 @@ export function generateScatter(map: MapDef, terrain: Terrain, features: Terrain
   // --- Rocks: hand-placed, tors, then scattered ---
   const rocks: RockInstance[] = [];
   const addRock = (x: number, z: number, radius: number, anchor: boolean, sink = 0.35, squash = 0.8) => {
-    const y = terrain.heightAt(x, z) + radius * squash * (1 - 2 * sink);
+    // Seat on the lowest ground under the inner footprint so a boulder on a slope has no
+    // gap beneath its downhill side.
+    let ground = terrain.heightAt(x, z);
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      ground = Math.min(
+        ground,
+        terrain.heightAt(x + Math.cos(a) * radius * 0.6, z + Math.sin(a) * radius * 0.6),
+      );
+    }
+    const y = ground + radius * squash * (1 - 2 * sink);
     rocks.push({
       x,
       y,
