@@ -121,4 +121,4 @@ docs/      DECISIONS.md (choices made where the spec was open) and screenshots p
 
 ## Deployment
 
-`.github/workflows/deploy.yml` runs lint and unit tests, builds `dist/` and deploys it to GitHub Pages on every push to `main`. The build uses relative asset paths, so it works under the repository's Pages URL. Pages has to be switched on once in the repository settings: **Settings → Pages → Source: GitHub Actions**.
+`.github/workflows/deploy.yml` runs lint, unit tests and the production build on every pull request and on every push to `main`. A push to `main` then deploys `dist/` to GitHub Pages. Deploy stays on `main` only: the Pages environment rejects other branches, and the Pages setup step fails the job until the site exists (that missing site is what turned the 16–17 Oct 2026 runs red after a successful build). Pages has to be switched on once in the repository settings: **Settings → Pages → Source: GitHub Actions**. The build uses relative asset paths, so it works under the repository's Pages URL.
