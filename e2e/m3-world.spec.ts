@@ -7,7 +7,7 @@ test('M3: every POI exists, with a screenshot of each', async ({ page }) => {
   await page.goto('/');
   await waitReady(page);
   const pois = await page.evaluate(() => window.__game!.pois());
-  expect(pois.length).toBe(14);
+  expect(pois.length).toBe(22);
   for (const p of pois) {
     await page.evaluate((id) => window.__game!.showPoi(id), p.id);
     await page.waitForTimeout(2500);

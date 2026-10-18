@@ -33,7 +33,7 @@ test('clustered challenge discoveries render clearly on the paper map', async ({
   expect(errors).toEqual([]);
 });
 
-test('all four 4WD challenges have obstacle guidance, easy bypasses, and map discovery', async ({ page }) => {
+test('all six Granite Crawl obstacles have guidance, easy bypasses, and map discovery', async ({ page }) => {
   test.setTimeout(300_000);
   const errors = collectErrors(page);
   await page.addInitScript(() =>
@@ -58,31 +58,15 @@ test('all four 4WD challenges have obstacle guidance, easy bypasses, and map dis
       track.points.map((p) => [p[0], p[1]] as const),
       1,
     );
-    const at =
-      trail.id === 'sidewinder-shelf'
-        ? 2
-        : trail.id === 'log-steps'
-          ? 6
-          : trail.id === 'boulder-gates'
-            ? 7
-            : 12;
-    const p = pointAt(poly, at);
+    // Stop short of the first rock; a terrain-only teleport onto one would start the
+    // chassis inside the solid granite.
+    const p = pointAt(poly, 2);
     await page.evaluate(
       (p) => window.__game!.teleport(p.x, p.z, (Math.atan2(p.dx, -p.dz) * 180) / Math.PI),
       p,
     );
-    await expect(title).toHaveText(
-      `${trail.name} · ${trail.difficulty === 'hard' ? 'Hard challenge' : 'Moderate challenge'}`,
-    );
+    await expect(title).toHaveText(`${trail.name} · ${trail.sections[0].name}`);
     await expect(page.locator('.course-hint span')).toHaveText(trail.sections[0].hint);
-    if (trail.id === 'sidewinder-shelf') {
-      // Enter the raised shelf from its ramp; a terrain-only teleport into its
-      // middle would start the chassis inside the solid rock.
-      await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
-      await waitSim(page, 8);
-      await page.evaluate(() => window.__game!.setInput({ handbrake: true }));
-      expect((await page.evaluate(() => window.__game!.vehicle())).tilt).toBeLessThan(35);
-    }
     await waitSim(page, 0.15);
     expect(await page.evaluate(() => window.__game!.discovered())).toContain(trail.id);
     await page.keyboard.press('KeyC');
@@ -107,9 +91,9 @@ test('all four 4WD challenges have obstacle guidance, easy bypasses, and map dis
     10,
   );
   await page.evaluate((p) => window.__game!.teleport(p.x, p.z, 90), link);
-  await expect(title).toHaveText('4WD Challenge Loop');
-  await expect(page.locator('.course-hint span')).toContainText('Next: V-Notch');
-  expect((await page.evaluate(() => window.__game!.pois())).length).toBe(20);
+  await expect(title).toHaveText('Granite Crawl');
+  await expect(page.locator('.course-hint span')).toContainText('Next: Rock Garden');
+  expect((await page.evaluate(() => window.__game!.pois())).length).toBe(22);
   await page.keyboard.press('KeyM');
   await expect.poll(() => page.evaluate(() => window.__game!.ui().map)).toBe(true);
   await page
@@ -119,8 +103,8 @@ test('all four 4WD challenges have obstacle guidance, easy bypasses, and map dis
   await page.keyboard.press('KeyM');
   await page.evaluate(() => {
     const g = window.__game!,
-      h = g.heightAt(-5, 238);
-    g.setCamera(-92, h + 75, 323, -5, h, 238);
+      h = g.heightAt(15, 240);
+    g.setCamera(-60, h + 70, 320, 15, h, 240);
   });
   await shot(page, 'challenges', 'challenge-loop-overview');
   expect(errors).toEqual([]);

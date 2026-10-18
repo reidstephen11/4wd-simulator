@@ -1,8 +1,14 @@
 name: Build and deploy to GitHub Pages
 
+# Lint, test and build on pull requests and on main.
+# Deploy only from main. The Pages environment rejects every other branch,
+# and configure-pages fails the job when the Pages site does not exist yet.
+# That 404 is what failed the 16–17 Oct 2026 runs after the build had succeeded,
+# so the Pages steps stay on the deploy path and do not fail the code checks.
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -10,9 +16,11 @@ permissions:
   pages: write
   id-token: write
 
+# One run per ref. Leave an in-progress production deploy to finish;
+# cancel an outdated pull-request run.
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   checks:
@@ -39,14 +47,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
     name: Deploy
-    needs: build
+    needs: [checks, build]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -382,7 +382,12 @@ export class WorldProps {
       }
     const markedTracks = new Map<string, string>();
     for (const trail of world.map.crawlTrails ?? []) {
-      markedTracks.set(trail.trackId, trail.difficulty === 'hard' ? '#B45D49' : '#CEA348');
+      markedTracks.set(
+        trail.trackId,
+        { easy: '#4F7FA6', moderate: '#CEA348', hard: '#B45D49', extreme: '#2B2724' }[
+          trail.difficulty ?? 'moderate'
+        ],
+      );
       markedTracks.set(trail.bypassTrackId, '#72975A');
     }
     for (const track of world.features.tracks)
@@ -442,6 +447,30 @@ export class WorldProps {
             .clone()
             .lerp(pal('mud'), rand() * 0.4),
         );
+      }
+      b.pop();
+    }
+    // Trail granite: the collider is the convex hull of exactly these vertices.
+    const lichen = new THREE.Color('#9A9A74');
+    for (const rock of world.features.rocks) {
+      const c = pal('rock')
+        .clone()
+        .lerp(pal('rockDark'), 0.15 + rand() * 0.45);
+      const v = (i: number) => new THREE.Vector3().fromArray(rock.vertices, i * 3);
+      b.push().translate(rock.x, rock.y, rock.z);
+      for (let i = 0; i < rock.indices.length; i += 3) {
+        const a = v(rock.indices[i]),
+          bb = v(rock.indices[i + 1]),
+          cc = v(rock.indices[i + 2]);
+        const up = new THREE.Vector3()
+          .subVectors(bb, a)
+          .cross(new THREE.Vector3().subVectors(cc, a))
+          .normalize().y;
+        // Weathered, lichen-flecked tops; darker undersides and faces.
+        const face = c
+          .clone()
+          .lerp(up > 0.75 && rand() < 0.3 ? lichen : pal('rockDark'), up > 0.75 ? rand() * 0.25 : 0.2);
+        b.tri(a, bb, cc, face);
       }
       b.pop();
     }

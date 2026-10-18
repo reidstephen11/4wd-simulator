@@ -2,7 +2,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { rockShape } from './world/rockShape';
 import { PHYSICS_DT } from '../core/config';
 import { SurfaceId } from '../data/surfaces';
-import type { StaticBox } from './world/features';
+import type { StaticBox, StaticRock } from './world/features';
 import type { Terrain } from './world/terrain';
 
 export type Rapier = typeof RAPIER;
@@ -109,6 +109,17 @@ export class Physics {
         .setCollisionGroups(groups(Groups.STATIC, 0xffff)),
     );
     this.colliderSurface.set(c.handle, surface);
+    return c;
+  }
+
+  addStaticRock(rock: StaticRock, friction = 0.9): RAPIER.Collider {
+    const c = this.world.createCollider(
+      this.R.ColliderDesc.convexHull(rock.vertices)!
+        .setTranslation(rock.x, rock.y, rock.z)
+        .setFriction(friction)
+        .setCollisionGroups(groups(Groups.STATIC, 0xffff)),
+    );
+    this.colliderSurface.set(c.handle, SurfaceId.Rock);
     return c;
   }
 
