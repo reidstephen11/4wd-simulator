@@ -16,6 +16,8 @@ import { poiApproach } from '../sim/world/poiApproach';
 import { headingOf } from '../sim/vehicle/math';
 import { Exploration } from '../sim/exploration';
 import { defaultSettings, loadSave, writeSave, type Settings } from '../sim/save/save';
+import { CrawlRuns, type CrawlBests, type CrawlRunEvent } from '../sim/crawlRuns';
+import { clock } from '../ui/hud';
 import type { ToolEvent } from '../sim/tools/tools';
 import { GameRenderer } from '../render/renderer';
 import { VehicleModel } from '../render/vehicleModel';
@@ -56,6 +58,8 @@ export class Game {
   readonly toolsView: ToolsView;
   readonly tool: ToolController;
   readonly exploration: Exploration;
+  /** Optional scored runs on the crawl trails. */
+  readonly crawlRuns: CrawlRuns;
   readonly hud: Hud;
   readonly toolMenu: ToolMenu;
   readonly map: PaperMap;
@@ -88,10 +92,12 @@ export class Game {
     uiRoot: HTMLElement,
     settings: Settings,
     exploration: Exploration,
+    crawlBests: CrawlBests,
   ) {
     this.debug = new URLSearchParams(location.search).has('debug');
     this.settings = settings;
     this.exploration = exploration;
+    this.crawlRuns = new CrawlRuns(world.map.crawlTrails ?? [], world.features.tracks, crawlBests);
     this.input = new InputManager(window);
     this.audio = new AudioSystem(settings);
     // Loading puts you at the last campsite (SPEC §14).
@@ -150,25 +156,28 @@ export class Game {
     });
 
     sim.events.on('tool', ({ event }) => this.onToolEvent(event));
-    sim.events.on('rangeChanged', ({ range }) =>
-      this.hud.toast(range === 'low' ? 'Low range' : 'High range', 1400),
-    );
+    sim.events.on('rangeChanged', ({ range }) => {
+      this.hud.toast(range === 'low' ? 'Low range' : 'High range', 1400);
+      this.audio.drivetrainClunk('range');
+    });
     sim.events.on('engine', ({ event }) => {
       this.hud.toast(event === 'stalled' ? 'Engine stalled — flooded' : 'Engine restarted');
       this.audio.engineEvent(event);
     });
-    sim.events.on('diffChanged', ({ axle, locked }) =>
+    sim.events.on('diffChanged', ({ axle, locked }) => {
       this.hud.toast(
         `${axle === 'front' ? 'Front' : 'Rear'} differential ${locked ? 'locked' : 'open'}`,
         1600,
-      ),
-    );
+      );
+      this.audio.drivetrainClunk(locked ? 'lockOn' : 'lockOff');
+    });
     sim.events.on('diffBlocked', () => this.hud.toast('Slow below 5 km/h to engage diff locks'));
     sim.events.on('precisionChanged', ({ enabled }) =>
       this.hud.toast(enabled ? 'Precision crawl — hold throttle for walking pace' : 'Precision crawl off'),
     );
     sim.events.on('wheelImpact', ({ id, speed }) => id === LOCAL_VEHICLE && this.audio.wheelImpact(speed));
     sim.events.on('dent', ({ id, impact }) => id === LOCAL_VEHICLE && this.audio.dent(impact));
+    sim.events.on('bodyKnock', ({ id, impulse }) => id === LOCAL_VEHICLE && this.audio.bodyKnock(impulse));
 
     this.loop = new GameLoop({
       step: (dt) => this.step(dt),
@@ -221,7 +230,7 @@ export class Game {
       qualityPresets[settings.quality],
       sim.dynamics.values(),
     );
-    return new Game(world, sim, view, uiEl, settings, exploration);
+    return new Game(world, sim, view, uiEl, settings, exploration, save?.crawlBests ?? {});
   }
 
   get vehicle(): Vehicle {
@@ -235,7 +244,12 @@ export class Game {
   // --- Saving ---------------------------------------------------------------
 
   save(): void {
-    const ok = writeSave({ version: 1, exploration: this.exploration.state(), settings: this.settings });
+    const ok = writeSave({
+      version: 1,
+      exploration: this.exploration.state(),
+      settings: this.settings,
+      crawlBests: this.crawlRuns.bests,
+    });
     if (!ok && this.storageOk) {
       this.storageOk = false;
       console.warn('4WD Simulator: browser storage is unavailable, progress will not be saved.');
@@ -291,12 +305,14 @@ export class Game {
     await this.fade.run(() => {
       this.tool.cancel();
       this.sim.returnToCampsite(LOCAL_VEHICLE, this.exploration.lastCampsite);
+      this.crawlRuns.cancel();
       this.chase.reset();
       this.view.snap();
     });
   }
 
   teleportToPoi(p: PoiDef): void {
+    this.crawlRuns.cancel();
     const r = p.reset ?? { x: p.x, z: p.z + 12, headingDeg: 0 };
     this.vehicle.teleport(this.sim.poseAt(r.x, r.z, r.headingDeg));
     this.chase.reset();
@@ -429,6 +445,42 @@ export class Game {
       if (camp && !found.discovered.includes(camp)) this.hud.toast(`Campsite: ${camp.name}`);
     }
     if (found.discovered.length > 0 || found.campsite) this.save();
+    const v = this.vehicle;
+    const run = this.crawlRuns.update({
+      x: p.x,
+      z: p.z,
+      tiltDeg: v.tiltDeg(),
+      knock: v.bodyContact.knock > 0,
+      winchAttached: this.sim.toolsOf(LOCAL_VEHICLE).winch.attached,
+      dt,
+    });
+    if (run) this.onCrawlRun(run);
+  }
+
+  private onCrawlRun(e: CrawlRunEvent): void {
+    if (e.type === 'started') {
+      this.hud.toast(`${e.run.trail.name}: scored run started`, 1600);
+      return;
+    }
+    const r = e.result;
+    const parts = [
+      r.reverses ? `${r.reverses} back-up${r.reverses === 1 ? '' : 's'}` : '',
+      r.knocks ? `${r.knocks} knock${r.knocks === 1 ? '' : 's'}` : '',
+      r.winches ? `winch ×${r.winches}` : '',
+    ].filter(Boolean);
+    if (e.type === 'failed') {
+      this.hud.toast(`${r.name}: run over — ${r.dnf === 'rolled' ? 'rolled' : 'left the line'}`, 2600);
+      return;
+    }
+    const best = this.crawlRuns.bests[r.trailId];
+    const points = r.points === 0 ? 'clean run' : `${r.points} penalty point${r.points === 1 ? '' : 's'}`;
+    this.hud.runResult(
+      e.best ? 'New best' : 'Run complete',
+      `${r.name} · ${clock(r.seconds)}`,
+      `${points}${parts.length ? ` (${parts.join(', ')})` : ''}${e.best ? '' : ` · best ${clock(best.seconds)}, ${best.points} pts`}`,
+    );
+    this.audio.discovery();
+    this.save();
   }
 
   /** Menus, map and tool menu input; runs every frame. */
@@ -499,7 +551,19 @@ export class Game {
       this.chase.zoom(zoom);
       if (this.input.pressed('cameraReset') && !cameraChord) this.chase.recenter();
       if (this.input.pressed('cameraPreset') && this.tool.mode === 'drive') this.chase.cyclePreset();
+      if (this.input.pressed('gauges')) {
+        const modes = ['auto', 'on', 'off'] as const;
+        this.hud.gaugeMode = modes[(modes.indexOf(this.hud.gaugeMode) + 1) % modes.length];
+        this.hud.toast(
+          { auto: 'Crawl gauges: in low range', on: 'Crawl gauges: always', off: 'Crawl gauges: off' }[
+            this.hud.gaugeMode
+          ],
+          1400,
+        );
+      }
     }
+    this.hud.cockpitView = this.chase.preset === 'cockpit' && !this.freeCamOn;
+    this.model.setCockpitView(this.hud.cockpitView);
     this.hud.cameraHelp(
       this.input.activeDevice,
       cameraEnabled,
@@ -530,13 +594,16 @@ export class Game {
         forward: this.tmpFwd,
         speed: v.speed,
         slopeDeg: this.world.terrain.slopeDegAt(p.x, p.z),
+        rotation: this.model.root.quaternion,
       });
     }
     this.view.focus.copy(this.model.root.position);
     const t0 = performance.now();
     this.view.render();
     this.sceneMs += (performance.now() - t0 - this.sceneMs) * 0.1;
-    this.audio.update(buildAudioFrame(v, tools.winch, this.world, this.loop.paused, frameDt));
+    this.audio.update(
+      buildAudioFrame(v, tools.winch, this.world, this.loop.paused, frameDt, this.hud.cockpitView),
+    );
     this.hud.update(
       buildHudState({
         vehicle: v,
@@ -550,6 +617,7 @@ export class Game {
         crawlTrails: this.world.map.crawlTrails,
         tracks: this.world.features.tracks,
         anchorInReach: this.anchorInReach,
+        run: this.crawlRuns.run,
       }),
     );
     if (this.overlay) {
@@ -577,5 +645,5 @@ function audioLine(audio: AudioSystem): string {
   const tyres = Object.entries(a.tyres)
     .map(([k, w]) => `${k} ${w.toFixed(2)}`)
     .join(' ');
-  return `audio ${(20 * Math.log10(a.level + 1e-6)).toFixed(0)} dB  engine ${a.engineHz.toFixed(0)} Hz  wind ${a.wind.toFixed(2)}  water ${a.water.toFixed(2)}  ${tyres}${a.winchHz ? `  winch ${a.winchHz.toFixed(0)} Hz` : ''}`;
+  return `audio ${(20 * Math.log10(a.level + 1e-6)).toFixed(0)} dB  engine ${a.engineHz.toFixed(0)} Hz (${a.engineVoice})  scrape ${a.scrape.toFixed(2)}  wind ${a.wind.toFixed(2)}  water ${a.water.toFixed(2)}  ${tyres}${a.winchHz ? `  winch ${a.winchHz.toFixed(0)} Hz` : ''}`;
 }

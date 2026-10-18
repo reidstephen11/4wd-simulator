@@ -44,7 +44,7 @@ export function surfaceLayer(surface: SurfaceId): TyreLayer {
 export type LayerWeights = Record<TyreLayer, number>;
 
 export function emptyWeights(): LayerWeights {
-  return { dirt: 0, gravel: 0, grass: 0, rock: 0, mud: 0, water: 0, wood: 0, scrub: 0 };
+  return { dirt: 0, gravel: 0, grass: 0, rock: 0, mud: 0, water: 0, wood: 0, scrub: 0, squeal: 0 };
 }
 
 /**
@@ -67,6 +67,9 @@ export function tyreWeights(
     const layer = inWater ? 'water' : surfaceLayer(w.surface);
     out[layer] += amount;
     if (layer !== 'water' && layer !== 'mud') out.scrub += clamp01(w.slide / T.fullSlide) * 0.25;
+    // Rubber chirps and squeals when it spins on hard rock or timber.
+    if (layer === 'rock' || layer === 'wood')
+      out.squeal += clamp01((w.spin - T.squealFrom) / (1 - T.squealFrom)) * 0.25;
   }
   for (const k of Object.keys(out) as TyreLayer[]) out[k] = clamp01(out[k]);
   return out;
@@ -109,4 +112,26 @@ export function windLevel(altitude: number): number {
 export function proximityLevel(distance: number, range: number): number {
   const f = clamp01(1 - distance / range);
   return f * f;
+}
+
+/** Chassis scrape level (0..1): needs both pressure on the ground and sliding. */
+export function scrapeLevel(force: number, slide: number, weight: number): number {
+  const S = audioTuning.scrape;
+  if (force <= 0) return 0;
+  const press = Math.sqrt(clamp01(force / (S.fullForce * weight)));
+  return press * Math.pow(clamp01(slide / S.fullSlide), 0.7);
+}
+
+/** Chassis knock loudness (0..1) for an impulse (N·s); 0 below the threshold. */
+export function knockLevel(impulse: number): number {
+  const k = audioTuning.knock;
+  if (impulse < k.from) return 0;
+  return 0.2 + 0.8 * clamp01((impulse - k.from) / (k.full - k.from));
+}
+
+/** Spring and body squeaks per second from summed suspension movement (m/s) and speed. */
+export function squeakRate(articulation: number, speed: number): number {
+  const q = audioTuning.squeak;
+  if (Math.abs(speed) > q.maxSpeed) return 0;
+  return q.rate * clamp01(articulation / q.fullArticulation);
 }

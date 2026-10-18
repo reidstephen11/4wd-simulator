@@ -58,7 +58,25 @@ export const cameraPresets = {
     lookAhead: 0.6,
   },
   rear: { label: 'Rear close', yaw: 0, distance: 4.8, height: 1.25, targetHeight: 0.3, lookAhead: 0 },
+  /** From the driver's seat (see `cockpit`); the other values are unused. */
+  cockpit: { label: 'Driver', yaw: 0, distance: 0, height: 0, targetHeight: 0, lookAhead: 0 },
 } as const;
 
+/** Driver's-seat view: eye position in the vehicle frame (right-hand drive), look limits, near plane. */
+export const cockpit = {
+  eye: { x: 0.38, y: 1.24, z: 0.3 },
+  /** Looking down a little shows the bonnet and the ground ahead. */
+  pitch: -0.12,
+  maxYaw: 2.4,
+  maxPitch: 1.0,
+  near: 0.05,
+};
+
 export type CameraPreset = keyof typeof cameraPresets;
-export const cameraPresetOrder: readonly CameraPreset[] = ['follow', 'frontLeft', 'frontRight', 'rear'];
+export const cameraPresetOrder: readonly CameraPreset[] = [
+  'follow',
+  'frontLeft',
+  'frontRight',
+  'rear',
+  'cockpit',
+];

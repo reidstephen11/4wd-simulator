@@ -8,6 +8,9 @@ import type { TrackInfo } from '../sim/world/features';
 import { trailProgress } from '../sim/world/crawlTrail';
 import { headingOf } from '../sim/vehicle/math';
 import type { CompassPoi, HudState, Prompt } from '../ui/hud';
+import type { GaugeState } from '../ui/crawlGauges';
+import { penaltyPoints, type CrawlRun } from '../sim/crawlRuns';
+import { rotate } from '../sim/vehicle/math';
 import type { ToolMode } from './toolController';
 
 export interface HudInputs {
@@ -23,6 +26,8 @@ export interface HudInputs {
   tracks?: readonly TrackInfo[];
   /** Is there a winch anchor in reach (checked a few times a second)? */
   anchorInReach: boolean;
+  /** Scored crawl run in progress, if any. */
+  run?: CrawlRun | null;
 }
 
 /** Build what the HUD shows this frame, including context prompts (SPEC §9). */
@@ -135,6 +140,8 @@ export function buildHudState(i: HudInputs): HudState {
   }
 
   return {
+    gauges: gaugeState(v),
+    run: i.run ? { name: i.run.trail.name, seconds: i.run.seconds, points: penaltyPoints(i.run) } : null,
     heading: i.cameraHeading,
     pois,
     range: v.drivetrain.range,
@@ -147,5 +154,28 @@ export function buildHudState(i: HudInputs): HudState {
     winchAttached: t.winch.attached,
     engine: flood.stalled ? 2 : flood.timer > 0 ? 1 : 0,
     prompts,
+  };
+}
+
+/** Inclinometer, tyre loads and drivetrain readout for the crawl gauges. */
+export function gaugeState(v: Vehicle): GaugeState {
+  const q = v.body.rotation();
+  const f = rotate(q, 0, 0, -1);
+  const r = rotate(q, 1, 0, 0);
+  const deg = 180 / Math.PI;
+  const parked = (v.tuning.mass * 9.81) / 4;
+  const d = v.drivetrain;
+  return {
+    pitch: Math.asin(Math.max(-1, Math.min(1, f.y))) * deg,
+    roll: -Math.asin(Math.max(-1, Math.min(1, r.y))) * deg,
+    speedKmh: Math.abs(v.speed) * 3.6,
+    gear: d.gear < 0 ? 'R' : String(d.gear + 1),
+    range: d.range,
+    rpm: d.rpm,
+    redline: v.tuning.engine.redlineRpm,
+    wheels: v.wheels.map((w) => ({ load: w.load / parked, contact: w.contact, spin: w.spin })),
+    frontLocked: v.differentials.front,
+    rearLocked: v.differentials.rear,
+    bodyContact: v.bodyContact.force > 0,
   };
 }

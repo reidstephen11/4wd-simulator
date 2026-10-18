@@ -11,9 +11,15 @@ import { testWorld } from './world';
 
 const DT = 1 / 60;
 
-/** Hold walking pace; using a speed target prevents momentum from hiding a snag. */
+/**
+ * Hold walking pace; using a speed target prevents momentum from hiding a snag. Like a
+ * driver, it brakes when idle creep or a drop carries the car past the target.
+ */
 function crawl(speed: number, reverse = false) {
-  const effort = Math.max(0, Math.min(1, (0.6 - speed * (reverse ? -1 : 1)) * 2));
+  const v = speed * (reverse ? -1 : 1);
+  if (v > 0.9)
+    return reverse ? { throttle: Math.min(1, (v - 0.6) * 0.5) } : { brake: Math.min(1, (v - 0.6) * 0.5) };
+  const effort = Math.max(0, Math.min(1, (0.6 - v) * 2));
   return reverse ? { brake: effort } : { throttle: effort };
 }
 

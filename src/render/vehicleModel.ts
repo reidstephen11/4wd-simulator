@@ -23,6 +23,7 @@ export class VehicleModel {
   readonly bodyMaterial: THREE.MeshPhysicalMaterial;
   readonly suspension: VehicleSuspension;
   private readonly rearLampMaterial: THREE.MeshStandardMaterial;
+  private readonly glass: THREE.MeshPhysicalMaterial;
   private readonly tmpQ = { x: 0, y: 0, z: 0, w: 1 };
   private readonly wheelGeo: THREE.BufferGeometry;
   private readonly basePos: Float32Array;
@@ -58,6 +59,7 @@ export class VehicleModel {
       }),
     );
     glass.forceSinglePass = true;
+    this.glass = glass;
     this.rearLampMaterial = patchFog(
       new THREE.MeshStandardMaterial({
         vertexColors: true,
@@ -211,6 +213,11 @@ export class VehicleModel {
       }
       normals.needsUpdate = true;
     }
+  }
+
+  /** From the driver's seat the tinted glass would fill the view; leave the windows clear. */
+  setCockpitView(on: boolean): void {
+    this.glass.visible = !on;
   }
 
   /** Each carried board and its straps disappear when that board is placed. */

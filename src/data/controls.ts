@@ -20,6 +20,7 @@ export type Action =
   | 'pause'
   | 'cameraReset'
   | 'cameraPreset'
+  | 'gauges'
   | 'confirm'
   | 'back'
   | 'menuUp'
@@ -48,6 +49,7 @@ export const keyBindings: Record<Action, readonly string[]> = {
   pause: ['Escape'],
   cameraReset: ['KeyV', 'Numpad5'],
   cameraPreset: ['KeyC'],
+  gauges: ['KeyI'],
   confirm: ['Enter', 'KeyE'],
   back: ['Escape', 'Backspace'],
   menuUp: ['ArrowUp', 'KeyW'],
@@ -167,7 +169,8 @@ export const controlsTable: ReadonlyArray<readonly [string, string, string]> = [
   ['Orbit camera', 'Mouse drag / Num 4 6 8 2', 'Right stick'],
   ['Camera distance', 'Scroll', 'D-pad left/right (driving)'],
   ['Recenter camera', 'V / Num 5', 'Right stick click'],
-  ['Cycle crawler camera views', 'C / View button', 'Hold LB + click right stick'],
+  ['Cycle crawler and driver views', 'C / View button', 'Hold LB + click right stick'],
+  ['Crawl gauges: auto (low range) / on / off', 'I', 'Shown in low range'],
   ['Horn', 'H', 'Left stick click'],
   ['Map', 'M', 'View / Select'],
   ['Pause', 'Esc', 'Start / Options'],

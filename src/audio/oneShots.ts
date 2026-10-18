@@ -147,3 +147,95 @@ export function creak(ctx: BaseAudioContext, out: AudioNode, level: number): voi
   o.start(at);
   o.stop(at + dur + 0.02);
 }
+
+/** Inharmonic ringing partials (a struck steel rail or panel), each a fast-decaying sine. */
+function ring(
+  ctx: BaseAudioContext,
+  out: AudioNode,
+  at: number,
+  partials: number[],
+  level: number,
+  decay: number,
+): void {
+  for (const hz of partials) {
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = hz * (0.97 + Math.random() * 0.06);
+    const g = gain(ctx, out);
+    o.connect(g);
+    pluck(g.gain, at, level, 0.002, decay * (0.6 + Math.random() * 0.6));
+    o.start(at);
+    o.stop(at + decay * 2.5);
+  }
+}
+
+/** The chassis knocks a rock: a dull thud, a gritty clack and the frame rails ringing. */
+export function knock(ctx: BaseAudioContext, out: AudioNode, noise: NoiseBank, level: number): void {
+  const at = ctx.currentTime;
+  const L = level * audioTuning.knock.gain;
+  thud(ctx, out, at, 58 + Math.random() * 20, L, 0.18);
+  const n = burst(ctx, noise.crunch, at, 0.15);
+  const f = filter(ctx, 'bandpass', 700 + Math.random() * 500, 1.1);
+  const g = gain(ctx, out);
+  n.connect(f).connect(g);
+  pluck(g.gain, at, L * 0.7, 0.002, 0.07);
+  ring(ctx, out, at, [310, 523, 871, 1460], L * 0.07, 0.35);
+}
+
+/** A leaf spring or the body flexing: a short stick-slip squeak (or a lower creak). */
+export function squeak(ctx: BaseAudioContext, out: AudioNode, level: number, low: boolean): void {
+  const at = ctx.currentTime;
+  const dur = low ? 0.18 + Math.random() * 0.3 : 0.06 + Math.random() * 0.16;
+  const o = ctx.createOscillator();
+  o.type = 'sawtooth';
+  const f0 = (low ? 22 : 30) + Math.random() * 25;
+  o.frequency.setValueAtTime(f0, at);
+  o.frequency.linearRampToValueAtTime(f0 * (0.75 + Math.random() * 0.6), at + dur);
+  const band = low ? 450 + Math.random() * 400 : 1700 + Math.random() * 1400;
+  const f = filter(ctx, 'bandpass', band, low ? 7 : 12);
+  const g = gain(ctx, out);
+  o.connect(f).connect(g);
+  const L = level * audioTuning.squeak.gain * (low ? 1.3 : 1);
+  g.gain.setValueAtTime(0, at);
+  g.gain.linearRampToValueAtTime(L, at + dur * 0.25);
+  g.gain.linearRampToValueAtTime(0, at + dur);
+  o.start(at);
+  o.stop(at + dur + 0.02);
+}
+
+/** Drivetrain clunks: transfer-case range change, an air locker, selecting drive or reverse. */
+export function clunk(
+  ctx: BaseAudioContext,
+  out: AudioNode,
+  noise: NoiseBank,
+  kind: 'range' | 'lockOn' | 'lockOff' | 'gear',
+): void {
+  const at = ctx.currentTime;
+  const C = audioTuning.clunk;
+  if (kind === 'range') {
+    // Gears sliding into mesh, then a heavy clunk through the floor.
+    const grind = burst(ctx, noise.rattle, at, 0.16);
+    const gf = filter(ctx, 'bandpass', 1500, 1.4);
+    const gg = gain(ctx, out);
+    grind.connect(gf).connect(gg);
+    pluck(gg.gain, at, C.range * 0.35, 0.02, 0.12);
+    thud(ctx, out, at + 0.12, 52, C.range, 0.22);
+    ring(ctx, out, at + 0.12, [240, 410, 690], C.range * 0.08, 0.25);
+  } else if (kind === 'gear') {
+    thud(ctx, out, at, 75, C.gear, 0.12);
+    ring(ctx, out, at, [380, 640], C.gear * 0.06, 0.15);
+  } else {
+    // Air locker: the solenoid clicks, then air hisses into (or out of) the diff.
+    const click = burst(ctx, noise.white, at, 0.02);
+    const cf = filter(ctx, 'bandpass', 2400, 2);
+    const cg = gain(ctx, out);
+    click.connect(cf).connect(cg);
+    pluck(cg.gain, at, C.locker * 0.8, 0.001, 0.012);
+    const hiss = burst(ctx, noise.white, at + 0.03, kind === 'lockOn' ? 0.35 : 0.5);
+    const hf = filter(ctx, 'highpass', kind === 'lockOn' ? 3500 : 2500, 0.7);
+    const hg = gain(ctx, out);
+    hiss.connect(hf).connect(hg);
+    pluck(hg.gain, at + 0.03, C.locker * 0.35, 0.01, kind === 'lockOn' ? 0.22 : 0.4);
+    if (kind === 'lockOn') thud(ctx, out, at + 0.2, 90, C.locker * 0.5, 0.08);
+  }
+}
