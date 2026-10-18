@@ -150,25 +150,28 @@ export class Game {
     });
 
     sim.events.on('tool', ({ event }) => this.onToolEvent(event));
-    sim.events.on('rangeChanged', ({ range }) =>
-      this.hud.toast(range === 'low' ? 'Low range' : 'High range', 1400),
-    );
+    sim.events.on('rangeChanged', ({ range }) => {
+      this.hud.toast(range === 'low' ? 'Low range' : 'High range', 1400);
+      this.audio.drivetrainClunk('range');
+    });
     sim.events.on('engine', ({ event }) => {
       this.hud.toast(event === 'stalled' ? 'Engine stalled — flooded' : 'Engine restarted');
       this.audio.engineEvent(event);
     });
-    sim.events.on('diffChanged', ({ axle, locked }) =>
+    sim.events.on('diffChanged', ({ axle, locked }) => {
       this.hud.toast(
         `${axle === 'front' ? 'Front' : 'Rear'} differential ${locked ? 'locked' : 'open'}`,
         1600,
-      ),
-    );
+      );
+      this.audio.drivetrainClunk(locked ? 'lockOn' : 'lockOff');
+    });
     sim.events.on('diffBlocked', () => this.hud.toast('Slow below 5 km/h to engage diff locks'));
     sim.events.on('precisionChanged', ({ enabled }) =>
       this.hud.toast(enabled ? 'Precision crawl — hold throttle for walking pace' : 'Precision crawl off'),
     );
     sim.events.on('wheelImpact', ({ id, speed }) => id === LOCAL_VEHICLE && this.audio.wheelImpact(speed));
     sim.events.on('dent', ({ id, impact }) => id === LOCAL_VEHICLE && this.audio.dent(impact));
+    sim.events.on('bodyKnock', ({ id, impulse }) => id === LOCAL_VEHICLE && this.audio.bodyKnock(impulse));
 
     this.loop = new GameLoop({
       step: (dt) => this.step(dt),
@@ -499,7 +502,19 @@ export class Game {
       this.chase.zoom(zoom);
       if (this.input.pressed('cameraReset') && !cameraChord) this.chase.recenter();
       if (this.input.pressed('cameraPreset') && this.tool.mode === 'drive') this.chase.cyclePreset();
+      if (this.input.pressed('gauges')) {
+        const modes = ['auto', 'on', 'off'] as const;
+        this.hud.gaugeMode = modes[(modes.indexOf(this.hud.gaugeMode) + 1) % modes.length];
+        this.hud.toast(
+          { auto: 'Crawl gauges: in low range', on: 'Crawl gauges: always', off: 'Crawl gauges: off' }[
+            this.hud.gaugeMode
+          ],
+          1400,
+        );
+      }
     }
+    this.hud.cockpitView = this.chase.preset === 'cockpit' && !this.freeCamOn;
+    this.model.setCockpitView(this.hud.cockpitView);
     this.hud.cameraHelp(
       this.input.activeDevice,
       cameraEnabled,
@@ -530,6 +545,7 @@ export class Game {
         forward: this.tmpFwd,
         speed: v.speed,
         slopeDeg: this.world.terrain.slopeDegAt(p.x, p.z),
+        rotation: this.model.root.quaternion,
       });
     }
     this.view.focus.copy(this.model.root.position);
@@ -577,5 +593,5 @@ function audioLine(audio: AudioSystem): string {
   const tyres = Object.entries(a.tyres)
     .map(([k, w]) => `${k} ${w.toFixed(2)}`)
     .join(' ');
-  return `audio ${(20 * Math.log10(a.level + 1e-6)).toFixed(0)} dB  engine ${a.engineHz.toFixed(0)} Hz  wind ${a.wind.toFixed(2)}  water ${a.water.toFixed(2)}  ${tyres}${a.winchHz ? `  winch ${a.winchHz.toFixed(0)} Hz` : ''}`;
+  return `audio ${(20 * Math.log10(a.level + 1e-6)).toFixed(0)} dB  engine ${a.engineHz.toFixed(0)} Hz (${a.engineVoice})  scrape ${a.scrape.toFixed(2)}  wind ${a.wind.toFixed(2)}  water ${a.water.toFixed(2)}  ${tyres}${a.winchHz ? `  winch ${a.winchHz.toFixed(0)} Hz` : ''}`;
 }

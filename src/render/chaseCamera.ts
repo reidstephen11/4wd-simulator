@@ -1,5 +1,11 @@
 import * as THREE from 'three';
-import { cameraTuning as C, cameraPresets, cameraPresetOrder, type CameraPreset } from '../data/camera';
+import {
+  cameraTuning as C,
+  cameraPresets,
+  cameraPresetOrder,
+  cockpit,
+  type CameraPreset,
+} from '../data/camera';
 
 export interface ChaseTarget {
   position: THREE.Vector3;
@@ -8,6 +14,8 @@ export interface ChaseTarget {
   speed: number;
   /** Ground slope under the vehicle (degrees). */
   slopeDeg: number;
+  /** Vehicle orientation (for the driver's-seat view). */
+  rotation?: THREE.Quaternion;
 }
 
 /** Returns the clear distance from `from` along unit `dir` up to `max`. */
@@ -50,6 +58,26 @@ export class ChaseCamera {
     private readonly groundAt: (x: number, z: number) => number,
   ) {}
 
+  private readonly headQ = new THREE.Quaternion();
+  private readonly lookQ = new THREE.Quaternion();
+  private readonly euler = new THREE.Euler(0, 0, 0, 'YXZ');
+
+  /** Driver's seat: moves and tilts with the body; the head turns with the orbit input. */
+  private updateCockpit(dt: number, t: ChaseTarget): void {
+    const k = Math.min(1, dt * C.orbitRate);
+    this.viewYaw += (this.orbitYaw - this.viewYaw) * k;
+    this.viewPitch += (this.orbitPitch - this.viewPitch) * k;
+    const q = t.rotation as THREE.Quaternion;
+    this.tmp.set(cockpit.eye.x, cockpit.eye.y, cockpit.eye.z).applyQuaternion(q).add(t.position);
+    this.camera.position.copy(this.tmp);
+    this.euler.set(cockpit.pitch + this.viewPitch, -this.viewYaw, 0);
+    this.lookQ.setFromEuler(this.euler);
+    this.headQ.copy(q).multiply(this.lookQ);
+    this.camera.quaternion.copy(this.headQ);
+    // Leaving the seat starts the follow camera from scratch.
+    this.initialised = false;
+  }
+
   zoom(steps: number): void {
     this.distance = THREE.MathUtils.clamp(this.distance + steps * C.zoomStep, C.minDistance, C.maxDistance);
   }
@@ -57,6 +85,12 @@ export class ChaseCamera {
   /** Keep the chosen angle relative to the vehicle until explicitly recentered. */
   orbit(yaw: number, pitch: number): void {
     if (yaw === 0 && pitch === 0) return;
+    if (this.preset === 'cockpit') {
+      // Turn your head: limited, and it stays where you leave it until recentred.
+      this.orbitYaw = THREE.MathUtils.clamp(this.orbitYaw + yaw, -cockpit.maxYaw, cockpit.maxYaw);
+      this.orbitPitch = THREE.MathUtils.clamp(this.orbitPitch - pitch, -cockpit.maxPitch, cockpit.maxPitch);
+      return;
+    }
     this.orbitYaw = Math.atan2(Math.sin(this.orbitYaw + yaw), Math.cos(this.orbitYaw + yaw));
     const profile = cameraPresets[this.preset];
     const base = Math.atan2(profile.height, profile.distance);
@@ -101,6 +135,15 @@ export class ChaseCamera {
   }
 
   update(dt: number, t: ChaseTarget): void {
+    const near = this.preset === 'cockpit' ? cockpit.near : C.near;
+    if (this.camera.near !== near) {
+      this.camera.near = near;
+      this.camera.updateProjectionMatrix();
+    }
+    if (this.preset === 'cockpit' && t.rotation) {
+      this.updateCockpit(dt, t);
+      return;
+    }
     const profile = cameraPresets[this.preset];
     const fx = t.forward.x;
     const fz = t.forward.z;

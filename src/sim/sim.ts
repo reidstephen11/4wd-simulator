@@ -53,6 +53,8 @@ export interface SimEvents extends Record<string, unknown> {
   dent: { id: string; impact: number };
   /** A wheel hit something hard (suspension compressing fast). */
   wheelImpact: { id: string; wheel: number; speed: number };
+  /** The chassis knocked into the ground or a rock (impulse, N·s). */
+  bodyKnock: { id: string; impulse: number };
   returned: { id: string; campsite: string };
 }
 
@@ -301,6 +303,7 @@ export class Simulation {
       for (let i = 0; i < v.wheelImpacts.length; i++)
         if (v.wheelImpacts[i] > 0)
           this.events.emit('wheelImpact', { id, wheel: i, speed: v.wheelImpacts[i] });
+      if (v.bodyContact.knock > 0) this.events.emit('bodyKnock', { id, impulse: v.bodyContact.knock });
       if (updateWear(v, dt)) this.events.emit('dent', { id, impact: v.lastImpact });
     }
     this.time += dt;

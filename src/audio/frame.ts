@@ -6,6 +6,7 @@ import type { World } from '../sim/world/world';
 import { isSputtering } from '../sim/vehicle/flooding';
 import { floodTuning } from '../data/tools';
 import type { AmbienceFrame } from './ambience';
+import type { CrawlFrame } from './crawlSounds';
 import type { EngineFrame } from './engineSound';
 import type { WheelSound } from './mix';
 import type { WinchFrame } from './winchSound';
@@ -18,6 +19,9 @@ export interface AudioFrame {
   /** Speed along the heading (m/s). */
   speed: number;
   wheels: readonly WheelSound[];
+  /** Selected gear (-1 = reverse), for the clunk of selecting drive or reverse. */
+  gear: number;
+  crawl: CrawlFrame;
   horn: boolean;
   winch: WinchFrame;
   ambience: AmbienceFrame;
@@ -66,6 +70,14 @@ export function buildAudioFrame(
     },
     speed: v.speed,
     wheels: v.wheels,
+    gear: d.gear,
+    crawl: {
+      dt,
+      body: v.bodyContact,
+      weight: tune.mass * 9.81,
+      articulation: v.wheels.reduce((sum, w) => sum + (w.contact ? Math.abs(w.compression) : 0), 0),
+      speed: v.speed,
+    },
     horn: v.horn,
     winch: { attached: winch.attached, motor: winch.motor, load: winch.tension / maxPull },
     ambience: {

@@ -47,6 +47,11 @@ for (const t of challengeTrails) {
   let prevVy = 0;
   let maxTilt = 0;
   let spinTime = 0;
+  let knocks = 0;
+  let maxKnock = 0;
+  let scrapeForce = 0;
+  let scrapeSlide = 0;
+  let scrapeTime = 0;
   const speeds: number[] = [];
   const contactFilter = (c: { handle: number }) =>
     v.colliders.slice(0, v.tuning.bodyBoxes.length).some((b) => b.handle === c.handle);
@@ -87,6 +92,15 @@ for (const t of challengeTrails) {
     vyNoise += Math.abs(vy - prevVy);
     prevVy = vy;
     maxTilt = Math.max(maxTilt, v.tiltDeg());
+    if (v.bodyContact.knock > 0) {
+      knocks++;
+      maxKnock = Math.max(maxKnock, v.bodyContact.knock);
+    }
+    if (v.bodyContact.force > 0) {
+      scrapeTime += DT;
+      scrapeForce = Math.max(scrapeForce, v.bodyContact.force);
+      scrapeSlide = Math.max(scrapeSlide, v.bodyContact.slide);
+    }
     speeds.push(Math.abs(v.speed));
   }
   speeds.sort((a, b) => a - b);
@@ -96,6 +110,6 @@ for (const t of challengeTrails) {
       `speed p10/50/90=${pct(0.1).toFixed(2)}/${pct(0.5).toFixed(2)}/${pct(0.9).toFixed(2)} ` +
       `throttleFlips/s=${(throttleFlips / time).toFixed(1)} maxRpm=${maxRpm.toFixed(0)} ` +
       `minLoad=${minLoad.toFixed(0)} air=${((airborneWheelTime / time) * 100).toFixed(0)}% spin=${((spinTime / time) * 100).toFixed(0)}% ` +
-      `body=${bodyContactTime.toFixed(1)}s vyJerk=${(vyNoise / time).toFixed(2)} tilt=${maxTilt.toFixed(0)}`,
+      `body=${bodyContactTime.toFixed(1)}s vyJerk=${(vyNoise / time).toFixed(2)} tilt=${maxTilt.toFixed(0)} knocks=${knocks} maxKnock=${maxKnock.toFixed(0)} scrape ${scrapeTime.toFixed(1)}s maxF=${scrapeForce.toFixed(0)} maxSlide=${scrapeSlide.toFixed(2)}`,
   );
 }

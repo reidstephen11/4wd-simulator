@@ -63,9 +63,29 @@ export const audioTuning = {
       water: { gain: 0.38, filterHz: 1300, q: 0.6 },
       wood: { gain: 0.3, filterHz: 520, q: 2.5 },
       scrub: { gain: 0.2, filterHz: 1100, q: 1.2 },
+      /** Rubber chirping as a tyre spins on rock or timber. */
+      squeal: { gain: 0.16, filterHz: 1150, q: 9 },
     },
+    /** Wheelspin above this (0..1) on rock or timber starts the squeal. */
+    squealFrom: 0.12,
     splashGain: 0.5,
   },
+
+  /** Chassis scraping over rock: force as a share of vehicle weight and sliding speed (m/s) for full level. */
+  scrape: { fullForce: 0.35, fullSlide: 0.6, gain: 0.5 },
+  /** Chassis knocking a rock: impulse (N·s) from faint to full. */
+  knock: { from: 120, full: 1600, gain: 0.55 },
+  /** Leaf springs and body squeak as the axles articulate at low speed. */
+  squeak: {
+    /** Summed suspension movement (m/s) for the most squeaks. */
+    fullArticulation: 0.5,
+    /** Squeaks per second at full articulation, and the speed (m/s) above which they stop. */
+    rate: 3.5,
+    maxSpeed: 4,
+    gain: 0.12,
+  },
+  /** Drivetrain clunks: transfer-case range change, air lockers, selecting drive or reverse. */
+  clunk: { range: 0.45, locker: 0.3, gear: 0.22 },
 
   /** Suspension thumps: compression speed (m/s) from faint to full. */
   thump: { from: 1.2, full: 4.5, gain: 0.7 },

@@ -97,6 +97,12 @@ export class Vehicle {
   floodEvent: FloodEvent = null;
   /** Engine power multiplier applied this step (dips while flooding sputters). */
   enginePower = 1;
+  /**
+   * The chassis (not the tyres) touching the ground this step: how hard it presses
+   * (N), how fast it slides at the contact (m/s), what it's on, and the sharpest
+   * new knock (impulse, N·s; 0 = none). Sound and the HUD read these.
+   */
+  readonly bodyContact = { force: 0, slide: 0, surface: SurfaceId.Rock as SurfaceId, knock: 0 };
   /** Compression speed of each wheel that hit hard this step (0 = no hit). */
   readonly wheelImpacts = [0, 0, 0, 0];
   private readonly impactCooldown = [0.5, 0.5, 0.5, 0.5];
@@ -628,6 +634,53 @@ export class Vehicle {
     return max;
   }
 
+  /** Sum the chassis boxes' contacts with the world (skid plates and rails on rock). */
+  private senseBodyContact(dt: number, vel: Vec3, ang: Vec3, com: Vec3): void {
+    const world = this.physics.world;
+    const bc = this.bodyContact;
+    const wasTouching = bc.force > 0;
+    let impulse = 0;
+    let slideSum = 0;
+    let surface: SurfaceId = bc.surface;
+    let biggest = 0;
+    const own = this.colliders;
+    for (let k = 0; k < this.tuning.bodyBoxes.length; k++) {
+      const box = own[k];
+      world.contactPairsWith(box, (other) => {
+        if (other.parent() === this.body) return;
+        world.contactPair(box, other, (m) => {
+          const n = m.numSolverContacts();
+          if (n === 0) return;
+          let j = 0;
+          for (let i = 0; i < m.numContacts(); i++) j += m.contactImpulse(i);
+          if (j <= 0) return;
+          const p = m.solverContactPoint(0);
+          if (!p) return;
+          const normal = m.normal();
+          // Chassis velocity at the contact, minus its component along the normal.
+          const rx = p.x - com.x;
+          const ry = p.y - com.y;
+          const rz = p.z - com.z;
+          const vx = vel.x + ang.y * rz - ang.z * ry;
+          const vy = vel.y + ang.z * rx - ang.x * rz;
+          const vz = vel.z + ang.x * ry - ang.y * rx;
+          const vn = vx * normal.x + vy * normal.y + vz * normal.z;
+          const slide = Math.hypot(vx - normal.x * vn, vy - normal.y * vn, vz - normal.z * vn);
+          impulse += j;
+          slideSum += slide * j;
+          if (j > biggest) {
+            biggest = j;
+            surface = this.physics.surfaceOfCollider(other, p.x, p.z);
+          }
+        });
+      });
+    }
+    bc.force = impulse / dt;
+    bc.slide = impulse > 0 ? slideSum / impulse : 0;
+    bc.surface = surface;
+    bc.knock = !wasTouching && impulse > this.tuning.bodyKnockImpulse ? impulse : 0;
+  }
+
   /** Read back wheel state after the physics step. */
   postStep(dt: number): void {
     const c = this.controller;
@@ -692,6 +745,7 @@ export class Vehicle {
       a.rotation += delta - this.wheelRotationDelta[i];
       b.rotation += delta - this.wheelRotationDelta[j];
     }
+    this.senseBodyContact(dt, vel, ang, com);
     // Impact detection: sudden change in velocity.
     const dvx = vel.x - this.lastVel.x;
     const dvy = vel.y - this.lastVel.y;

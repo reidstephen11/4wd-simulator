@@ -1,5 +1,6 @@
 import { icons, type PoiIcon } from './icons';
 import { cameraPresets, type CameraPreset } from '../data/camera';
+import { CrawlGauges, type GaugeMode, type GaugeState } from './crawlGauges';
 
 export interface Prompt {
   /** Key or button glyphs, e.g. "E" or "Hold J". */
@@ -17,6 +18,7 @@ export interface CompassPoi {
 }
 
 export interface HudState {
+  gauges: GaugeState;
   /** Camera heading (degrees, 0 = north). */
   heading: number;
   pois: CompassPoi[];
@@ -57,6 +59,11 @@ export class Hud {
   private readonly cameraHint: HTMLElement;
   private readonly cameraResetKey: HTMLElement;
   private readonly cameraPresetButton: HTMLButtonElement;
+  private readonly gauges: CrawlGauges;
+  /** Crawl gauges: 'auto' shows them in low range, precision crawl or the driver's seat. */
+  gaugeMode: GaugeMode = 'auto';
+  /** Set by the game: the driver's-seat camera is in use. */
+  cockpitView = false;
   private lastCompassKey = '';
   private lastPromptKey = '';
   private readonly iconImages = new Map<string, HTMLImageElement>();
@@ -85,6 +92,7 @@ export class Hud {
       <div class="toasts"></div>
       <div class="discovery"></div>`;
     root.appendChild(this.el);
+    this.gauges = new CrawlGauges(this.el);
     this.compass = this.el.querySelector('.compass canvas') as HTMLCanvasElement;
     this.cctx = this.compass.getContext('2d') as CanvasRenderingContext2D;
     this.status = this.el.querySelector('.status') as HTMLElement;
@@ -147,6 +155,11 @@ export class Hud {
 
   update(s: HudState): void {
     this.drawCompass(s);
+    const showGauges =
+      this.gaugeMode === 'on' ||
+      (this.gaugeMode === 'auto' && (s.range === 'low' || s.precisionCrawl || this.cockpitView));
+    this.gauges.visible = showGauges;
+    if (showGauges) this.gauges.update(s.gauges);
     this.rangeEl.textContent = s.range === 'high' ? 'H' : 'L';
     this.rangeEl.classList.toggle('low', s.range === 'low');
     const active = [s.frontLocked, s.rearLocked, s.precisionCrawl];

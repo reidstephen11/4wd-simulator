@@ -1,11 +1,12 @@
 import { audioTuning, type TyreLayer } from '../data/audio';
 import type { Settings } from '../sim/save/save';
 import { Ambience } from './ambience';
+import { CrawlSounds } from './crawlSounds';
 import { createNoiseBank, type NoiseBank } from './buffers';
 import { EngineSound, HornSound } from './engineSound';
 import type { AudioFrame } from './frame';
-import { thumpLevel } from './mix';
-import { dentCrunch, thump } from './oneShots';
+import { knockLevel, thumpLevel } from './mix';
+import { clunk, dentCrunch, knock, thump } from './oneShots';
 import { TyreSound } from './tyreSound';
 import { UiSounds } from './uiSounds';
 import { WinchSound } from './winchSound';
@@ -26,6 +27,7 @@ interface Graph {
   engine: EngineSound;
   horn: HornSound;
   tyres: TyreSound;
+  crawl: CrawlSounds;
   winch: WinchSound;
   ambience: Ambience;
   ui: UiSounds;
@@ -41,6 +43,8 @@ export interface AudioInfo {
   engine: number;
   ambience: number;
   engineHz: number;
+  /** Chassis scrape level (0..1). */
+  scrape: number;
   /** 'synth' (AudioWorklet engine), 'oscillator' (fallback) or 'loading'. */
   engineVoice: string;
   winchHz: number;
@@ -61,6 +65,7 @@ export class AudioSystem {
   private g: Graph | null = null;
   private settings: Settings;
   private failed = false;
+  private lastGear = 0;
   private readonly buf = new Float32Array(1024);
 
   constructor(
@@ -156,6 +161,7 @@ export class AudioSystem {
       engine: new EngineSound(ctx, engineBus, noise),
       horn: new HornSound(ctx, fxBus),
       tyres: new TyreSound(ctx, fxBus, noise),
+      crawl: new CrawlSounds(ctx, fxBus, noise),
       winch: new WinchSound(ctx, fxBus, noise),
       ambience: new Ambience(ctx, ambienceBus, noise),
       ui: new UiSounds(ctx, uiBus, noise),
@@ -194,6 +200,11 @@ export class AudioSystem {
     g.engine.update(f.engine);
     g.horn.set(f.horn && !f.paused);
     g.tyres.update(f.wheels, f.speed);
+    g.crawl.update(f.crawl);
+    // Selecting drive or reverse clunks through the driveline.
+    if (Math.sign(f.gear + 0.5) !== Math.sign(this.lastGear + 0.5) && !f.paused)
+      clunk(g.ctx, g.fxBus, g.noise, 'gear');
+    this.lastGear = f.gear;
     g.winch.update(f.winch);
     g.ambience.update(f.ambience);
   }
@@ -211,6 +222,19 @@ export class AudioSystem {
     const g = this.live();
     const level = thumpLevel(speed);
     if (g && level > 0) thump(g.ctx, g.fxBus, g.noise, level);
+  }
+
+  /** The chassis knocked a rock (impulse, N·s). */
+  bodyKnock(impulse: number): void {
+    const g = this.live();
+    const level = knockLevel(impulse);
+    if (g && level > 0) knock(g.ctx, g.fxBus, g.noise, level);
+  }
+
+  /** Transfer-case range change or an air locker engaging / releasing. */
+  drivetrainClunk(kind: 'range' | 'lockOn' | 'lockOff'): void {
+    const g = this.live();
+    if (g) clunk(g.ctx, g.fxBus, g.noise, kind);
   }
 
   /** The body was dented (impact speed, m/s). */
@@ -269,6 +293,7 @@ export class AudioSystem {
       engine: g?.engineBus.gain.value ?? 0,
       ambience: g?.ambienceBus.gain.value ?? 0,
       engineHz: g?.engine.hz ?? 0,
+      scrape: g?.crawl.scrape ?? 0,
       engineVoice: g?.engine.kind ?? 'off',
       winchHz: g?.winch.hz ?? 0,
       wind: g?.ambience.wind ?? 0,

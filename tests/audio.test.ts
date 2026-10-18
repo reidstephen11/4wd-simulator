@@ -4,6 +4,9 @@ import { kookaburraPhrase, magpiePhrase } from '../src/audio/birds';
 import {
   engineGain,
   firingHz,
+  knockLevel,
+  scrapeLevel,
+  squeakRate,
   proximityLevel,
   thumpLevel,
   tyreWeights,
@@ -63,6 +66,29 @@ describe('audio mixing (M6)', () => {
   it('sliding sideways adds scrub', () => {
     const w = tyreWeights(four(wheel(SurfaceId.Dirt, { slide: 3 })), 8);
     expect(w.scrub).toBeGreaterThan(0.9);
+  });
+
+  it('a tyre spinning on rock squeals; rolling on rock or spinning in mud does not', () => {
+    expect(tyreWeights(four(wheel(SurfaceId.Rock)), 2).squeal).toBe(0);
+    expect(tyreWeights(four(wheel(SurfaceId.Rock, { spin: 0.8 })), 0.2).squeal).toBeGreaterThan(0.5);
+    expect(tyreWeights(four(wheel(SurfaceId.Mud, { spin: 0.8 })), 0.2).squeal).toBe(0);
+  });
+
+  it('the chassis scrapes only while pressing on the ground and sliding', () => {
+    const weight = 1600 * 9.81;
+    expect(scrapeLevel(0, 1, weight)).toBe(0);
+    expect(scrapeLevel(8000, 0, weight)).toBe(0);
+    expect(scrapeLevel(8000, 0.6, weight)).toBeGreaterThan(scrapeLevel(2000, 0.6, weight));
+    expect(scrapeLevel(8000, 0.6, weight)).toBeGreaterThan(scrapeLevel(8000, 0.15, weight));
+    expect(scrapeLevel(1e6, 5, weight)).toBeLessThanOrEqual(1);
+  });
+
+  it('knocks above a threshold and squeaks while articulating slowly', () => {
+    expect(knockLevel(50)).toBe(0);
+    expect(knockLevel(2000)).toBeGreaterThan(knockLevel(300));
+    expect(squeakRate(0, 1)).toBe(0);
+    expect(squeakRate(0.4, 1)).toBeGreaterThan(squeakRate(0.1, 1));
+    expect(squeakRate(0.4, 10)).toBe(0);
   });
 
   it('thumps only above the threshold, louder for harder hits', () => {

@@ -36,6 +36,8 @@ export interface VehicleTuning {
   bodyFriction: number;
   /** Suspension compression speed (m/s) that counts as a hard hit (sound, events). */
   wheelImpactSpeed: number;
+  /** Chassis impulse (N·s) on first touching the ground that counts as a knock (sound, events). */
+  bodyKnockImpulse: number;
 
   engine: {
     idleRpm: number;
@@ -180,6 +182,7 @@ export const vehicleTuning: VehicleTuning = {
   bumpRadius: 0.24,
   bodyFriction: 0.45,
   wheelImpactSpeed: 1.2,
+  bodyKnockImpulse: 120,
 
   engine: {
     idleRpm: 800,
