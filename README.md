@@ -67,14 +67,16 @@ Press **C** or click **View** to cycle Follow → Front left → Front right →
 
 The **Granite Link** starts just east of the camp course. Follow the amber markers through about 70 m of split rocks, an off-camber shelf and granite ledges. Marked boulders beside the trail provide winch anchors. The wider, green-marked gravel bypass connects the same entrance and exit, making a loop back to camp. Both routes work in either direction; section hints explain the obstacle nearby. The rocks' chamfered surfaces use the same vertices for rendering and collision.
 
-Continue past Granite Link to the signed **4WD Challenge Loop**. Four new obstacles each have their own wider gravel bypass and a marked winch anchor:
+Continue past Granite Link to the signed **Granite Crawl**: six rock obstacles in a loop that get harder as you go. Each has its own wider gravel bypass (no lockers needed) and a marked winch anchor:
 
-- **V-Notch — moderate:** keep a tyre on each sloping bank and straddle the channel.
-- **Log Steps — moderate:** three angled, staggered logs lift alternating wheels. Try low range and precision crawl, adding lockers as needed.
-- **Boulder Gates — hard:** align the vehicle through two 2.15 m rock gaps. More throttle cannot make the gaps wider; use the front-corner camera and back up to correct the line.
-- **Sidewinder Shelf — hard:** climb onto a raised shelf tilted up to 20°, stay centred, and ease down the far end.
+- **Rock Garden — easy:** knee-high granite under both wheel paths. Pick a line that puts tyres on rocks, not the belly. Open diffs in low range will do.
+- **Granite Step-ups — moderate:** four ledges climbing nearly a metre, the third staggered so one front tyre climbs at a time, then a slab back down.
+- **Crevice Run — moderate:** two granite banks lean in towards a crack that widens to 0.8 m. Straddle it with a tyre high on each bank; a tyre that slips in drops and wedges.
+- **Boulder Field — hard:** packed 0.4–0.55 m boulders up a 3.5 m climb, set side to side so they lift diagonal wheels. Both lockers get through steadily; a rear locker alone struggles, and open diffs stall.
+- **Off-camber Slab — hard:** a broad slab that leans the car about 22–25° towards a drop. Keep the high-side tyres on the rock and never turn downhill.
+- **The Rock Face — extreme:** a split granite dome that climbs 2.7 m at up to 34° and twists at the seam, then a long descent. Low range is essential; a wheel off the dome can roll the car.
 
-Amber markers identify moderate obstacles, red markers identify hard ones, and green markers follow the links and bypasses. Signs and nearby hints point to the next challenge and back to Granite Link. Both the obstacle loop and the complete easy route are driveable without resetting. All four challenges appear on the paper map once discovered. The obstacle logs share their exact rendered mesh with collision.
+Marker colours show the grade: blue easy, amber moderate, red hard, black extreme. Green markers follow the links and bypasses. Signs and nearby hints name the next obstacle and the way back to Granite Link. Both the obstacle loop and the complete easy route are driveable without resetting. All six obstacles appear on the paper map once discovered. Every rock is a convex hull whose rendered faces are the same triangles Rapier collides with.
 
 ## Debug mode
 
@@ -88,10 +90,10 @@ Add `?debug` to the URL (for example `http://localhost:5173/?debug` or `https://
 The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 
 - [ ] It loads from the Pages link in current Chrome, Firefox and Edge.
-- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (20 places; the map fills in as you find them).
+- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (22 places; the map fills in as you find them).
 - [ ] **Camp logs:** select low range (L) and crawl over both logs without a run-up. Try reverse and a line with only one wheel on each axle crossing the log; the tyres should climb before the body touches.
 - [ ] **Granite Link:** follow the amber trail through all three rock sections, then return on the green gravel bypass. Try C / View at a diagonal obstacle to see the axle flex; confirm V restores follow. Try the loop in the opposite direction.
-- [ ] **4WD Challenge Loop:** continue from Granite Link through V-Notch, Log Steps, Boulder Gates and Sidewinder Shelf, then return. Try every green bypass with open diffs. At the gates, a poor line should catch the visible rock; reverse and realign to pass.
+- [ ] **Granite Crawl:** continue from Granite Link through Rock Garden, Step-ups, Crevice Run, Boulder Field, Off-camber Slab and The Rock Face, then return. Try the Boulder Field with open diffs, then the rear locker, then both. Try every green bypass with open diffs, and run the loop in reverse.
 - [ ] **Deep Crossing:** drive into the deep channel and sit there — the engine sputters after about 5 s under water and stalls at 10 s. It restarts on throttle once the air intake has been clear for 20 s.
 - [ ] **The Staircase:** the rocky climb needs low range (press L while slow); high range shouldn't make it.
 - [ ] **Washout Gully:** the car can't cross the 1.2 m gap on its own. Lay both planks across it (tool menu → Place planks) or take the detour around the top end.
