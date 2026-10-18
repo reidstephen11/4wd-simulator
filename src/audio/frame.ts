@@ -15,6 +15,8 @@ import type { WinchFrame } from './winchSound';
 export interface AudioFrame {
   dt: number;
   paused: boolean;
+  /** Heard from the driver's seat (through the cabin). */
+  interior: boolean;
   engine: EngineFrame;
   /** Speed along the heading (m/s). */
   speed: number;
@@ -34,6 +36,7 @@ export function buildAudioFrame(
   world: World,
   paused: boolean,
   dt: number,
+  interior = false,
 ): AudioFrame {
   const p = v.body.translation();
   const d = v.drivetrain;
@@ -58,6 +61,7 @@ export function buildAudioFrame(
   return {
     dt,
     paused,
+    interior,
     engine: {
       rpm: d.rpm,
       load: d.load,

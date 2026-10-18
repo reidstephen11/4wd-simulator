@@ -19,6 +19,8 @@ interface Graph {
   master: GainNode;
   analyser: AnalyserNode;
   vehicleDuck: GainNode;
+  /** Muffles the vehicle when heard from the driver's seat. */
+  cabin: BiquadFilterNode;
   ambienceDuck: GainNode;
   engineBus: GainNode;
   ambienceBus: GainNode;
@@ -141,7 +143,13 @@ export class AudioSystem {
     analyser.fftSize = 1024;
     comp.connect(analyser).connect(ctx.destination);
     const master = gain(comp, 0);
-    const vehicleDuck = gain(master);
+    const A = audioTuning;
+    const cabin = ctx.createBiquadFilter();
+    cabin.type = 'lowpass';
+    cabin.frequency.value = A.cabin.openHz;
+    cabin.Q.value = 0.5;
+    cabin.connect(master);
+    const vehicleDuck = gain(cabin);
     const ambienceDuck = gain(master);
     const engineBus = gain(vehicleDuck, 0);
     const fxBus = gain(vehicleDuck);
@@ -153,6 +161,7 @@ export class AudioSystem {
       master,
       analyser,
       vehicleDuck,
+      cabin,
       ambienceDuck,
       engineBus,
       ambienceBus,
@@ -195,7 +204,12 @@ export class AudioSystem {
     if (!g || g.ctx.state !== 'running') return;
     const t = g.ctx.currentTime;
     const A = audioTuning;
-    g.vehicleDuck.gain.setTargetAtTime(f.paused ? A.pausedVehicleGain : 1, t, 0.08);
+    g.vehicleDuck.gain.setTargetAtTime(
+      (f.paused ? A.pausedVehicleGain : 1) * (f.interior ? A.cabin.gain : 1),
+      t,
+      0.08,
+    );
+    g.cabin.frequency.setTargetAtTime(f.interior ? A.cabin.closedHz : A.cabin.openHz, t, 0.12);
     g.ambienceDuck.gain.setTargetAtTime(f.paused ? A.pausedAmbienceGain : 1, t, 0.2);
     g.engine.update(f.engine);
     g.horn.set(f.horn && !f.paused);

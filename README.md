@@ -1,6 +1,6 @@
 # 4WD Simulator
 
-A relaxed, single-player off-road exploration game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD through a patch of Australian high country, using a winch, planks and careful line choice to get over rough ground. No races, no scores — just the drive and what's over the next hill.
+A relaxed, single-player off-road exploration and rock-crawling game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD through a patch of Australian high country, using low range, lockers, a winch, planks and careful line choice to get over rough ground. No races — just the drive, what's over the next hill, and optional scored runs on the rock trails if you want them.
 
 Built with Three.js, Rapier physics and TypeScript. Everything, including leaf textures, terrain detail and sound, is generated in code; there are no downloaded asset files. Graphics use smooth terrain lighting, fine eucalyptus foliage, reflective water and detailed vehicle materials. High quality uses the full resolution of displays with up to 2× pixel density.
 
@@ -46,7 +46,8 @@ Sound starts after your first click or key press (browser rule).
 | Orbit camera                   | Mouse drag (left or right button), or Num 4/6/8/2     | Right stick                                          |
 | Camera distance                | Scroll                                                | D-pad left/right while driving                       |
 | Recenter camera                | V or Num 5, or the Reset view button                  | Right stick click                                    |
-| Cycle crawler views            | C, or the View button                                 | Hold LB + click right stick                          |
+| Cycle crawler / driver views   | C, or the View button                                 | Hold LB + click right stick                          |
+| Crawl gauges: auto / on / off  | I                                                     | Shown in low range                                   |
 | Horn                           | H                                                     | Left stick click                                     |
 | Map                            | M                                                     | View / Select                                        |
 | Pause                          | Esc                                                   | Start / Options                                      |
@@ -57,13 +58,21 @@ Placing planks: choose **Place planks** in the tool menu, move them with W/S, tu
 
 The **Camp Rock Course** is about 40 m east of River Flat Camp; follow the sign beside camp. Three marked lines progress from low warm-up steps to cross-axle rocks and a harder ledge line. Each line has entrance and exit markers, a difficulty sign and nearby driving hints. The course also appears on the map once discovered.
 
-Select **low range (L)**, then toggle **precision crawl (P)**. Hold W for a forward target of 6 km/h; S still brakes normally while moving forwards, then targets 5 km/h in reverse once stopped. Precision mode adjusts throttle and brakes to control descents while retaining full engine effort for climbing. Analogue triggers vary the target speed; half input targets 3 km/h forwards or 2.5 km/h in reverse. Use lighter trigger input or feather W on taller ledges to avoid catching the belly. Release the controls to stop, or press P again for normal driving.
+Select **low range (L)**, then toggle **precision crawl (P)**. It works like a crawl-control system: hold W for a forward target of 6 km/h; S still brakes normally while moving forwards, then targets 5 km/h in reverse once stopped. Precision mode adjusts throttle and brakes to control descents while retaining full engine effort for climbing. Analogue triggers vary the target speed; half input targets 3 km/h forwards or 2.5 km/h in reverse. Use lighter trigger input or feather W on taller ledges to avoid catching the belly. Release the controls and it brakes to a stop; press P again for normal driving.
+
+The drivetrain behaves like a real automatic. The throttle sets how hard the engine pulls, so a light, steady pedal settles at a steady speed (in low range about 7 km/h at 10% throttle) and the revs build over a moment. A torque converter sits between engine and gearbox: in gear the car creeps at idle (about 4 km/h in low range), so brake to stop when precision crawl is off. Engine braking comes through the converter and rises with the revs, and the gearbox holds its gear when you coast downhill. Pulling away on a slope, hill-start assist holds the brakes until the drive has built up. If the car slips back down a rock, W still drives forwards, fighting the roll, instead of braking.
 
 Toggle the **rear locker with X** and **front locker with Z**. A locked axle keeps using the grounded tyre when its partner lifts. Engage below 5 km/h; unlocking is always allowed. Front lock increases the turning radius, so unlock it for tight manoeuvres. The status buttons show each axle's state and can also be clicked. On gamepad, hold LB, point the left stick at the front locker, rear locker or precision crawl option, then release LB to select it.
 
 Low range also softens the springs and anti-roll bars, adds 6 cm of suspension droop and adjusts the dampers. The tyres can stay loaded over diagonal rocks while parked body height and bump clearance stay the same. Returning to high range restores the normal suspension support.
 
-Press **C** or click **View** to cycle Follow → Front left → Front right → Rear close. The front views look low across the tyres for placing a wheel on a rock; the rear view helps judge the belly and rear axle. Mouse drag, right-stick orbit and zoom still work. **V / R3 / Reset view** returns to follow and restores its previous zoom. On gamepad, hold **LB and click R3** to cycle views without choosing a tool.
+Press **C** or click **View** to cycle Follow → Front left → Front right → Rear close → Driver. The front views look low across the tyres for placing a wheel on a rock; the rear view helps judge the belly and rear axle. The driver view sits in the right-hand seat and tilts with the body; drag (or the right stick) turns your head. Mouse drag, right-stick orbit and zoom still work. **V / R3 / Reset view** returns to follow and restores its previous zoom. On gamepad, hold **LB and click R3** to cycle views without choosing a tool.
+
+**Crawl gauges** appear at the bottom right in low range, with precision crawl or in the driver view (**I** cycles auto / always / off). The inclinometer shows pitch and roll and turns red near tipping angles (about 32° pitch, 28° roll). The tyre diagram shades each tyre by how much weight it carries, draws a lifted tyre as a dashed outline and a spinning one in orange, and marks locked axles. It warns when the belly is on a rock, and shows gear (L1, H2, R…), speed and revs.
+
+**Scored runs (optional):** drive into either end of a crawl trail's technical line (Granite Link or any Granite Crawl obstacle) and a clock starts under the compass. Each time the car backs up costs 1 point, each time the chassis knocks a rock 1 point, and hooking up the winch 5 points. Reach the far end to see your time and points; your best per trail (fewest points, then quickest) is saved. Leaving the line or rolling ends the run; drifting past an entrance just cancels it.
+
+**Sound** follows what the car is doing: the inline six's burble changes with revs and load, low range adds transfer-case whine, tyres chirp when they spin on rock, the springs squeak as the axles flex, and the chassis grinds and knocks when it touches rock. Range changes clunk, the air lockers click and hiss, and selecting drive or reverse clunks.
 
 The **Granite Link** starts just east of the camp course. Follow the amber markers through about 70 m of split rocks, an off-camber shelf and granite ledges. Marked boulders beside the trail provide winch anchors. The wider, green-marked gravel bypass connects the same entrance and exit, making a loop back to camp. Both routes work in either direction; section hints explain the obstacle nearby. The rocks' chamfered surfaces use the same vertices for rendering and collision.
 
@@ -72,7 +81,7 @@ Continue past Granite Link to the signed **Granite Crawl**: six rock obstacles i
 - **Rock Garden — easy:** knee-high granite under both wheel paths. Pick a line that puts tyres on rocks, not the belly. Open diffs in low range will do.
 - **Granite Step-ups — moderate:** four ledges climbing nearly a metre, the third staggered so one front tyre climbs at a time, then a slab back down.
 - **Crevice Run — moderate:** two granite banks lean in towards a crack that widens to 0.8 m. Straddle it with a tyre high on each bank; a tyre that slips in drops and wedges.
-- **Boulder Field — hard:** packed 0.4–0.55 m boulders up a 3.5 m climb, set side to side so they lift diagonal wheels. Both lockers get through steadily; a rear locker alone struggles, and open diffs stall.
+- **Boulder Field — hard:** packed 0.4–0.55 m boulders up a 3.5 m climb, set side to side so they lift diagonal wheels. Both lockers get through steadily; a rear locker alone takes about half as long again, and open diffs stall.
 - **Off-camber Slab — hard:** a broad slab that leans the car about 22–25° towards a drop. Keep the high-side tyres on the rock and never turn downhill.
 - **The Rock Face — extreme:** a split granite dome that climbs 2.7 m at up to 34° and twists at the seam, then a long descent. Low range is essential; a wheel off the dome can roll the car.
 
@@ -83,7 +92,7 @@ Marker colours show the grade: blue easy, amber moderate, red hard, black extrem
 Add `?debug` to the URL (for example `http://localhost:5173/?debug` or `https://reidstephen11.github.io/4wd-simulator/?debug`). You get:
 
 - An overlay with FPS, a frame-time graph, draw calls, triangles, main-thread time (simulation and rendering), vehicle state (speed, gear, rpm, surface and load per wheel), winch, flooding, dirt, sound levels and particle counts.
-- A panel with: free-fly camera (also the **backtick key**), physics collider wireframes and wheel contact points, a teleport button for every place on the map, buttons to play each bird call, and live sliders for the main vehicle tuning values.
+- A panel with: free-fly camera (also the **backtick key**), physics collider wireframes and wheel contact points, a teleport button for every place on the map, buttons to play each bird call, and live sliders for the main vehicle tuning values (including the torque converter). The overlay's audio line names the engine sound in use (`synth` = the AudioWorklet engine) and the chassis scrape level.
 
 ## What to test
 
@@ -103,7 +112,10 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] Pause menu → Return to last campsite works; settings (graphics quality, volumes, units) apply straight away and are remembered.
 - [ ] Frame rate on Medium: open `?debug` and check the overlay holds 60 fps while driving around (the target is a 2022 laptop with integrated graphics).
 - [ ] Feel: steering response, how much the body leans, braking distance, how easily it rolls, how hard the Staircase and Bog Hole are, camera distance and lag. The main numbers are in `src/data/vehicle.ts` and `src/data/camera.ts`, and the vehicle ones can be changed live in the debug panel.
-- [ ] Sound: engine pitch with revs, tyre noise changing between dirt, gravel, mud and water, winch whine, wind up high, creek water, bird calls, the map rustle and the discovery chime. Check the three volume sliders.
+- [ ] Sound: the engine cranks and catches on your first key press; idle lopes; revs and load change the note (try a full-throttle stall against a rock in low range, then lift off at high revs for the overrun burble). Low range adds a gear whine that rises with speed. Tyre noise changes between dirt, gravel, mud and water; tyres chirp when spinning on rock; springs squeak while articulating; the chassis grinds and knocks on rock in the Boulder Field. Range changes, lockers and selecting reverse each make their own clunk. Winch whine, wind up high, creek water, bird calls, the map rustle and the discovery chime. Check the three volume sliders.
+- [ ] Driving feel: in low range with precision crawl off, a light steady throttle should settle at a steady crawl; releasing W creeps rather than stopping (brake with S); a 20–25° climb from a standstill pulls away without rolling back; coasting down a steep slope in low range holds the speed back.
+- [ ] Crawl gauges and driver view: pitch/roll and lifted tyres match what you see (try C → Driver on the Off-camber Slab); I cycles the gauges.
+- [ ] Scored runs: complete a Granite Crawl obstacle, then try to beat your points or time; back up once and check it costs a point.
 
 ## Project layout
 
@@ -114,8 +126,9 @@ src/
   sim/     headless simulation (no rendering, UI or audio imports): world generation, physics, vehicle, tools, saving
   render/  Three.js: terrain, vegetation, water, sky, vehicle model, particles, chase camera
   ui/      HUD, compass, paper map, menus, tool menu
-  audio/   Web Audio synthesis
+  audio/   Web Audio synthesis (engine/ holds the AudioWorklet engine synthesiser)
   debug/   overlay, free camera, debug panel
+scripts/   dev helpers: engine-lab (renders the engine to WAV with levels and spectra), drivetrain-lab, crawl-lab and drive-lab (headless measurements), shoot (screenshots)
 tests/     Vitest unit and headless physics tests
 e2e/       Playwright browser tests (one file per milestone)
 docs/      DECISIONS.md (choices made where the spec was open) and screenshots per milestone

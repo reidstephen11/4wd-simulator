@@ -10,6 +10,8 @@ export const audioTuning = {
   /** Vehicle sounds fade to this level while the game is paused (map, pause menu). */
   pausedVehicleGain: 0,
   pausedAmbienceGain: 0.6,
+  /** From the driver's seat the body muffles the vehicle's sounds (low-pass, Hz) a little. */
+  cabin: { openHz: 20000, closedHz: 1600, gain: 0.85 },
 
   engine: {
     /** Firing frequency = rpm / 60 × cylinders / 2 (four-stroke). */

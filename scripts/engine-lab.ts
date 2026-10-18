@@ -170,6 +170,34 @@ const scenarios: Record<string, { steps: Step[]; start?: boolean }> = {
       { seconds: 1, inputs: {} },
     ],
   },
+  // Everything in one file: start-up, idle, crawling in low range, a full-throttle
+  // stall against a rock, a rev up and the overrun back down.
+  demo: {
+    start: true,
+    steps: [
+      { seconds: 4, inputs: {} },
+      {
+        seconds: 4,
+        inputs: (t) => ({
+          rpm: 1050 + 60 * Math.sin(t * 2.1),
+          throttle: 0.3,
+          load: 0.35,
+          shaftHz: 6.5,
+          whine: 1,
+        }),
+      },
+      {
+        seconds: 2.5,
+        inputs: (t) => ({ rpm: 1100 + Math.min(1, t - 8) * 900, throttle: 1, load: 1, whine: 0.6 }),
+      },
+      {
+        seconds: 3,
+        inputs: (t) => ({ rpm: 2000 + Math.min(1, (t - 10.5) / 2.5) * 2200, throttle: 1, load: 0.5 }),
+      },
+      { seconds: 3, inputs: (t) => ({ rpm: 4200 - Math.min(1, (t - 13.5) / 2.5) * 3400, throttle: 0 }) },
+      { seconds: 2, inputs: {} },
+    ],
+  },
   'flooded-sputter': {
     steps: [{ seconds: 3, inputs: { rpm: 900, throttle: 0.3, load: 0.3, misfire: 0.45 } }],
   },

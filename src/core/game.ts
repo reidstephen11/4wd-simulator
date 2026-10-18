@@ -601,7 +601,9 @@ export class Game {
     const t0 = performance.now();
     this.view.render();
     this.sceneMs += (performance.now() - t0 - this.sceneMs) * 0.1;
-    this.audio.update(buildAudioFrame(v, tools.winch, this.world, this.loop.paused, frameDt));
+    this.audio.update(
+      buildAudioFrame(v, tools.winch, this.world, this.loop.paused, frameDt, this.hud.cockpitView),
+    );
     this.hud.update(
       buildHudState({
         vehicle: v,
