@@ -195,6 +195,22 @@ export class DebugTools {
         step: 0.1,
       },
       {
+        label: 'Converter stall ×',
+        get: () => t.converter.stallRatio,
+        set: (v) => (t.converter.stallRatio = v),
+        min: 1,
+        max: 2.5,
+        step: 0.05,
+      },
+      {
+        label: 'Converter K',
+        get: () => t.converter.capacity,
+        set: (v) => (t.converter.capacity = v),
+        min: 80,
+        max: 200,
+        step: 5,
+      },
+      {
         label: 'Brake (N)',
         get: () => t.brakeForce,
         set: (v) => (t.brakeForce = v),

@@ -39,14 +39,34 @@ export interface VehicleTuning {
 
   engine: {
     idleRpm: number;
-    /** Torque converter stall speed: rpm the engine can reach at standstill with full throttle. */
-    stallRpm: number;
     redlineRpm: number;
-    /** [rpm, Nm] pairs. */
+    /** Full-throttle torque at the flywheel (after friction): [rpm, Nm] pairs. */
     torqueCurve: ReadonlyArray<readonly [number, number]>;
-    /** Engine braking force at the wheels (N) per unit of total gear ratio. */
+    /**
+     * Air the wide-open throttle passes, as torque × rpm (Nm·rpm). Part throttle lets
+     * through a share of this, so its torque falls as the revs rise.
+     */
+    airflow: number;
+    /** Share of `airflow` with the throttle closed (idle air). */
+    idleAir: number;
+    /** Throttle opening → air: share = throttle ^ curve (fine control near closed). */
+    throttleCurve: number;
+    /** The idle governor adds up to this much throttle as the revs sag this far below idle. */
+    idleGovernor: number;
+    idleDroop: number;
+    /** Friction and pumping losses: base + perRpm·rpm + pumpingPerRpm·rpm·(1 − throttle) Nm. */
+    friction: { base: number; perRpm: number; pumpingPerRpm: number };
+    /** Rotating inertia of crank and flywheel (kg·m²). */
+    inertia: number;
+    /** Drag at the wheels from a stalled engine (N) per unit of total gear ratio, halved. */
     engineBrake: number;
   };
+  /**
+   * Torque converter between engine and gearbox. Pump torque = (rpm / capacity)² minus
+   * the same for the turbine; the turbine gets up to `stallRatio` × that below the
+   * coupling point (turbine / engine speed).
+   */
+  converter: { capacity: number; stallRatio: number; couplingPoint: number };
   gearbox: {
     ratios: readonly number[];
     reverse: number;
@@ -91,8 +111,10 @@ export interface VehicleTuning {
   handbrakeForce: number;
   /** Rear side-friction multiplier while the handbrake is held. */
   handbrakeSideGrip: number;
-  /** Brake applied when stopped with no input, so the car doesn't creep. */
+  /** Brake applied when stopped with no input (the driver's foot on the brake), so it doesn't creep or roll. */
   holdBrakeForce: number;
+  /** Hill-start assist: longest the brakes stay on while drive builds on a slope (s). */
+  hillStartHold: number;
   dragArea: number;
   steering: {
     maxAngleDeg: number;
@@ -161,7 +183,6 @@ export const vehicleTuning: VehicleTuning = {
 
   engine: {
     idleRpm: 800,
-    stallRpm: 2000,
     redlineRpm: 4300,
     torqueCurve: [
       [600, 150],
@@ -172,8 +193,18 @@ export const vehicleTuning: VehicleTuning = {
       [4300, 190],
       [4800, 80],
     ],
+    airflow: 950000,
+    idleAir: 0.03,
+    throttleCurve: 1.5,
+    idleGovernor: 0.08,
+    idleDroop: 150,
+    // About 80 Nm with the throttle closed at 2500 rpm, as for a 4.2 L petrol six.
+    friction: { base: 15, perRpm: 0.01, pumpingPerRpm: 0.016 },
+    inertia: 0.3,
     engineBrake: 120,
   },
+  // Stalls (full throttle, wheels held) at about 2000 rpm.
+  converter: { capacity: 120, stallRatio: 1.15, couplingPoint: 0.8 },
   gearbox: {
     ratios: [2.48, 1.48, 1.0],
     reverse: 2.08,
@@ -187,10 +218,10 @@ export const vehicleTuning: VehicleTuning = {
     high: { ratio: 1.0, topSpeedKmh: 100, reverseTopKmh: 18 },
     low: { ratio: 2.5, topSpeedKmh: 25, reverseTopKmh: 10 },
   },
-  openDiffLeak: 0.35,
+  openDiffLeak: 0.1,
   crawling: {
     diffLockMaxKmh: 5,
-    frontLockSteering: 0.72,
+    frontLockSteering: 0.85,
     forwardKmh: 6,
     reverseKmh: 5,
     speedGain: 3,
@@ -208,7 +239,8 @@ export const vehicleTuning: VehicleTuning = {
   brakeFrontBias: 0.6,
   handbrakeForce: 6000,
   handbrakeSideGrip: 0.45,
-  holdBrakeForce: 7000,
+  holdBrakeForce: 13500,
+  hillStartHold: 1.2,
   dragArea: 1.65,
   steering: {
     maxAngleDeg: 34,
