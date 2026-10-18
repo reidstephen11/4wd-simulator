@@ -4,12 +4,16 @@ import type { TrackInfo } from './features';
 /** Which track to arrive on, where the nearest one isn't the natural approach. */
 export const PREFERRED_APPROACH: Record<string, string> = {
   'granite-link': 'mine-track',
-  'rock-garden': 'rock-garden-bypass',
-  'step-ups': 'step-ups-bypass',
-  'crevice-run': 'crevice-run-bypass',
-  'boulder-field': 'boulder-field-bypass',
-  'off-camber-slab': 'off-camber-slab-bypass',
-  'rock-face': 'rock-face-bypass',
+  // Granite Spur obstacles are reached along the fire trail, not through the obstacle.
+  'creek-bed': 'ft-west',
+  'whoa-boys': 'ft-north',
+  'rock-steps': 'ft-north',
+  'log-step': 'ft-summit-east',
+  sidling: 'ft-summit-east',
+  'boulder-gully': 'ft-southeast',
+  'the-chute': 'ft-summit-south',
+  'washout-ruts': 'ft-ruts-end',
+  'spur-summit': 'ft-summit-east',
   staircase: 'staircase',
   'dingo-gap': 'main-track',
   falls: 'bog-track',
@@ -41,7 +45,10 @@ export function poiApproach(poi: PoiDef, tracks: readonly TrackInfo[], length = 
   if (!bestTrack) return [[poi.x, poi.z]];
   const t = bestTrack;
   const path: [number, number][] = [];
-  if (bestK >= length) for (let k = bestK - length; k <= bestK; k++) path.push([t.poly.xs[k], t.poly.zs[k]]);
+  // Come in along the side of the track with room for the run-up (the longer side if
+  // neither has enough).
+  if (bestK >= Math.min(length, t.poly.count - 1 - bestK))
+    for (let k = Math.max(0, bestK - length); k <= bestK; k++) path.push([t.poly.xs[k], t.poly.zs[k]]);
   else
     for (let k = Math.min(t.poly.count - 1, bestK + length); k >= bestK; k--)
       path.push([t.poly.xs[k], t.poly.zs[k]]);

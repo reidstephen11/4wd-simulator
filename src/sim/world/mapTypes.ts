@@ -104,8 +104,44 @@ export interface TrackDef {
   steps?: readonly TrackStepsDef[];
   /** Rocky steps: short sharp rises along the profile. */
   rockySteps?: ReadonlyArray<{ at: number; rise: number }>;
+  /** Lower the graded track: [metres along, depth] pairs, interpolated (a cutting or gully floor). */
+  cut?: ReadonlyArray<readonly [number, number]>;
+  /** Extra lean across the track: [metres along, degrees] pairs, interpolated (+ raises the right side). */
+  cant?: ReadonlyArray<readonly [number, number]>;
+  /** Drainage humps across the track, built as fine ground detail. */
+  humps?: readonly TrackHumpDef[];
+  /** Erosion ruts in the track, built as fine ground detail. */
+  erosion?: readonly ErosionRutDef[];
   markerColor?: 'green' | 'amber' | 'red';
   routeHint?: string;
+}
+
+/**
+ * A drainage hump (whoa-boy) across a track: an earth mound with a dug-out ditch on the
+ * side the water comes from. Built from the fine ground detail grid.
+ */
+export interface TrackHumpDef {
+  /** Metres along the track to the crest. */
+  at: number;
+  height: number;
+  /** Length of the mound along the track. */
+  length: number;
+  /** Depth of the ditch beside the mound (0 = none). */
+  ditch?: number;
+  /** Which side of the mound the ditch is on: +1 further along the track, -1 before it. */
+  ditchSide?: 1 | -1;
+  /** Turn away from square across the track (degrees, + moves the right end further along). */
+  angleDeg?: number;
+}
+
+/**
+ * An erosion rut: a channel following `path` in track coordinates ([metres along,
+ * metres right of the centreline]), with a flat floor and sloping walls.
+ */
+export interface ErosionRutDef {
+  path: ReadonlyArray<readonly [number, number]>;
+  width: number;
+  depth: number;
 }
 
 export type SurfaceKind = 'dirt' | 'grass' | 'gravel' | 'rock' | 'mud';
@@ -281,7 +317,8 @@ export interface CrawlTrailDef {
   id: string;
   name: string;
   trackId: string;
-  bypassTrackId: string;
+  /** A separate easier route between the same ends, if there is one. */
+  bypassTrackId?: string;
   difficulty?: TrailDifficulty;
   bypassHint?: string;
   sections: ReadonlyArray<{

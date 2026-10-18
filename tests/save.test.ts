@@ -32,11 +32,11 @@ describe('exploration and saving (M5)', () => {
         version: 1,
         exploration,
         settings: defaultSettings,
-        crawlBests: { 'rock-garden': { points: 1, seconds: 31.5 } },
+        crawlBests: { 'creek-bed': { points: 1, seconds: 31.5 } },
       },
       s,
     );
-    expect(loadSave(s)!.crawlBests).toEqual({ 'rock-garden': { points: 1, seconds: 31.5 } });
+    expect(loadSave(s)!.crawlBests).toEqual({ 'creek-bed': { points: 1, seconds: 31.5 } });
     s.setItem(
       [...s.data.keys()][0],
       JSON.stringify({ version: 1, exploration, settings: {}, crawlBests: { a: { points: 'x' }, b: null } }),

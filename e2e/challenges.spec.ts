@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { challengeTrails, challengeTracks } from '../src/data/challenges';
+import { challengePois, challengeTrails, challengeTracks } from '../src/data/challenges';
 import { densify, pointAt } from '../src/sim/world/polyline';
 import { collectErrors, shot, waitReady, waitSim } from './helpers';
 
@@ -33,8 +33,10 @@ test('clustered challenge discoveries render clearly on the paper map', async ({
   expect(errors).toEqual([]);
 });
 
-test('all six Granite Crawl obstacles have guidance, easy bypasses, and map discovery', async ({ page }) => {
-  test.setTimeout(300_000);
+test('all eight Granite Spur obstacles and the fire trail have guidance and map discovery', async ({
+  page,
+}) => {
+  test.setTimeout(600_000);
   const errors = collectErrors(page);
   await page.addInitScript(() =>
     localStorage.setItem(
@@ -52,48 +54,40 @@ test('all six Granite Crawl obstacles have guidance, easy bypasses, and map disc
   await page.keyboard.press('KeyL');
   await page.keyboard.press('KeyP');
   const title = page.locator('.course-hint strong');
-  for (const trail of challengeTrails) {
-    const track = challengeTracks.find((t) => t.id === trail.trackId)!;
-    const poly = densify(
-      track.points.map((p) => [p[0], p[1]] as const),
+  const line = (id: string) =>
+    densify(
+      challengeTracks.find((t) => t.id === id)!.points.map((p) => [p[0], p[1]] as const),
       1,
     );
-    // Stop short of the first rock; a terrain-only teleport onto one would start the
-    // chassis inside the solid granite.
-    const p = pointAt(poly, 2);
+  for (const trail of challengeTrails) {
+    // Half a metre in, short of the first rock or hump: a terrain-only teleport onto one
+    // would start the chassis inside it.
+    const p = pointAt(line(trail.trackId), 0.5);
     await page.evaluate(
       (p) => window.__game!.teleport(p.x, p.z, (Math.atan2(p.dx, -p.dz) * 180) / Math.PI),
       p,
     );
     await expect(title).toHaveText(`${trail.name} · ${trail.sections[0].name}`);
     await expect(page.locator('.course-hint span')).toHaveText(trail.sections[0].hint);
-    await waitSim(page, 0.15);
-    expect(await page.evaluate(() => window.__game!.discovered())).toContain(trail.id);
     await page.keyboard.press('KeyC');
     await waitSim(page, 0.35);
     await shot(page, 'challenges', trail.id);
-
-    const bypass = challengeTracks.find((t) => t.id === trail.bypassTrackId)!;
-    const bypassPoly = densify(
-      bypass.points.map((p) => [p[0], p[1]] as const),
-      1,
-    );
-    const mid = pointAt(bypassPoly, bypassPoly.length / 2);
-    await page.evaluate((p) => window.__game!.teleport(p.x, p.z, 0), mid);
-    await expect(title).toHaveText(`Easy · ${trail.name} bypass`);
-    await expect(page.locator('.course-hint span')).toContainText('no lockers');
+    await page.keyboard.press('KeyV');
+    // The long obstacles' places sit mid-way along, beside the fire trail.
+    const poi = challengePois.find((q) => q.id === trail.id)!;
+    await page.evaluate((p) => window.__game!.teleport(p.x, p.z, 0), poi);
+    await waitSim(page, 0.15);
+    expect(await page.evaluate(() => window.__game!.discovered())).toContain(trail.id);
   }
-  const link = pointAt(
-    densify(
-      challengeTracks.find((t) => t.id === 'challenge-entry')!.points.map((p) => [p[0], p[1]] as const),
-      1,
-    ),
-    10,
+  const trail = line('ft-north');
+  const mid = pointAt(trail, trail.length / 2);
+  await page.evaluate(
+    (p) => window.__game!.teleport(p.x, p.z, (Math.atan2(p.dx, -p.dz) * 180) / Math.PI),
+    mid,
   );
-  await page.evaluate((p) => window.__game!.teleport(p.x, p.z, 90), link);
-  await expect(title).toHaveText('Granite Crawl');
-  await expect(page.locator('.course-hint span')).toContainText('Next: Rock Garden');
-  expect((await page.evaluate(() => window.__game!.pois())).length).toBe(22);
+  await expect(title).toHaveText('Fire trail · Summit');
+  await expect(page.locator('.course-hint span')).toContainText('no lockers');
+  expect((await page.evaluate(() => window.__game!.pois())).length).toBe(25);
   await page.keyboard.press('KeyM');
   await expect.poll(() => page.evaluate(() => window.__game!.ui().map)).toBe(true);
   await page
@@ -103,9 +97,9 @@ test('all six Granite Crawl obstacles have guidance, easy bypasses, and map disc
   await page.keyboard.press('KeyM');
   await page.evaluate(() => {
     const g = window.__game!,
-      h = g.heightAt(15, 240);
-    g.setCamera(-60, h + 70, 320, 15, h, 240);
+      h = g.heightAt(15, 225);
+    g.setCamera(-55, h + 45, 300, 15, h - 4, 225);
   });
-  await shot(page, 'challenges', 'challenge-loop-overview');
+  await shot(page, 'challenges', 'granite-spur-overview');
   expect(errors).toEqual([]);
 });

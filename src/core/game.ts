@@ -326,7 +326,7 @@ export class Game {
     const path = poiApproach(poi, this.world.features.tracks, 45);
     const t = this.world.terrain;
     const park = path[Math.max(0, path.length - 14)];
-    const next = path[Math.min(path.length - 1, path.length - 10)];
+    const next = path[Math.max(0, Math.min(path.length - 1, path.length - 10))];
     this.vehicle.teleport(this.sim.poseAt(park[0], park[1], headingOf(next[0] - park[0], next[1] - park[1])));
     const from = path[0];
     const dx = from[0] - poi.x;

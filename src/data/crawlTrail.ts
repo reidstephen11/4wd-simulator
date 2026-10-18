@@ -89,7 +89,7 @@ export const graniteLinkSigns: PropDef[] = [
   { kind: 'signpost', x: -101, z: 260, headingDeg: 180, text: 'TECHNICAL · Granite Link' },
   // In the fork between the rock trail and the bypass, facing the turn-off.
   { kind: 'signpost', x: -89.5, z: 257.5, headingDeg: 235, text: 'EASY · Gravel bypass →' },
-  { kind: 'signpost', x: -60, z: 208, headingDeg: 210, text: 'Bypass → Camp' },
+  { kind: 'signpost', x: -67, z: 211, headingDeg: 210, text: 'Bypass → Camp' },
 ];
 
 const poly = densify(

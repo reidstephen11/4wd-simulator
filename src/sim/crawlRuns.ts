@@ -137,29 +137,32 @@ export class CrawlRuns {
   }
 
   private tryStart(i: CrawlRunInput): CrawlRunEvent | null {
+    // Where one trail ends and another begins, the car is nearest the line it is on.
+    let start: { trail: CrawlTrailDef; track: TrackInfo; along: number; distance: number } | null = null;
     for (const trail of this.trails) {
       const track = this.tracks.find((t) => t.def.id === trail.trackId);
       if (!track) continue;
       const p = trailProgress(track, i.x, i.z);
       const length = track.poly.length;
       const onLine = p.distance < track.def.width / 2;
-      const atStart = p.along < S.startZone;
-      const atEnd = p.along > length - S.startZone;
+      const inZone = p.along < S.startZone || p.along > length - S.startZone;
       if (this.resting === trail.id) {
-        if (!onLine || (!atStart && !atEnd)) this.resting = null;
+        if (!onLine || !inZone) this.resting = null;
         continue;
       }
-      if (!onLine || (!atStart && !atEnd)) continue;
-      const dir = atStart ? 1 : -1;
-      this.run = { trail, track, dir, seconds: 0, reverses: 0, knocks: 0, winches: 0, progress: 0, length };
-      const along = dir > 0 ? p.along : length - p.along;
-      this.best = this.low = along;
-      this.armed = true;
-      this.sinceKnock = Infinity;
-      this.winchWas = i.winchAttached;
-      return { type: 'started', run: this.run };
+      if (onLine && inZone && (!start || p.distance < start.distance)) start = { trail, track, ...p };
     }
-    return null;
+    if (!start) return null;
+    const { trail, track } = start;
+    const length = track.poly.length;
+    const dir = start.along < S.startZone ? 1 : -1;
+    this.run = { trail, track, dir, seconds: 0, reverses: 0, knocks: 0, winches: 0, progress: 0, length };
+    const along = dir > 0 ? start.along : length - start.along;
+    this.best = this.low = along;
+    this.armed = true;
+    this.sinceKnock = Infinity;
+    this.winchWas = i.winchAttached;
+    return { type: 'started', run: this.run };
   }
 
   private end(dnf?: CrawlRunResult['dnf']): CrawlRunEvent {

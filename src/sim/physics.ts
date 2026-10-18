@@ -4,6 +4,7 @@ import { PHYSICS_DT } from '../core/config';
 import { SurfaceId } from '../data/surfaces';
 import type { StaticBox, StaticRock } from './world/features';
 import type { Terrain } from './world/terrain';
+import { DETAIL_SUB, patchStride, patchTriangles } from './world/detail';
 
 export type Rapier = typeof RAPIER;
 
@@ -62,7 +63,7 @@ export class Physics {
     // Rapier stores heights x-major (column-major rows = z); Terrain is z-major.
     const h = new Float32Array(res * res);
     for (let iz = 0; iz < res; iz++)
-      for (let ix = 0; ix < res; ix++) h[ix * res + iz] = terrain.heights[iz * res + ix];
+      for (let ix = 0; ix < res; ix++) h[ix * res + iz] = terrain.solidSample(ix, iz);
     const desc = this.R.ColliderDesc.heightfield(
       n,
       n,
@@ -73,6 +74,33 @@ export class Physics {
       .setFriction(0.8)
       .setCollisionGroups(groups(Groups.TERRAIN, 0xffff));
     this.terrainCollider = this.world.createCollider(desc);
+    // Fine ruts and humps sit just above the pushed-down 1 m cells they replace, and
+    // report the terrain's surface type like the heightfield does.
+    for (const patch of terrain.detail) {
+      const w = patchStride(patch);
+      const vertices = new Float32Array(patch.heights.length * 3);
+      patch.heights.forEach((y, k) =>
+        vertices.set(
+          [
+            patch.ix0 - terrain.half + (k % w) / DETAIL_SUB,
+            y,
+            patch.iz0 - terrain.half + Math.floor(k / w) / DETAIL_SUB,
+          ],
+          k * 3,
+        ),
+      );
+      const indices: number[] = [];
+      patchTriangles(patch, (i, j) => indices.push(j * w + i));
+      this.world.createCollider(
+        this.R.ColliderDesc.trimesh(
+          vertices,
+          new Uint32Array(indices),
+          this.R.TriMeshFlags.FIX_INTERNAL_EDGES,
+        )
+          .setFriction(0.8)
+          .setCollisionGroups(groups(Groups.TERRAIN, 0xffff)),
+      );
+    }
     return this.terrainCollider;
   }
 

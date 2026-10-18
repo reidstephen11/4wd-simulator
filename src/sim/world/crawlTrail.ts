@@ -143,12 +143,35 @@ export function trailLogs(trail: CrawlTrailDef, tracks: readonly TrackInfo[], te
       const yaw = ((-centre.headingDeg + (log.angleDeg ?? 0)) * Math.PI) / 180;
       const dx = (Math.cos(yaw) * log.length) / 2,
         dz = (-Math.sin(yaw) * log.length) / 2;
-      const end = (side: number): [number, number, number] => {
-        const x = centre.x + dx * side,
-          z = centre.z + dz * side;
-        return [x, terrain.heightAt(x, z) + log.radius * 0.7, z];
+      // A fallen trunk rests on the highest ground across the track, 30% sunk in: the
+      // edge of the upper hull of that ground profile under its middle. Beyond the
+      // track its ends run into the banks or hang free over a dip.
+      const n = 16,
+        span = Math.min(1, (track.def.width / 2 + 0.6) / (log.length / 2));
+      const rest = Array.from({ length: n + 1 }, (_, i) => {
+        const t = 0.5 + span * (i / n - 0.5);
+        return [
+          t,
+          terrain.heightAt(centre.x + dx * (2 * t - 1), centre.z + dz * (2 * t - 1)) + log.radius * 0.7,
+        ];
+      });
+      const hull: number[][] = [];
+      for (const p of rest) {
+        while (hull.length >= 2) {
+          const [a, b] = hull.slice(-2);
+          if ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) < 0) break;
+          hull.pop();
+        }
+        hull.push(p);
+      }
+      const k = hull.findIndex((p) => p[0] >= 0.5);
+      const [p0, p1] = k <= 0 ? [hull[0], hull[1]] : [hull[k - 1], hull[k]];
+      const y = (t: number) => p0[1] + ((p1[1] - p0[1]) * (t - p0[0])) / (p1[0] - p0[0]);
+      return {
+        a: [centre.x - dx, y(0), centre.z - dz] as [number, number, number],
+        b: [centre.x + dx, y(1), centre.z + dz] as [number, number, number],
+        radius: log.radius,
       };
-      return { a: end(-1), b: end(1), radius: log.radius };
     }),
   );
 }
