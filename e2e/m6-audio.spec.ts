@@ -19,9 +19,11 @@ test('M6: audio starts on first input, follows the car, and the volume settings 
   await page.keyboard.press('KeyH');
   await expect.poll(async () => (await audio(page)).state).toBe('running');
   await expect.poll(async () => (await audio(page)).level).toBeGreaterThan(0.002);
+  // The inline-six synthesiser runs in an AudioWorklet; idle fires at about 40 Hz.
+  await expect.poll(async () => (await audio(page)).engineVoice).toBe('synth');
   const idle = await audio(page);
-  expect(idle.engineHz).toBeGreaterThan(20);
-  expect(idle.engineHz).toBeLessThan(35);
+  expect(idle.engineHz).toBeGreaterThan(30);
+  expect(idle.engineHz).toBeLessThan(50);
 
   // Driving: engine pitch rises, tyre noise follows the surface.
   await page.evaluate(() => window.__game!.teleport(-212, 228, 320));

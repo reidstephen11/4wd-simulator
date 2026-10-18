@@ -26,8 +26,9 @@ const four = (w: WheelSound) => [w, w, w, w];
 
 describe('audio mixing (M6)', () => {
   it('engine pitch follows rpm', () => {
-    expect(firingHz(800)).toBeCloseTo(26.7, 1);
-    expect(firingHz(3000)).toBeCloseTo(100, 5);
+    // Inline six: three firings per crank turn.
+    expect(firingHz(800)).toBeCloseTo(40, 5);
+    expect(firingHz(3000)).toBeCloseTo(150, 5);
     expect(firingHz(3000)).toBeGreaterThan(firingHz(1500));
   });
 

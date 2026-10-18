@@ -4,6 +4,7 @@ import type { Vehicle } from '../sim/vehicle/vehicle';
 import type { Winch } from '../sim/tools/winch';
 import type { World } from '../sim/world/world';
 import { isSputtering } from '../sim/vehicle/flooding';
+import { floodTuning } from '../data/tools';
 import type { AmbienceFrame } from './ambience';
 import type { EngineFrame } from './engineSound';
 import type { WheelSound } from './mix';
@@ -37,6 +38,19 @@ export function buildAudioFrame(
   const iz = Math.min(t.res - 1, Math.max(0, Math.round(p.z + t.half)));
   const falls = world.pois.find((q) => q.id === audioTuning.ambience.falls.poi);
   const maxPull = winchTuning.maxForceFactor * v.tuning.mass * 9.81;
+  const flood = v.condition.flood;
+  const sputter = isSputtering(flood)
+    ? Math.min(1, (flood.timer - floodTuning.sputterAt) / (floodTuning.stallAt - floodTuning.sputterAt))
+    : 0;
+  // Transfer-case input shaft: wheel turns × final drive × transfer ratio.
+  const tune = v.tuning;
+  const wheelRevs = Math.abs(v.speed) / (2 * Math.PI * tune.wheelRadius);
+  const shaftHz = wheelRevs * tune.gearbox.finalDrive * tune.ranges[d.range].ratio;
+  const W = audioTuning.whine;
+  const whine =
+    (d.range === 'low' ? 1 : W.highRange) *
+    (W.coast + (1 - W.coast) * d.load) *
+    Math.min(1, shaftHz / W.fadeInHz);
   return {
     dt,
     paused,
@@ -45,7 +59,10 @@ export function buildAudioFrame(
       load: d.load,
       throttle: v.throttle,
       running: d.engineRunning,
-      powerCut: d.engineRunning && isSputtering(v.condition.flood) && v.enginePower < 0.5,
+      powerCut: d.engineRunning && isSputtering(flood) && v.enginePower < 0.5,
+      misfire: sputter > 0 ? 0.15 + 0.35 * sputter : 0,
+      shaftHz,
+      whine,
     },
     speed: v.speed,
     wheels: v.wheels,

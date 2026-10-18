@@ -13,8 +13,10 @@ export const audioTuning = {
 
   engine: {
     /** Firing frequency = rpm / 60 × cylinders / 2 (four-stroke). */
-    cylinders: 4,
-    /** Relative strength of each harmonic of the firing frequency. */
+    cylinders: 6,
+    /** Gain of the synthesised engine (AudioWorklet) before the engine volume setting. */
+    synthGain: 0.9,
+    /** Fallback oscillator engine (no AudioWorklet): strength of each firing harmonic. */
     harmonics: [1, 0.62, 0.5, 0.55, 0.3, 0.26, 0.2, 0.17, 0.1, 0.08, 0.06, 0.05],
     /** Crank-rate rumble under the firing note. */
     halfOrderGain: 0.35,
@@ -32,6 +34,16 @@ export const audioTuning = {
   },
 
   horn: { tones: [392, 494], gain: 0.16 },
+
+  /** Transfer-case and gearbox whine level (see engineSynthTuning.whine for the tone). */
+  whine: {
+    /** Relative level in high range (low range is 1). */
+    highRange: 0.3,
+    /** Level when coasting, relative to full load. */
+    coast: 0.35,
+    /** Shaft speed (rev/s) at which the whine reaches full level. */
+    fadeInHz: 4,
+  },
 
   tyres: {
     /** Speed (m/s) at which rolling noise is at full level. */
@@ -98,3 +110,91 @@ export const audioTuning = {
 } as const;
 
 export type TyreLayer = keyof typeof audioTuning.tyres.layers;
+
+/**
+ * Inline-six engine synthesiser (src/audio/engine/engineSynth.ts), modelled on the
+ * 4.2 L petrol six of a 1970s 40 Series. Pressures are relative (1 = full throttle).
+ */
+export const engineSynthTuning = {
+  idleRpm: 800,
+  /** Above this the ignition cuts out every other firing (rev limiter). */
+  limiterRpm: 4450,
+  firingOrder: [1, 5, 3, 6, 2, 4],
+  /**
+   * Exhaust manifold runners, cylinders 1..6: extra delay (ms) and pulse strength. The
+   * outlet sits between cylinders 3 and 4, so the outer cylinders' pulses arrive later
+   * and softer; the unevenness gives the six its burble.
+   */
+  runners: {
+    delayMs: [0.45, 0.25, 0.05, 0.1, 0.3, 0.5],
+    strength: [0.97, 1.0, 1.04, 1.03, 0.98, 0.95],
+  },
+  /**
+   * Blowdown pulse rise and decay times (ms) at [closed, full] throttle, limited to a
+   * range of crank angle (°): distinct pops at idle, a continuous roar at high revs.
+   */
+  pulse: { riseMs: [0.45, 0.2], decayMs: [1.6, 0.9], minRiseDeg: 2, minDecayDeg: 5, maxDecayDeg: 22 },
+  /** Flow noise riding on the exhaust pulses at closed and full throttle. */
+  turbulence: { idle: 0.25, load: 0.6 },
+  /** Exhaust pulse strength at closed throttle, and from compression alone (no firing). */
+  pressure: { idle: 0.22, compression: 0.035 },
+  /** How quickly manifold pressure follows the throttle (s). */
+  manifoldSeconds: 0.06,
+  /** Cycle-to-cycle variation: pulse strength at idle and under load, timing (°), idle rpm wander. */
+  jitter: { idle: 0.1, load: 0.035, timingDeg: 3, lopeRpm: 14 },
+  exhaust: {
+    /** Speed of sound in hot exhaust gas (m/s). */
+    soundSpeed: 510,
+    headPipe: { length: 1.7, reflection: -0.35, dampingHz: 2600 },
+    /** Muffler low-pass, its low boom resonance, and the share of sound that bypasses it. */
+    muffler: { cutoffHz: 950, q: 0.6, boomHz: 92, boomQ: 1.3, boomDb: 3.5, leak: 0.22 },
+    tailPipe: { length: 1.3, reflection: -0.3, dampingHz: 3600 },
+    /** The tailpipe radiates little below this. */
+    radiationHz: 38,
+    gain: 1,
+  },
+  /** Combustion thump through the engine block. */
+  block: { cutoffHz: 160, gain: 0.35 },
+  /** Valve-train tick: two metallic resonances (Hz) excited twelve times per cycle. */
+  valves: { hz: [2600, 4300], q: 9, gain: 2.5 },
+  /** Intake roar: suction pulses open at this crank angle after exhaust opening (°). */
+  intake: {
+    openDeg: 380,
+    riseDeg: 30,
+    decayDeg: 28,
+    noiseHz: 650,
+    noiseGain: 1.4,
+    honkHz: 135,
+    honkQ: 4,
+    honkGain: 0.5,
+  },
+  /** Engine-driven fan. */
+  fan: { hz: 1100, gain: 0.25 },
+  /** Closed throttle at high revs: occasional misfires, rare pops and a thin intake whistle. */
+  overrun: {
+    fromRpm: 1700,
+    misfire: 0.18,
+    popChance: 0.03,
+    popGain: 1.3,
+    whistleHz: 2900,
+    whistleGain: 0.15,
+  },
+  /** Starter motor: crank speed, dip on each compression, ring-gear teeth per crank turn. */
+  starter: {
+    seconds: 0.95,
+    rpm: 190,
+    compressionDip: 0.35,
+    meshPerCrankTurn: 110,
+    toneHz: 900,
+    brushHz: 2600,
+    gain: 0.25,
+  },
+  /** After the engine catches it flares to this rpm, then settles to idle. */
+  catch: { seconds: 1.6, flareRpm: 1350, flareSeconds: 0.3, settleSeconds: 0.45 },
+  /**
+   * Transfer case and gearbox whine: gear teeth per shaft turn for two meshes, the
+   * second mesh and second harmonic levels, shaft-rate wobble and random flutter.
+   */
+  whine: { teeth: [43, 31], second: 0.5, harmonic: 0.25, shaftAm: 0.3, wobble: 0.15, gain: 0.05 },
+  outputGain: 1,
+} as const;

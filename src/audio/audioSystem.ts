@@ -41,6 +41,8 @@ export interface AudioInfo {
   engine: number;
   ambience: number;
   engineHz: number;
+  /** 'synth' (AudioWorklet engine), 'oscillator' (fallback) or 'loading'. */
+  engineVoice: string;
   winchHz: number;
   wind: number;
   water: number;
@@ -159,6 +161,8 @@ export class AudioSystem {
       ui: new UiSounds(ctx, uiBus, noise),
     };
     this.applyVolumes(g, true);
+    // The engine starts up when sound first comes on.
+    g.engine.restarted();
     return g;
   }
 
@@ -265,6 +269,7 @@ export class AudioSystem {
       engine: g?.engineBus.gain.value ?? 0,
       ambience: g?.ambienceBus.gain.value ?? 0,
       engineHz: g?.engine.hz ?? 0,
+      engineVoice: g?.engine.kind ?? 'off',
       winchHz: g?.winch.hz ?? 0,
       wind: g?.ambience.wind ?? 0,
       water: g?.ambience.water ?? 0,
