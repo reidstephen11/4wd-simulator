@@ -156,3 +156,17 @@ test('M7: 5-minute scripted drive across the map with no console errors', async 
   // Average at least 3 m/s including leg starts (the autopilot cruises at 9 m/s).
   expect(distance).toBeGreaterThan(3 * simSeconds);
 });
+
+test('M7: ground cover stays drawn after driving away from camp', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await waitReady(page);
+  const cover = () =>
+    page.evaluate(() => window.__game!.breakdown()['vegetation/ground-cover']?.triangles ?? 0);
+  await expect.poll(cover).toBeGreaterThan(0);
+  // About 380 m east of camp, facing away from it.
+  await page.evaluate(() => window.__game!.teleport(196, 340, 60));
+  await expect.poll(cover, { timeout: 60_000 }).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});

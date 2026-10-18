@@ -92,8 +92,8 @@ test('crawl controls work from keyboard, HUD and gamepad; course hints explain t
   expect(Math.abs(after.speed)).toBeLessThan(vehicleTuning.crawling.forwardKmh / 3.6 + 0.4);
   await page.evaluate(() => {
     const g = window.__game!;
-    const h = g.heightAt(-120, 253);
-    g.setCamera(-104, h + 14, 280, -120, h + 0.3, 253);
+    const h = g.heightAt(-116, 247);
+    g.setCamera(-100, h + 14, 274, -116, h + 0.3, 247);
   });
   await shot(page, 'crawling', 'camp-course-and-controls');
   expect(errors).toEqual([]);

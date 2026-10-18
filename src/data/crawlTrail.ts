@@ -84,10 +84,12 @@ export const graniteLink: CrawlTrailDef = {
 };
 
 export const graniteLinkSigns: PropDef[] = [
-  { kind: 'signpost', x: -107, z: 267, headingDeg: 180, text: 'Granite Link →' },
+  // Beside the Mine track at the turn-off, facing traffic from camp.
+  { kind: 'signpost', x: -105, z: 263, headingDeg: 287, text: '← Granite Link' },
   { kind: 'signpost', x: -101, z: 260, headingDeg: 180, text: 'TECHNICAL · Granite Link' },
-  { kind: 'signpost', x: -90, z: 267, headingDeg: 180, text: 'EASY · Gravel bypass →' },
-  { kind: 'signpost', x: -55, z: 209, headingDeg: 0, text: 'Bypass → Camp' },
+  // In the fork between the rock trail and the bypass, facing the turn-off.
+  { kind: 'signpost', x: -89.5, z: 257.5, headingDeg: 235, text: 'EASY · Gravel bypass →' },
+  { kind: 'signpost', x: -60, z: 208, headingDeg: 210, text: 'Bypass → Camp' },
 ];
 
 const poly = densify(

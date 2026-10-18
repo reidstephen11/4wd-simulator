@@ -4,10 +4,11 @@ import { coursePoint } from '../sim/world/crawlCourse';
 export const campCrawlCourse: CrawlCourseDef = {
   id: 'camp-rock-course',
   name: 'Camp Rock Course',
-  x: -120,
-  z: 265,
+  // Starts just north of the Mine track, clear of the road, and ends short of the creek shortcut.
+  x: -116,
+  z: 258,
   headingDeg: 0,
-  length: 24,
+  length: 22,
   lines: [
     {
       id: 'warm-up',
