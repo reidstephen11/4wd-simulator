@@ -108,6 +108,7 @@ export class Simulation {
     this.physics.addWalls(world.map.wallHalfExtent);
     for (const b of world.features.boxes)
       this.physics.addStaticBox(b, b.kind === 'ledge' ? SurfaceId.Rock : SurfaceId.Dirt);
+    for (const r of world.features.rocks) this.physics.addStaticRock(r);
     this.addScatterColliders();
     for (const f of world.map.fallenTrees) this.addFallenTree(f);
   }

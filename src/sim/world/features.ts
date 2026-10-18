@@ -48,10 +48,23 @@ export interface StaticLog {
   radius: number;
 }
 
+/**
+ * A static granite hull. Vertices are relative to (x, y, z) with orientation baked in;
+ * rendering draws these triangles and the collider is the convex hull of the same vertices.
+ */
+export interface StaticRock {
+  x: number;
+  y: number;
+  z: number;
+  vertices: Float32Array;
+  indices: Uint32Array;
+}
+
 export interface TerrainFeatures {
   tracks: TrackInfo[];
   creek: CreekInfo;
   boxes: StaticBox[];
+  rocks: StaticRock[];
   logs: StaticLog[];
   gullies: GullyInfo[];
   /** Distance (m, clamped to 255) from each sample to the nearest track edge (0 = on a track). */

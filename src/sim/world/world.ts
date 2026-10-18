@@ -4,7 +4,7 @@ import type { TerrainFeatures } from './features';
 import { generateTerrainSteps, type GenStep } from './terrainGen';
 import { generateScatter, SpatialGrid, type RockInstance, type Scatter, type TreeInstance } from './scatter';
 import { courseObstacles } from './crawlCourse';
-import { trailObstacles, trailLogs } from './crawlTrail';
+import { trailObstacles, trailLogs, trailStones } from './crawlTrail';
 
 /** Everything static about the map: terrain, derived features, scatter and points of interest. */
 export interface World {
@@ -29,6 +29,7 @@ export function* buildWorldSteps(map: MapDef): Generator<GenStep, World, void> {
   for (const course of map.crawlCourses ?? []) features.boxes.push(...courseObstacles(course, terrain));
   for (const trail of map.crawlTrails ?? []) {
     features.boxes.push(...trailObstacles(trail, features.tracks, terrain));
+    features.rocks.push(...trailStones(trail, features.tracks, terrain));
     features.logs.push(...trailLogs(trail, features.tracks, terrain));
   }
   yield { progress: 0.66, label: 'Growing trees' };

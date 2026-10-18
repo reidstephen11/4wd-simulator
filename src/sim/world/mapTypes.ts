@@ -251,12 +251,38 @@ export interface VegetationDef {
   boulderDensity: number;
 }
 
+export type TrailDifficulty = 'easy' | 'moderate' | 'hard' | 'extreme';
+
+/**
+ * A granite hull on a crawl trail, placed `at` metres along the track and `lateral`
+ * metres to its right. Sizes are full extents; `height` is exposed rock above the ground.
+ * - boulder: faceted rounded rock; width × length footprint.
+ * - slab: chamfered flat-topped block, optionally pitched (+ raises the far end) and rolled (+ raises the right).
+ * - ridge: whaleback on the ground whose top follows `profile` ([metres along from the
+ *   centre, centre height, optional cross-slope]); `rollDeg` is its default cross-slope.
+ */
+export interface TrailStoneDef {
+  shape: 'boulder' | 'slab' | 'ridge';
+  at: number;
+  lateral: number;
+  width: number;
+  length: number;
+  height: number;
+  profile?: ReadonlyArray<readonly [number, number, number?]>;
+  /** Raise the stone's ground level, e.g. to seat a boulder on a slab beneath it. */
+  base?: number;
+  yawDeg?: number;
+  pitchDeg?: number;
+  rollDeg?: number;
+  seed?: number;
+}
+
 export interface CrawlTrailDef {
   id: string;
   name: string;
   trackId: string;
   bypassTrackId: string;
-  difficulty?: 'moderate' | 'hard';
+  difficulty?: TrailDifficulty;
   bypassHint?: string;
   sections: ReadonlyArray<{
     from: number;
@@ -264,6 +290,7 @@ export interface CrawlTrailDef {
     name: string;
     hint: string;
     rocks: CrawlCourseDef['lines'][number]['obstacles'];
+    stones?: readonly TrailStoneDef[];
     logs?: ReadonlyArray<{
       at: number;
       lateral: number;
