@@ -4,10 +4,12 @@ import type { TrackInfo } from './features';
 /** Which track to arrive on, where the nearest one isn't the natural approach. */
 export const PREFERRED_APPROACH: Record<string, string> = {
   'granite-link': 'mine-track',
-  'v-notch': 'v-notch-bypass',
-  'log-steps': 'log-steps-bypass',
-  'boulder-gates': 'boulder-gates-bypass',
-  'sidewinder-shelf': 'sidewinder-shelf-bypass',
+  'rock-garden': 'rock-garden-bypass',
+  'step-ups': 'step-ups-bypass',
+  'crevice-run': 'crevice-run-bypass',
+  'boulder-field': 'boulder-field-bypass',
+  'off-camber-slab': 'off-camber-slab-bypass',
+  'rock-face': 'rock-face-bypass',
   staircase: 'staircase',
   'dingo-gap': 'main-track',
   falls: 'bog-track',

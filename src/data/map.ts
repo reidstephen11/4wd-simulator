@@ -4,7 +4,6 @@ import { graniteLink, graniteLinkTracks, graniteLinkSigns, graniteLinkAnchors } 
 import {
   challengeTracks,
   challengeTrails,
-  challengeFlats,
   challengePois,
   challengeSigns,
   challengeAnchors,
@@ -120,7 +119,6 @@ export const highCountryMap: MapDef = {
     },
   ],
   flats: [
-    ...challengeFlats,
     { id: 'camp', x: -160, z: 246, radius: 26, blend: 26 },
     { id: 'crawl-course', x: -120, z: 253, radius: 19, blend: 8 },
     { id: 'hut', x: -200, z: -436, radius: 16, blend: 16 },
