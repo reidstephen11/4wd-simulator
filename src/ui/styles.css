@@ -793,3 +793,11 @@ table.controls td {
 .fade.on {
   opacity: 1;
 }
+
+.build-label {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-align: center;
+  user-select: text;
+}
