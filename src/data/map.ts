@@ -7,6 +7,10 @@ import {
   challengePois,
   challengeSigns,
   challengeAnchors,
+  spurHill,
+  spurClearings,
+  spurRidges,
+  spurTors,
 } from './challenges';
 
 /**
@@ -17,7 +21,7 @@ import {
  *   north  – high plain (~85 m) with snow gums, Mountain Hut, Fire Tower knoll
  *   middle – escarpment and ridge (Staircase, Dingo Gap Lookout), creek valley (~20 m)
  *   east   – low bench where the creek drops at the Falls
- *   south  – River Flat Camp, Old Mine hill, Granite Tors, map entrance
+ *   south  – River Flat Camp, Granite Spur's 4WD obstacles, Old Mine hill, Granite Tors, map entrance
  */
 export const highCountryMap: MapDef = {
   id: 'high-country',
@@ -103,6 +107,7 @@ export const highCountryMap: MapDef = {
     { id: 'plain-rise-ne', x: 430, z: -420, radius: 150, height: 22, shape: 'dome' },
     { id: 'dingo-gap-saddle', x: 62, z: -236, radius: 42, height: -8, shape: 'dome' },
     { id: 'valley-knoll', x: -380, z: 230, radius: 70, height: 9, shape: 'dome' },
+    spurHill,
   ],
   ridges: [
     {
@@ -117,6 +122,7 @@ export const highCountryMap: MapDef = {
       height: 14,
       width: 70,
     },
+    ...spurRidges,
   ],
   flats: [
     { id: 'camp', x: -160, z: 246, radius: 26, blend: 26 },
@@ -556,6 +562,7 @@ export const highCountryMap: MapDef = {
     { id: 'granite-tors', x: -568, z: 300, radius: 16, count: 11 },
     { id: 'plain-tor', x: -40, z: -470, radius: 9, count: 5 },
     { id: 'ridge-tor', x: 196, z: -226, radius: 8, count: 4 },
+    ...spurTors,
   ],
   fallenTrees: [{ id: 'fallen-tree', x: -489, z: -140, headingDeg: 82, length: 12, radius: 0.42, mass: 750 }],
   crawlCourses: [campCrawlCourse],
@@ -581,6 +588,7 @@ export const highCountryMap: MapDef = {
       { x: 174, z: 3, radius: 20 },
       { x: 330, z: -20, radius: 22 },
       { x: -190, z: 560, radius: 14 },
+      ...spurClearings,
     ],
   },
   spawnCampsite: 'river-flat-camp',

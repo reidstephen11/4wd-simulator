@@ -4,6 +4,7 @@ import { Noise2D, clamp, smoothstep } from './noise';
 import { attrAt, densify, type DensePolyline } from './polyline';
 import { GroundTint, NO_WATER, Terrain } from './terrain';
 import type { CreekInfo, GullyInfo, StaticBox, TerrainFeatures, TrackInfo } from './features';
+import { buildDetailPatch, type DetailPatch } from './detail';
 
 /** Macro relief is evaluated on a coarser grid and upsampled. */
 const MACRO_STEP = 2;
@@ -419,6 +420,8 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
     for (let k = 0; k < poly.count; k++) raw[k] = sampleH(poly.xs[k], poly.zs[k]);
     let profile = boxBlur(boxBlur(raw, def.smooth * 0.5), def.smooth * 0.5);
     profile = applyPins(def, poly, profile);
+    // A cutting or gully floor sits below the smoothed ground.
+    if (def.cut) for (let k = 0; k < poly.count; k++) profile[k] -= pairsAt(def.cut, poly.s[k]);
     if (def.rockySteps) {
       for (let k = 0; k < poly.count; k++) {
         const s = poly.s[k];
@@ -448,6 +451,9 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
     const h = heights[i];
     let target = target0 + def.camber * (h - raw);
     if (def.faint) target = h + (target0 - raw) * 0.35;
+    // Extra lean raises the right side (trackSide is + on the left).
+    if (def.cant)
+      target -= trackSide[i] * Math.tan((pairsAt(def.cant, atParam(t.poly.s, p)) * Math.PI) / 180);
     // Slight crown between the wheel lines reads as worn ruts.
     const lat = Math.abs(trackSide[i]);
     if (def.ruts > 0 && lat < hw) target += def.ruts * (1 - Math.min(1, Math.abs(lat - 0.75) / 0.75));
@@ -740,10 +746,28 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
   yield { progress: 0.8, label: 'Terrain ready' };
 
   const terrain = new Terrain(size, heights, surface, tint, water);
+  // Fine ruts and drainage humps over the finished 1 m ground.
+  const patches: DetailPatch[] = [];
+  for (const t of tracks) {
+    const patch = buildDetailPatch(t, half, (x, z) => terrain.heightAt(x, z));
+    if (patch) patches.push(patch);
+  }
+  terrain.setDetail(patches);
   return {
     terrain,
     features: { tracks, creek, boxes, rocks: [], logs: [], gullies, trackDistance, creekDistance },
   };
+}
+
+/** Linear interpolation through [distance, value] pairs, holding the end values. */
+function pairsAt(pairs: ReadonlyArray<readonly [number, number]>, s: number): number {
+  if (s <= pairs[0][0]) return pairs[0][1];
+  for (let i = 0; i + 1 < pairs.length; i++) {
+    const [s0, v0] = pairs[i],
+      [s1, v1] = pairs[i + 1];
+    if (s <= s1) return v0 + ((v1 - v0) * (s - s0)) / Math.max(1e-6, s1 - s0);
+  }
+  return pairs[pairs.length - 1][1];
 }
 
 /** Apply pinned heights (third value on track control points). */

@@ -66,26 +66,28 @@ Toggle the **rear locker with X** and **front locker with Z**. A locked axle kee
 
 Low range also softens the springs and anti-roll bars, adds 6 cm of suspension droop and adjusts the dampers. The tyres can stay loaded over diagonal rocks while parked body height and bump clearance stay the same. Returning to high range restores the normal suspension support.
 
-Press **C** or click **View** to cycle Follow → Front left → Front right → Rear close → Driver. The front views look low across the tyres for placing a wheel on a rock; the rear view helps judge the belly and rear axle. The driver view sits in the right-hand seat and tilts with the body; drag (or the right stick) turns your head. Mouse drag, right-stick orbit and zoom still work. **V / R3 / Reset view** returns to follow and restores its previous zoom. On gamepad, hold **LB and click R3** to cycle views without choosing a tool.
+Press **C** or click **View** to cycle Follow → Front left → Front right → Rear close → Driver. The front views look low across the tyres for placing a wheel on a rock; the rear view helps judge the belly and rear axle. The driver view sits in the right-hand seat and tilts with the body; drag (or the right stick) turns your head. The steering wheel turns with the front wheels, and the dash works: speedometer, tachometer and oil pressure, plus lamps for low range, each locker, crawl control and a stalled engine. Mouse drag, right-stick orbit and zoom still work. **V / R3 / Reset view** returns to follow and restores its previous zoom. On gamepad, hold **LB and click R3** to cycle views without choosing a tool.
 
 **Crawl gauges** appear at the bottom right in low range, with precision crawl or in the driver view (**I** cycles auto / always / off). The inclinometer shows pitch and roll and turns red near tipping angles (about 32° pitch, 28° roll). The tyre diagram shades each tyre by how much weight it carries, draws a lifted tyre as a dashed outline and a spinning one in orange, and marks locked axles. It warns when the belly is on a rock, and shows gear (L1, H2, R…), speed and revs.
 
-**Scored runs (optional):** drive into either end of a crawl trail's technical line (Granite Link or any Granite Crawl obstacle) and a clock starts under the compass. Each time the car backs up costs 1 point, each time the chassis knocks a rock 1 point, and hooking up the winch 5 points. Reach the far end to see your time and points; your best per trail (fewest points, then quickest) is saved. Leaving the line or rolling ends the run; drifting past an entrance just cancels it.
+**Scored runs (optional):** drive into either end of a crawl trail's technical line (Granite Link or any Granite Spur obstacle) and a clock starts under the compass. Each time the car backs up costs 1 point, each time the chassis knocks a rock 1 point, and hooking up the winch 5 points. Reach the far end to see your time and points; your best per trail (fewest points, then quickest) is saved. Leaving the line or rolling ends the run; drifting past an entrance just cancels it.
 
 **Sound** follows what the car is doing: the inline six's burble changes with revs and load, low range adds transfer-case whine, tyres chirp when they spin on rock, the springs squeak as the axles flex, and the chassis grinds and knocks when it touches rock. Range changes clunk, the air lockers click and hiss, and selecting drive or reverse clunks.
 
 The **Granite Link** starts just east of the camp course. Follow the amber markers through about 70 m of split rocks, an off-camber shelf and granite ledges. Marked boulders beside the trail provide winch anchors. The wider, green-marked gravel bypass connects the same entrance and exit, making a loop back to camp. Both routes work in either direction; section hints explain the obstacle nearby. The rocks' chamfered surfaces use the same vertices for rendering and collision.
 
-Continue past Granite Link to the signed **Granite Crawl**: six rock obstacles in a loop that get harder as you go. Each has its own wider gravel bypass (no lockers needed) and a marked winch anchor:
+Continue past Granite Link to **Granite Spur**, a granite hill with eight obstacles modelled on real tracks: the clay climbs, rock steps, shale sidlings and washouts of the Victorian High Country (Billy Goat Bluff, Blue Rag Range), and the boulder gullies and chutes of the Rubicon and Moab. A gravel **fire trail** (green markers) climbs the north face to the summit and rings the foot of the hill, so you can reach both ends of every obstacle without lockers. Marker colours show the grade: blue easy, amber moderate, red hard, black extreme.
 
-- **Rock Garden — easy:** knee-high granite under both wheel paths. Pick a line that puts tyres on rocks, not the belly. Open diffs in low range will do.
-- **Granite Step-ups — moderate:** four ledges climbing nearly a metre, the third staggered so one front tyre climbs at a time, then a slab back down.
-- **Crevice Run — moderate:** two granite banks lean in towards a crack that widens to 0.8 m. Straddle it with a tyre high on each bank; a tyre that slips in drops and wedges.
-- **Boulder Field — hard:** packed 0.4–0.55 m boulders up a 3.5 m climb, set side to side so they lift diagonal wheels. Both lockers get through steadily; a rear locker alone takes about half as long again, and open diffs stall.
-- **Off-camber Slab — hard:** a broad slab that leans the car about 22–25° towards a drop. Keep the high-side tyres on the rock and never turn downhill.
-- **The Rock Face — extreme:** a split granite dome that climbs 2.7 m at up to 34° and twists at the seam, then a long descent. Low range is essential; a wheel off the dome can roll the car.
+- **Creek Bed — easy:** a dry creek cut a metre into the foot of the hill, floored with rounded stones that rock the car. Open diffs in low range will do.
+- **Whoa-boys — moderate:** a 17° clay climb over three earth drainage humps, each with a ditch dug behind it. Take them square and slow so the belly doesn't hang on a crest; the angled ones lift diagonal wheels.
+- **Rock Steps — moderate:** granite ledges up the steep pinch onto the summit, two of them split so one front tyre climbs first. Low range gets up with open diffs; high range stalls. Coming down is harder.
+- **Log Step — moderate:** three fallen snow gums across the summit, about as tall as the chassis rails. Cross at a slight angle so one wheel climbs at a time.
+- **The Sidling — hard:** a narrow side-cut on loose shale above a gully, leaning the car 20–25° towards the drop. A washout under the low-side tyres and a rock shelf under the high side add to it. Never turn downhill.
+- **Boulder Gully — hard:** a gully cut up to 3 m into the south face and choked with boulders bigger than the tyres. Both lockers get through; a rear locker alone takes nearly three times as long; open diffs and high range stall.
+- **The Chute — extreme:** a granite V-notch that climbs about 10 m in 20 m onto the summit. Its walls swap high and low every wheelbase, so one front and the opposite rear tyre are always lifting. It needs both lockers and low range.
+- **Washout Ruts — hard:** a steep clay descent gouged by erosion ruts up to half a metre deep. Straddle the middle rut, and cross the others at an angle one wheel at a time.
 
-Marker colours show the grade: blue easy, amber moderate, red hard, black extreme. Green markers follow the links and bypasses. Signs and nearby hints name the next obstacle and the way back to Granite Link. Both the obstacle loop and the complete easy route are driveable without resetting. All six obstacles appear on the paper map once discovered. Every rock is a convex hull whose rendered faces are the same triangles Rapier collides with.
+The suggested order runs round the hill from Granite Link: Creek Bed, Whoa-boys, Rock Steps and Log Step to the summit, down The Sidling, along the foot of the hill, up Boulder Gully and The Chute, and down Washout Ruts. Every obstacle also works the other way. Signs at both ends and nearby hints name the obstacle and how to drive it, and the summit and all eight obstacles appear on the paper map once found. Ruts and drainage humps are fine ground detail (0.25 m) laid over the 1 m terrain; like the rocks and logs, what you see is exactly what the car collides with.
 
 ## Debug mode
 
@@ -99,10 +101,10 @@ Add `?debug` to the URL (for example `http://localhost:5173/?debug` or `https://
 The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 
 - [ ] It loads from the Pages link in current Chrome, Firefox and Edge.
-- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (22 places; the map fills in as you find them).
+- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (25 places; the map fills in as you find them).
 - [ ] **Camp logs:** select low range (L) and crawl over both logs without a run-up. Try reverse and a line with only one wheel on each axle crossing the log; the tyres should climb before the body touches.
 - [ ] **Granite Link:** follow the amber trail through all three rock sections, then return on the green gravel bypass. Try C / View at a diagonal obstacle to see the axle flex; confirm V restores follow. Try the loop in the opposite direction.
-- [ ] **Granite Crawl:** continue from Granite Link through Rock Garden, Step-ups, Crevice Run, Boulder Field, Off-camber Slab and The Rock Face, then return. Try the Boulder Field with open diffs, then the rear locker, then both. Try every green bypass with open diffs, and run the loop in reverse.
+- [ ] **Granite Spur:** from Granite Link, drive the obstacles in order (Creek Bed, Whoa-boys, Rock Steps, Log Step, The Sidling, Boulder Gully, The Chute, Washout Ruts), then the fire trail up and round the hill with open diffs. Try Boulder Gully and The Chute with open diffs, then the rear locker, then both. Watch the roll gauge on The Sidling (C → Driver), and try straddling the ruts versus dropping a wheel in.
 - [ ] **Deep Crossing:** drive into the deep channel and sit there — the engine sputters after about 5 s under water and stalls at 10 s. It restarts on throttle once the air intake has been clear for 20 s.
 - [ ] **The Staircase:** the rocky climb needs low range (press L while slow); high range shouldn't make it.
 - [ ] **Washout Gully:** the car can't cross the 1.2 m gap on its own. Lay both planks across it (tool menu → Place planks) or take the detour around the top end.
@@ -115,7 +117,7 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] Sound: the engine cranks and catches on your first key press; idle lopes; revs and load change the note (try a full-throttle stall against a rock in low range, then lift off at high revs for the overrun burble). Low range adds a gear whine that rises with speed. Tyre noise changes between dirt, gravel, mud and water; tyres chirp when spinning on rock; springs squeak while articulating; the chassis grinds and knocks on rock in the Boulder Field. Range changes, lockers and selecting reverse each make their own clunk. Winch whine, wind up high, creek water, bird calls, the map rustle and the discovery chime. Check the three volume sliders.
 - [ ] Driving feel: in low range with precision crawl off, a light steady throttle should settle at a steady crawl; releasing W creeps rather than stopping (brake with S); a 20–25° climb from a standstill pulls away without rolling back; coasting down a steep slope in low range holds the speed back.
 - [ ] Crawl gauges and driver view: pitch/roll and lifted tyres match what you see (try C → Driver on the Off-camber Slab); I cycles the gauges.
-- [ ] Scored runs: complete a Granite Crawl obstacle, then try to beat your points or time; back up once and check it costs a point.
+- [ ] Scored runs: complete a Granite Spur obstacle, then try to beat your points or time; back up once and check it costs a point.
 
 ## Project layout
 
@@ -128,7 +130,7 @@ src/
   ui/      HUD, compass, paper map, menus, tool menu
   audio/   Web Audio synthesis (engine/ holds the AudioWorklet engine synthesiser)
   debug/   overlay, free camera, debug panel
-scripts/   dev helpers: engine-lab (renders the engine to WAV with levels and spectra), drivetrain-lab, crawl-lab and drive-lab (headless measurements), shoot (screenshots)
+scripts/   dev helpers: engine-lab (renders the engine to WAV with levels and spectra), drivetrain-lab, crawl-lab, obstacle-lab and drive-lab (headless measurements), shoot (screenshots)
 tests/     Vitest unit and headless physics tests
 e2e/       Playwright browser tests (one file per milestone)
 docs/      DECISIONS.md (choices made where the spec was open) and screenshots per milestone

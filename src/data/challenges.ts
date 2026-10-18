@@ -1,20 +1,57 @@
 import type {
+  BoulderDef,
+  ClearingDef,
   CrawlTrailDef,
-  TrackDef,
-  XZ,
+  HillDef,
   PoiDef,
   PropDef,
+  RidgeDef,
+  TorDef,
+  TrackDef,
   TrailDifficulty,
   TrailStoneDef,
+  XZ,
 } from '../sim/world/mapTypes';
-import { densify, pointAt } from '../sim/world/polyline';
+import { densify, pointAt, segmentDistance } from '../sim/world/polyline';
+import { graniteLinkTracks } from './crawlTrail';
 
 /**
- * The Granite Crawl: six rock obstacles in rising difficulty, joined into one loop from
- * the end of Granite Link. Each has a wider gravel bypass that needs no lockers.
+ * Granite Spur: a granite hill east of camp with eight 4WD obstacles modelled on real
+ * tracks. The Victorian High Country gives the clay climbs with drainage humps, the
+ * rock steps of Billy Goat Bluff, Blue Rag's shale sidlings and washed-out descents;
+ * the Rubicon and Moab give the boulder-choked gully and the granite chute. A gravel
+ * fire trail climbs the north face to the summit and rings the foot of the hill, so
+ * both ends of every obstacle can be reached without lockers.
+ *
  * Sizes are against the vehicle: 0.38 m tyres, 1.45 m track, 2.3 m wheelbase and
- * roughly 0.44 m under the chassis rails.
+ * roughly 0.44 m under the chassis rails. Stones are placed `at` metres along their
+ * track and `lateral` metres to its right.
  */
+export const spurHill: HillDef = {
+  id: 'granite-spur',
+  x: 15,
+  z: 218,
+  radius: 80,
+  height: 18,
+  shape: 'dome',
+  stretch: [1.15, 0.85, 0],
+};
+/** A gully below The Sidling, so its low side drops away steeply. */
+export const spurRidges: RidgeDef[] = [
+  {
+    id: 'sidling-drop',
+    points: [
+      [63, 220],
+      [64, 233],
+      [60, 246],
+    ],
+    height: -5,
+    width: 14,
+  },
+];
+export const spurClearings: ClearingDef[] = [{ x: 16, z: 216, radius: 15 }];
+export const spurTors: TorDef[] = [{ id: 'spur-tor', x: 40, z: 236, radius: 4, count: 3 }];
+
 const boulder = (
   at: number,
   lateral: number,
@@ -22,7 +59,8 @@ const boulder = (
   width: number,
   length = width,
   yawDeg = 0,
-): TrailStoneDef => ({ shape: 'boulder', at, lateral, height, width, length, yawDeg });
+  base = 0,
+): TrailStoneDef => ({ shape: 'boulder', at, lateral, height, width, length, yawDeg, base });
 const slab = (
   at: number,
   lateral: number,
@@ -30,446 +68,737 @@ const slab = (
   width: number,
   length: number,
   rollDeg = 0,
-  pitchDeg = 0,
-): TrailStoneDef => ({ shape: 'slab', at, lateral, height, width, length, rollDeg, pitchDeg });
-/** Rocks just off the line that frame the obstacle and stop it being driven around. */
-const borders = (from: number, to: number, step: number, offset = 2.35): TrailStoneDef[] => {
+  yawDeg = 0,
+): TrailStoneDef => ({ shape: 'slab', at, lateral, height, width, length, rollDeg, yawDeg });
+/** Larger rocks just off the line, sunk `sink` metres into the banks, alternating sides. */
+const banks = (
+  from: number,
+  to: number,
+  step: number,
+  offset: number,
+  size = 1,
+  sink = 0.2,
+): TrailStoneDef[] => {
   const out: TrailStoneDef[] = [];
-  for (let at = from, k = 0; at <= to; at += step, k++)
-    for (const side of [-1, 1])
-      out.push(
-        boulder(
-          at + (side > 0 ? step / 2 : 0),
-          side * (offset + (k % 2) * 0.25),
-          0.62 + ((k * 7 + side) % 3) * 0.14,
-          1.3,
-          1.6,
-          k * 23,
-        ),
-      );
+  for (let at = from, k = 0; at <= to; at += step, k++) {
+    const side = k % 2 ? 1 : -1;
+    const h = (0.55 + ((k * 7) % 4) * 0.12) * size;
+    out.push(boulder(at, side * (offset + (k % 3) * 0.15), h + sink, 1.2 * size, 1.5 * size, k * 37, -sink));
+  }
   return out;
 };
 
-// Easy: knee-high granite scattered under both wheel paths. Each tyre climbs in turn,
-// rocking the body, but there is always a line with open diffs in low range.
-const rockGarden: TrailStoneDef[] = [
-  boulder(5, -0.75, 0.18, 0.9, 0.8),
-  boulder(7.4, 0.72, 0.24, 1.0, 0.9, 30),
-  boulder(9.6, -0.15, 0.16, 1.0, 0.8, 70),
-  boulder(11.8, -0.8, 0.27, 1.1, 1.0, 15),
-  boulder(13.4, 0.78, 0.22, 0.9, 1.0),
-  boulder(15.8, 0.05, 0.15, 1.5, 0.9, 10),
-  boulder(18, -0.7, 0.28, 1.1, 1.1, 45),
-  boulder(19.8, 0.82, 0.25, 1.0, 1.0),
-  boulder(22.2, -0.6, 0.2, 0.9, 0.9),
-  boulder(23.4, 0.9, 0.18, 0.9, 0.8),
-  // The bypass leaves on the left at the entrance.
-  ...borders(4, 24, 4.5, 2.3).filter((rock) => rock.at > 5 || rock.lateral > 0),
+// Easy: a dry creek bed cut a metre into the foot of the hill, floored with rounded
+// stones. Each tyre climbs a stone in turn and the body rocks, but nothing is big
+// enough to need lockers.
+const creekStones: TrailStoneDef[] = [
+  ...(
+    [
+      [10, -0.7, 0.18, 0.9, 0.8, 0],
+      [13, 0.75, 0.22, 1.0, 0.9, 30],
+      [16, 0.1, 0.12, 0.8, 0.8, 0],
+      [19, -0.8, 0.25, 1.1, 1.0, 20],
+      [22, 0.7, 0.2, 0.9, 1.0, 0],
+      [26, -0.5, 0.15, 1.2, 0.9, 60],
+      [29, 0.8, 0.28, 1.1, 1.1, 0],
+      [33, -0.75, 0.22, 1.0, 0.9, 45],
+      [36, 0.3, 0.14, 0.9, 0.8, 0],
+      [40, 0.75, 0.24, 1.0, 1.0, 15],
+      [44, -0.8, 0.26, 1.1, 1.0, 0],
+      [48, 0.6, 0.18, 0.9, 0.9, 70],
+      [52, -0.3, 0.15, 1.0, 0.9, 0],
+      [55, 0.8, 0.27, 1.1, 1.0, 25],
+      [58, -0.75, 0.2, 1.0, 0.9, 0],
+      [62, 0.5, 0.16, 0.9, 0.8, 0],
+    ] as const
+  ).map(([at, lateral, h, w, l, yaw]) => boulder(at, lateral, h * 1.25, w, l, yaw)),
+  ...banks(11, 55, 5.5, 1.75, 0.7),
 ];
 
-// Moderate: a granite staircase. Rises of 0.26–0.4 m, the third staggered so only one
-// front tyre climbs at a time, then a 16° slab back down.
-const stepUps: TrailStoneDef[] = [
-  slab(6, 0, 0.26, 3.0, 2.4),
-  slab(8.6, 0, 0.56, 3.0, 2.8),
-  slab(11.2, -0.75, 0.96, 1.5, 2.4),
-  slab(11.2, 0.75, 0.66, 1.5, 2.4),
-  slab(13.8, 0, 0.94, 3.0, 2.8),
-  {
-    shape: 'ridge',
-    at: 17,
-    lateral: 0,
-    width: 3.0,
-    length: 4.4,
-    height: 0.92,
-    profile: [
-      [-2.2, 0.92],
-      [-1.4, 0.91],
-      [2.2, 0],
-    ],
-  },
-  ...borders(5, 21, 4, 2.2),
+// Moderate: climbing the north face at about 17° over three earth drainage humps
+// ("whoa-boys") with a ditch dug on the uphill side of each. The crests are sharp
+// enough to touch the belly between the axles if taken fast, and the angled ones lift
+// diagonal wheels.
+const whoaBoyHumps = [
+  { at: 5, height: 0.45, length: 4.6, ditch: 0.25, ditchSide: 1 as const },
+  { at: 13, height: 0.55, length: 4.6, ditch: 0.25, ditchSide: 1 as const, angleDeg: 16 },
+  { at: 21, height: 0.5, length: 4.6, ditch: 0.25, ditchSide: 1 as const, angleDeg: -14 },
 ];
 
-// Moderate: two granite banks lean in towards a crevice that widens from 0.5 m to
-// 0.8 m and deepens to about 0.5 m. Straddle it with a tyre on each bank; a tyre that
-// drifts in drops into the crack and wedges.
-const crevice: TrailStoneDef[] = [
-  [5, 0.22, 0.5, 10],
-  [7.6, 0.42, 0.6, 15],
-  [10.2, 0.62, 0.7, 19],
-  [12.8, 0.76, 0.8, 21],
-  [15.4, 0.76, 0.8, 21],
-  [18, 0.6, 0.7, 18],
-  [20.6, 0.4, 0.6, 14],
-  [23.2, 0.2, 0.5, 9],
-].flatMap(([at, height, gap, roll]) =>
-  [-1, 1].map((side) => slab(at, side * (gap / 2 + 0.7), height, 1.4, 2.65, side * roll)),
-);
-
-// Hard: 0.4–0.55 m boulders packed up a 3.5 m climb so no line misses them. Tall rocks
-// alternate side to side, lifting diagonal wheels on the grade; the chassis clears the
-// low middle rocks only while both tyres are up.
-const boulderField: TrailStoneDef[] = [
-  boulder(5, -0.75, 0.4, 1.2, 1.2, 10),
-  boulder(7.6, -0.75, 0.52, 1.4, 1.5, 75),
-  boulder(8.2, 0.2, 0.2, 0.8, 0.8),
-  boulder(9.9, 0.78, 0.54, 1.4, 1.4, 20),
-  boulder(12.2, -0.75, 0.52, 1.4, 1.4, 60),
-  boulder(14.5, 0.78, 0.55, 1.4, 1.5, 5),
-  boulder(15.2, -0.1, 0.24, 0.9, 0.9, 30),
-  boulder(16.8, -0.75, 0.52, 1.5, 1.6, 35),
-  boulder(19.1, 0.8, 0.5, 1.3, 1.4),
-  boulder(21.4, -0.7, 0.45, 1.2, 1.2),
-  // The bypass leaves on the left at the entrance.
-  ...borders(4, 21, 3.5, 2.25).filter((rock) => rock.at > 5 || rock.lateral > 0),
-];
-
-// Hard: a broad granite slab tilted towards a drop on its low side. It leans the car
-// 10° on the way on, about 22° across the middle, then steps down past a boulder.
-const offCamber: TrailStoneDef[] = [
-  {
-    shape: 'ridge',
-    at: 13.5,
-    lateral: 0.4,
-    width: 4.2,
-    length: 19,
-    height: 0.75,
-    profile: [
-      [-9.5, 0, 0],
-      [-7.5, 0.32, 6],
-      [-4.5, 0.6, 14],
-      [-1.5, 0.74, 22],
-      [2, 0.75, 23],
-      [5, 0.64, 17],
-      [7.5, 0.36, 8],
-      [9.5, 0, 0],
-    ],
-  },
-  boulder(14, -2.8, 0.55, 1.4, 1.8, 20),
-  boulder(9.5, 2.9, 0.8, 1.6, 1.8),
-  boulder(18.5, 3.0, 0.9, 1.7, 1.6, 50),
-];
-
-// Extreme: a granite dome split by a seam. Each half leaves the ground at about 34° and
-// climbs 2.7 m; the right half starts 0.6 m further on, so the body twists as it climbs.
-// High range cannot hold the climb, and a wheel placed off the dome rolls the car.
-const face = (lateral: number, at: number): TrailStoneDef => ({
-  shape: 'ridge',
+// Moderate: five granite ledges up the steep pinch onto the summit, like the rock
+// steps of Billy Goat Bluff. Each is a band of bedrock: a riser at its downhill edge,
+// then a tread flatter than the hill that runs back into the slope. Two are split so
+// one front tyre climbs before the other.
+const rockStep = (at: number, lateral: number, rise: number, width: number, depth: number, rollDeg = 0) => ({
+  shape: 'ridge' as const,
   at,
   lateral,
-  width: 1.8,
-  length: 15.2,
-  height: 2.7,
+  width,
+  length: depth,
+  height: rise,
+  rollDeg,
   profile: [
-    [-6.8, 0],
-    [-5.4, 0.9],
-    [-3.8, 1.95],
-    [-2.2, 2.6],
-    [0, 2.7],
-    [2.4, 2.4],
-    [5.6, 1.2],
-    [8.4, 0],
-  ],
+    [-depth / 2, rise * 0.7],
+    [-depth / 2 + 0.25, rise],
+    [depth / 2, 0.04],
+  ] as const,
 });
-const rockFace: TrailStoneDef[] = [
-  face(-0.9, 13.5),
-  face(0.9, 14.1),
-  boulder(7.0, -0.75, 0.4, 1.0, 0.9, 15),
-  boulder(9, -2.6, 1.1, 1.8, 2.2, 30),
-  boulder(10.5, 2.7, 1.3, 2.0, 2.4, 70),
-  boulder(17.5, -2.7, 1.2, 1.8, 2.0),
-  boulder(18.5, 2.6, 0.9, 1.6, 1.8, 10),
+// Each tread runs back into the slope about 1.4 m for a 0.4 m riser.
+const tread = (rise: number) => rise / 0.28 + 0.2;
+const rockSteps: TrailStoneDef[] = [
+  rockStep(3.2, 0, 0.32, 4.4, tread(0.32), 3),
+  rockStep(6.8, -1.1, 0.42, 2.2, tread(0.42), -4),
+  rockStep(7.6, 1.1, 0.34, 2.2, tread(0.34), 5),
+  rockStep(11.2, 0, 0.4, 4.4, tread(0.4), -3),
+  rockStep(14.7, 1.1, 0.46, 2.2, tread(0.46), 4),
+  rockStep(15.5, -1.1, 0.36, 2.2, tread(0.36), -5),
+  rockStep(18.2, 0, 0.44, 3.9, tread(0.44), 2),
+  ...banks(2, 17, 3.4, 2.7, 0.95),
 ];
 
-interface Route {
+// Moderate: fallen snow gums across the summit track. They stand about 0.43–0.48 m,
+// right at the height of the chassis rails, so a square crossing high-centres.
+const logStepLogs = [
+  { at: 8, lateral: 0, length: 6.5, radius: 0.25 },
+  { at: 14.5, lateral: 0, length: 7, radius: 0.28, angleDeg: 28 },
+  { at: 21, lateral: 0, length: 6.5, radius: 0.27, angleDeg: -22 },
+];
+const logStepRocks: TrailStoneDef[] = [8, 14.5, 21].flatMap((at, k) => [
+  boulder(at, -3.9, 0.7 + k * 0.08, 1.3, 1.5, k * 50, -0.1),
+  boulder(at + 0.6, 3.9, 0.65 + k * 0.1, 1.2, 1.4, k * 70, -0.1),
+]);
+
+// Hard: a narrow side-cut across the east face on loose shale. The track keeps the
+// hill's lean and tips further towards the drop; a washout under the low-side tyres
+// and a rock shelf under the high side push it past 25° for a moment.
+const sidlingRocks: TrailStoneDef[] = [
+  slab(37.5, 0.85, 0.16, 1.3, 3.2, 8, 4),
+  boulder(12, 2.3, 0.7, 1.3, 1.5, 20, -0.15),
+  boulder(26, 2.4, 0.8, 1.4, 1.6, 60, -0.15),
+  boulder(46, 2.3, 0.65, 1.2, 1.4, 10, -0.15),
+];
+
+// Hard: a gully cut up to three metres into the south face and choked with boulders bigger
+// than the tyres, like the Rubicon's Little Sluice. Tall rocks alternate sides so
+// diagonal wheels lift on the climb, over low stones in the middle.
+const gullyRocks: TrailStoneDef[] = [
+  ...(
+    [
+      [4.6, -0.75, 0.4, 1.2, 1.2, 10],
+      [6.5, 0.8, 0.46, 1.3, 1.4, 70],
+      [7.2, -0.1, 0.14, 0.8, 0.8, 0],
+      [9.5, -0.8, 0.5, 1.4, 1.5, 25],
+      [12, 0.75, 0.48, 1.4, 1.4, 0],
+      [12.8, -0.05, 0.14, 0.9, 0.9, 40],
+      [15, -0.75, 0.52, 1.5, 1.5, 60],
+      [17.5, 0.8, 0.5, 1.4, 1.5, 15],
+      [20, -0.7, 0.48, 1.4, 1.4, 0],
+      [22.5, 0.75, 0.5, 1.5, 1.5, 35],
+      [23.2, 0, 0.14, 0.9, 0.9, 0],
+      [25.5, -0.6, 0.45, 1.3, 1.3, 50],
+    ] as const
+  ).map(([at, lateral, h, w, l, yaw]) => boulder(at, lateral, h + 0.06, w, l, yaw, -0.06)),
+  ...banks(5, 26, 3, 2.15, 1.1, 0.5),
+];
+
+// Extreme: a granite V-notch chute climbing out of the gully onto the summit, after
+// Moab's Escalator. It rises about 10 m in 20 m. The walls lean in towards a crack
+// and swap from high to low every wheelbase, so the car is always cross-axled: one
+// front and the opposite rear tyre lift, and open diffs spin out.
+const chuteWall = (
+  from: number,
+  to: number,
+  side: number,
+  before: number,
+  height: number,
+): TrailStoneDef => ({
+  shape: 'ridge',
+  at: (from + to) / 2,
+  lateral: side * 0.85,
+  width: 1.3,
+  length: to - from,
+  height,
+  // Heights are at the wall's centre; it leans 14° in towards the crack.
+  // Each section ramps up from the one below over its first 0.9 m.
+  rollDeg: side * 14,
+  profile: [
+    [-(to - from) / 2, before],
+    [-(to - from) / 2 + 0.9, height],
+    [(to - from) / 2, height],
+  ],
+});
+const CHUTE_SECTION = 2.3;
+const chuteHeight = (k: number, side: number) => (k < 0 ? 0.1 : (k + (side > 0 ? 1 : 0)) % 2 ? 0.2 : 0.62);
+const chuteRocks: TrailStoneDef[] = [
+  ...Array.from({ length: 6 }, (_, k) => {
+    const from = 3 + k * CHUTE_SECTION,
+      to = from + CHUTE_SECTION;
+    return [-1, 1].map((side) =>
+      chuteWall(
+        from,
+        to,
+        side,
+        Math.min(chuteHeight(k - 1, side), chuteHeight(k, side)),
+        chuteHeight(k, side),
+      ),
+    );
+  }).flat(),
+];
+
+// Hard: a steep clay descent off the west of the summit, gouged by erosion ruts. The
+// main rut runs down the middle for a while (straddle it), then cuts across the left
+// wheel path; side ruts and a pothole catch tyres that wander.
+const rutChannels = [
+  {
+    path: [
+      [3, 1.4],
+      [8, 0.3],
+      [10, 0],
+      [24, 0.1],
+      [28, -0.6],
+      [33, -1.35],
+      [46, -1.45],
+    ] as const,
+    width: 0.95,
+    depth: 0.48,
+  },
+  {
+    path: [
+      [6, -1.55],
+      [19, -1.6],
+    ] as const,
+    width: 0.8,
+    depth: 0.4,
+  },
+  {
+    path: [
+      [29, 1.45],
+      [47, 1.35],
+    ] as const,
+    width: 0.85,
+    depth: 0.42,
+  },
+  {
+    path: [
+      [38.4, 0.6],
+      [39.6, 0.62],
+    ] as const,
+    width: 0.9,
+    depth: 0.3,
+  },
+];
+
+interface Obstacle {
   id: string;
   name: string;
   difficulty: TrailDifficulty;
-  points: XZ[];
-  bypass: XZ[];
   section: string;
   hint: string;
-  stones: TrailStoneDef[];
+  track: Omit<TrackDef, 'id' | 'name'>;
+  stones?: TrailStoneDef[];
+  logs?: typeof logStepLogs;
+  /** Where along the line its map place sits (fraction; default the middle). */
+  poiAt?: number;
 }
 
-const routes: Route[] = [
+const obstacles: Obstacle[] = [
   {
-    id: 'rock-garden',
-    name: 'Rock Garden',
+    id: 'creek-bed',
+    name: 'Creek Bed',
     difficulty: 'easy',
-    points: [
-      [-40, 206],
-      [-12, 206],
-    ],
-    bypass: [
-      [-40, 206],
-      [-32, 197],
-      [-18, 197],
-      [-12, 206],
-    ],
-    section: 'Scattered granite',
-    hint: 'Low range and precision crawl. Pick a line that puts each tyre on a rock rather than the belly, and let the body rock. Open diffs will do.',
-    stones: rockGarden,
-  },
-  {
-    id: 'step-ups',
-    name: 'Granite Step-ups',
-    difficulty: 'moderate',
-    points: [
-      [-4, 208],
-      [22, 214],
-    ],
-    bypass: [
-      [-4, 208],
-      [3, 199],
-      [17, 202],
-      [22, 214],
-    ],
-    section: 'Ledge staircase',
-    hint: 'Four granite ledges up to 0.4 m. Approach each square and feed throttle as the tyre touches. Lock the rear when the staggered third step lifts a wheel; ease down the slab.',
-    stones: stepUps,
-  },
-  {
-    id: 'crevice-run',
-    name: 'Crevice Run',
-    difficulty: 'moderate',
-    points: [
-      [30, 214],
-      [56, 212],
-    ],
-    bypass: [
-      [30, 214],
-      [37, 204],
-      [50, 203],
-      [56, 212],
-    ],
-    section: 'V-notch crevice',
-    hint: 'Straddle the crack with a tyre high on each bank. Keep steering small; use C for a front-corner view. If a tyre slips in, stop, back out and re-centre.',
-    stones: crevice,
-  },
-  {
-    id: 'boulder-field',
-    name: 'Boulder Field',
-    difficulty: 'hard',
-    points: [
-      [64, 222],
-      [66, 250],
-    ],
-    bypass: [
-      [64, 222],
-      [74, 229],
-      [74, 244],
-      [66, 250],
-    ],
-    section: 'Packed boulders',
-    hint: 'No clean line: climb the big rocks with your tyres so the belly clears the small ones. Lock both axles; diagonal rocks lift alternate wheels. Crawl slowly.',
-    stones: boulderField,
-  },
-  {
-    id: 'off-camber-slab',
-    name: 'Off-camber Slab',
-    difficulty: 'hard',
-    points: [
-      [60, 260],
-      [34, 268],
-    ],
-    bypass: [
-      [60, 260],
-      [56, 273],
-      [40, 277],
-      [34, 268],
-    ],
-    section: 'Tilted granite',
-    hint: 'The slab leans you about 22 degrees towards the low side. Keep the high-side tyres on the rock, stay smooth, and never turn downhill. Back off if the tilt passes 30.',
-    stones: offCamber,
-  },
-  {
-    id: 'rock-face',
-    name: 'The Rock Face',
-    difficulty: 'extreme',
-    points: [
-      [26, 271],
-      [0, 265],
-    ],
-    bypass: [
-      [26, 271],
-      [20, 282],
-      [6, 280],
-      [0, 265],
-    ],
-    section: 'Steep granite dome',
-    hint: 'A 34-degree granite dome climbs 2.7 m and twists at the seam. Low range, both lockers, wheels square on the dome and steady throttle all the way up. Crawl over the crest and let precision crawl hold you down.',
-    stones: rockFace,
-  },
-];
-
-const links: Array<{ id: string; points: XZ[]; name: string; hint: string }> = [
-  {
-    id: 'challenge-entry',
-    points: [
-      [-57, 213],
-      [-48, 207],
-      [-40, 206],
-    ],
-    name: 'Granite Crawl',
-    hint: 'Next: Rock Garden. Six rock obstacles get harder as you go: blue easy, amber moderate, red hard, black extreme. Green markers take the gravel bypasses.',
-  },
-  {
-    id: 'crawl-link-steps',
-    points: [
-      [-12, 206],
-      [-4, 208],
-    ],
-    name: 'Next · Granite Step-ups',
-    hint: 'Granite Step-ups is next: four ledges climbing nearly a metre. Amber markers enter the ledges; green markers go around.',
-  },
-  {
-    id: 'crawl-link-crevice',
-    points: [
-      [22, 214],
-      [30, 214],
-    ],
-    name: 'Next · Crevice Run',
-    hint: 'Crevice Run is next. Line up on the centre of the crack before the banks start.',
-  },
-  {
-    id: 'crawl-link-boulders',
-    points: [
-      [56, 212],
-      [63, 216],
-      [64, 222],
-    ],
-    name: 'Next · Boulder Field',
-    hint: 'Boulder Field is next and hard. Lock both axles before the first rock; the green bypass skips it.',
-  },
-  {
-    id: 'crawl-link-slab',
-    points: [
-      [66, 250],
-      [64, 256],
-      [60, 260],
-    ],
-    name: 'Next · Off-camber Slab',
-    hint: 'Off-camber Slab is next. It leans to the left; keep your high-side tyres on the rock.',
-  },
-  {
-    id: 'crawl-link-face',
-    points: [
-      [34, 268],
-      [26, 271],
-    ],
-    name: 'Next · The Rock Face',
-    hint: 'The Rock Face is the extreme finale. Low range, both lockers and precision crawl, or follow green to the bypass.',
-  },
-  {
-    id: 'challenge-return',
-    points: [
-      [0, 265],
-      [-19, 257],
-      [-40, 242],
-      [-57, 213],
-    ],
-    name: 'Return · Granite Link',
-    hint: 'Follow green markers back to Granite Link and camp. Turn onto the signed entrance to run the Granite Crawl again.',
-  },
-];
-
-const gravel = { width: 4.2, shoulder: 1.8, smooth: 2, surface: 'gravel' as const, ruts: 0.02, camber: 0.1 };
-export const challengeTracks: TrackDef[] = [
-  ...routes.flatMap((route) => [
-    {
-      id: route.id,
-      name: route.name,
-      points: route.points,
-      width: 3.2,
-      shoulder: 1.5,
-      smooth: 2,
-      surface: 'rock' as const,
-      ruts: 0.01,
-      camber: 0.05,
+    section: 'Dry stony creek',
+    hint: 'A dry creek bed along the foot of the hill. Low range and a steady crawl; put the tyres on the flat stones and let the car rock. Open diffs will do.',
+    track: {
+      points: [
+        [-57, 213],
+        [-58, 199],
+        [-50, 184],
+        [-38, 170],
+        [-25, 161],
+        [-14, 163],
+      ],
+      width: 4,
+      shoulder: 1.6,
+      smooth: 3,
+      surface: 'gravel',
+      ruts: 0,
+      camber: 0,
+      cut: [
+        [0, 0],
+        [8, 1.0],
+        [54, 1.1],
+        [64, 0],
+      ],
     },
-    { ...gravel, id: `${route.id}-bypass`, name: `${route.name} bypass`, points: route.bypass },
-  ]),
-  ...links.map((link) => ({
+    stones: creekStones,
+  },
+  {
+    id: 'whoa-boys',
+    name: 'Whoa-boys',
+    difficulty: 'moderate',
+    section: 'Drainage humps',
+    hint: 'A steep clay climb over earth drainage humps. Take each one square and slow, keep rolling over the crest so the belly doesn’t hang up, and ease into the ditch behind it.',
+    track: {
+      points: [
+        [-4, 162],
+        [-4.5, 174],
+        [-4, 187],
+      ],
+      width: 3.4,
+      shoulder: 1.6,
+      smooth: 2,
+      surface: 'dirt',
+      ruts: 0.02,
+      camber: 0.3,
+      humps: whoaBoyHumps,
+    },
+    stones: banks(3, 24, 4, 2.7, 0.8),
+  },
+  {
+    id: 'rock-steps',
+    name: 'Rock Steps',
+    difficulty: 'moderate',
+    section: 'Granite ledges',
+    hint: 'Granite ledges up a steep pinch. Square up to each step, let the tyre touch, then feed in throttle; lock the rear when the split ledges lift a wheel. Coming down is harder: one step at a time on crawl control.',
+    track: {
+      points: [
+        [-4, 187],
+        [0, 197],
+        [4, 207],
+      ],
+      width: 3.4,
+      shoulder: 1.4,
+      smooth: 2,
+      surface: 'rock',
+      ruts: 0,
+      camber: 0.3,
+    },
+    stones: rockSteps,
+  },
+  {
+    id: 'log-step',
+    name: 'Log Step',
+    difficulty: 'moderate',
+    section: 'Fallen snow gums',
+    hint: 'Fallen trees across the track, as tall as your chassis rails. Cross at a slight angle so one wheel climbs at a time; straight on, the log hangs the belly between the axles.',
+    track: {
+      points: [
+        [4, 207],
+        [12, 211.5],
+        [24, 214],
+        [32, 213],
+      ],
+      width: 3.4,
+      shoulder: 1.5,
+      smooth: 3,
+      surface: 'dirt',
+      ruts: 0.03,
+      camber: 0.3,
+    },
+    stones: logStepRocks,
+    logs: logStepLogs,
+  },
+  {
+    id: 'sidling',
+    name: 'The Sidling',
+    difficulty: 'hard',
+    poiAt: 0.3,
+    section: 'Shale side-cut',
+    hint: 'A narrow side-cut on loose shale that leans you over 20° towards the drop. Crawl, steer smoothly and never turn downhill. If the lean passes 28°, stop and back out.',
+    track: {
+      points: [
+        [32, 213],
+        [45, 214],
+        [52, 226],
+        [52, 241],
+        [45, 254],
+      ],
+      width: 3,
+      shoulder: 0.9,
+      smooth: 3,
+      surface: 'gravel',
+      ruts: 0,
+      camber: 1,
+      cant: [
+        [0, 0],
+        [8, 4],
+        [18, 8],
+        [44, 8],
+        [52, 3],
+        [57, 0],
+      ],
+      erosion: [
+        {
+          path: [
+            [21, -0.85],
+            [30, -0.8],
+          ],
+          width: 1,
+          depth: 0.35,
+        },
+      ],
+    },
+    stones: sidlingRocks,
+  },
+  {
+    id: 'boulder-gully',
+    name: 'Boulder Gully',
+    difficulty: 'hard',
+    section: 'Boulder choke',
+    hint: 'A narrow gully packed with boulders bigger than your tyres. Lock both axles, climb the big rocks with your tyres and keep the belly off the small ones in the middle.',
+    track: {
+      points: [
+        [24, 270],
+        [20, 256],
+        [16, 243],
+      ],
+      width: 3.4,
+      shoulder: 1.2,
+      smooth: 2,
+      surface: 'rock',
+      ruts: 0,
+      camber: 0.3,
+      cut: [
+        [0, 0],
+        [4, 1.2],
+        [14, 2.2],
+        [28, 3],
+      ],
+    },
+    stones: gullyRocks,
+  },
+  {
+    id: 'the-chute',
+    name: 'The Chute',
+    difficulty: 'extreme',
+    section: 'Granite V-notch',
+    hint: 'A steep granite V-notch onto the summit. Keep a tyre on each wall and out of the crack, and expect a front wheel to lift at the ledges. Low range, both lockers and steady throttle; a wheel off the wall can roll the car.',
+    track: {
+      points: [
+        [16, 243],
+        [13, 233],
+        [11, 224],
+      ],
+      width: 3.2,
+      shoulder: 1.2,
+      smooth: 2,
+      surface: 'rock',
+      ruts: 0,
+      camber: 0.2,
+      cut: [
+        [0, 3],
+        [4, 2.7],
+        [10, 1.9],
+        [16, 0.9],
+        [19.7, 0],
+      ],
+    },
+    stones: chuteRocks,
+  },
+  {
+    id: 'washout-ruts',
+    name: 'Washout Ruts',
+    difficulty: 'hard',
+    poiAt: 0.75,
+    section: 'Erosion ruts',
+    hint: 'A steep clay descent gouged by erosion ruts. Straddle the middle rut with a wheel on each side, cross ruts at an angle one wheel at a time, and let crawl control hold you back.',
+    track: {
+      points: [
+        [2, 216],
+        [-14, 214],
+        [-30, 213],
+        [-48, 212],
+      ],
+      width: 3.8,
+      shoulder: 1.6,
+      smooth: 3,
+      surface: 'dirt',
+      ruts: 0,
+      camber: 0.4,
+      erosion: rutChannels,
+    },
+  },
+];
+
+/** The fire trail: graded gravel that needs no lockers, joining both ends of every obstacle. */
+const fireTrail: Array<{ id: string; name: string; points: XZ[]; hint: string }> = [
+  {
+    id: 'ft-west',
+    name: 'Granite Spur · Fire trail',
+    points: [
+      [-57, 213],
+      [-45, 204],
+      [-38, 191],
+      [-29, 181],
+      [-19, 173],
+      [-14, 163],
+    ],
+    hint: 'Gravel fire trail along the foot of Granite Spur, beside the Creek Bed. It climbs the north face to the summit; the obstacles leave it marked blue, amber, red and black.',
+  },
+  {
+    id: 'ft-whoa-boys',
+    name: 'Fire trail · Summit',
+    points: [
+      [-14, 163],
+      [-4, 162],
+    ],
+    hint: 'Whoa-boys climbs straight up the hill from here. The fire trail carries on east and round to the summit without needing lockers.',
+  },
+  {
+    id: 'ft-north',
+    name: 'Fire trail · Summit',
+    points: [
+      [-4, 162],
+      [10, 161],
+      [30, 168],
+      [40, 182],
+      [32, 195],
+      [18, 201],
+      [4, 207],
+    ],
+    hint: 'The easy way to the summit, no lockers needed. Whoa-boys and Rock Steps are the direct line up the north face.',
+  },
+  {
+    id: 'ft-summit-west',
+    name: 'Summit',
+    points: [
+      [4, 207],
+      [2, 212],
+      [2, 216],
+    ],
+    hint: 'Summit of Granite Spur. Washout Ruts drops off the west side, The Chute arrives from the south and The Sidling leaves to the east.',
+  },
+  {
+    id: 'ft-summit-south',
+    name: 'Summit',
+    points: [
+      [11, 224],
+      [7, 221],
+      [2, 216],
+    ],
+    hint: 'Summit of Granite Spur. Washout Ruts drops off the west side; the fire trail back down is on the north face.',
+  },
+  {
+    id: 'ft-summit-east',
+    name: 'Summit',
+    points: [
+      [11, 224],
+      [24, 224.5],
+      [33, 220],
+      [32, 213],
+    ],
+    hint: 'Summit of Granite Spur. The Sidling leaves to the east; the Log Step crosses the north side of the top.',
+  },
+  {
+    id: 'ft-southeast',
+    name: 'Fire trail · Foot of the hill',
+    points: [
+      [45, 254],
+      [38, 266],
+      [24, 270],
+    ],
+    hint: 'Boulder Gully climbs the south face from just ahead, and The Chute carries on to the summit. Follow the green markers west to get back to Granite Link.',
+  },
+  {
+    id: 'ft-south',
+    name: 'Fire trail · Foot of the hill',
+    points: [
+      [24, 270],
+      [5, 272],
+      [-20, 262],
+      [-40, 240],
+    ],
+    hint: 'Fire trail around the south of Granite Spur, back to Granite Link and camp.',
+  },
+  {
+    id: 'ft-return',
+    name: 'Fire trail · Granite Link',
+    points: [
+      [-40, 240],
+      [-45, 231],
+      [-48, 225],
+    ],
+    hint: 'The Granite Link bypass is just ahead: left for camp, right for Granite Link. Washout Ruts comes down the hill to the east.',
+  },
+  {
+    id: 'ft-ruts-end',
+    name: 'Fire trail · Granite Link',
+    points: [
+      [-48, 212],
+      [-57, 213],
+    ],
+    hint: 'Granite Link and camp are just ahead; the fire trail climbs Granite Spur from the Creek Bed.',
+  },
+];
+
+const gravel = { width: 4.2, shoulder: 1.8, smooth: 3, surface: 'gravel' as const, ruts: 0.02, camber: 0.15 };
+export const challengeTracks: TrackDef[] = [
+  ...obstacles.map((o) => ({ ...o.track, id: o.id, name: o.name })),
+  ...fireTrail.map((f) => ({
     ...gravel,
-    id: link.id,
-    name: link.name,
-    points: link.points,
+    id: f.id,
+    name: f.name,
+    points: f.points,
     markerColor: 'green' as const,
-    routeHint: link.hint,
+    routeHint: f.hint,
   })),
 ];
 
-export const challengeTrails: CrawlTrailDef[] = routes.map((route) => ({
-  id: route.id,
-  name: route.name,
-  trackId: route.id,
-  bypassTrackId: `${route.id}-bypass`,
-  difficulty: route.difficulty,
-  bypassHint: `Follow green markers around ${route.name} and rejoin the Granite Crawl. The bypass is gravel and needs no lockers.`,
-  sections: [{ from: 0, to: 40, name: route.section, hint: route.hint, rocks: [], stones: route.stones }],
+export const challengeTrails: CrawlTrailDef[] = obstacles.map((o) => ({
+  id: o.id,
+  name: o.name,
+  trackId: o.id,
+  difficulty: o.difficulty,
+  sections: [
+    {
+      from: 0,
+      to: 80,
+      name: o.section,
+      hint: o.hint,
+      rocks: [],
+      stones: o.stones ?? [],
+      logs: o.logs ?? [],
+    },
+  ],
 }));
 
-const polys = routes.map((route) => densify(route.points, 1));
-export const challengePois: PoiDef[] = routes.map((route, i) => {
-  const poly = polys[i],
-    p = pointAt(poly, poly.length / 2),
-    start = pointAt(poly, 0);
-  return {
-    id: route.id,
-    name: route.name,
-    kind: 'feature',
-    x: p.x,
-    z: p.z,
-    radius: 12.5,
-    reset: { x: start.x, z: start.z, headingDeg: (Math.atan2(start.dx, -start.dz) * 180) / Math.PI },
-    note: `${route.difficulty.toUpperCase()} · Granite Crawl. ${route.hint}`,
-  };
-});
-export const challengeAnchors = polys.map((poly) => {
-  const p = pointAt(poly, poly.length * 0.65),
-    lateral = 5.8;
+const polys = obstacles.map((o) =>
+  densify(
+    o.track.points.map((p) => [p[0], p[1]] as const),
+    1,
+  ),
+);
+const heading = (p: { dx: number; dz: number }) => (Math.atan2(p.dx, -p.dz) * 180) / Math.PI;
+export const challengePois: PoiDef[] = [
+  ...obstacles.map((o, i) => {
+    // Centred on the obstacle, or nearer the end on the fire trail for the long ones,
+    // and big enough that driving past on the fire trail finds it.
+    const poly = polys[i],
+      p = pointAt(poly, poly.length * (o.poiAt ?? 0.5)),
+      start = pointAt(poly, 0);
+    return {
+      id: o.id,
+      name: o.name,
+      kind: 'feature' as const,
+      x: p.x,
+      z: p.z,
+      radius: Math.min(16, poly.length / 2 + 2),
+      reset: { x: start.x, z: start.z, headingDeg: heading(start) },
+      note: `${o.difficulty.toUpperCase()} · Granite Spur. ${o.hint}`,
+    };
+  }),
+  {
+    id: 'spur-summit',
+    name: 'Granite Spur',
+    kind: 'viewpoint',
+    x: 16,
+    z: 216,
+    radius: 12,
+    note: 'Summit of a granite hill with eight 4WD obstacles. A gravel fire trail climbs the north face.',
+  },
+];
+
+/** Marked winch anchors beside the harder obstacles, clear of every track. */
+export const challengeAnchors: BoulderDef[] = (
+  [
+    ['whoa-boys', 0.6, -6],
+    ['rock-steps', 0.55, -5.5],
+    ['sidling', 0.5, 4.8],
+    ['boulder-gully', 0.55, -5.2],
+    ['the-chute', 0.6, 5.2],
+    ['washout-ruts', 0.55, 6],
+  ] as const
+).map(([id, frac, lateral]) => {
+  const poly = polys[obstacles.findIndex((o) => o.id === id)],
+    p = pointAt(poly, poly.length * frac);
   return { x: p.x - p.dz * lateral, z: p.z + p.dx * lateral, radius: 1.15, sink: 0.4, anchor: true };
 });
+
+/** Track centrelines here and how far their grading reaches, so signs stand clear of every one. */
+const spurLines = [
+  ...obstacles.map((o, i) => ({ poly: polys[i], reach: o.track.width / 2 + o.track.shoulder })),
+  ...fireTrail.map((f) => ({ poly: densify(f.points, 1), reach: gravel.width / 2 + gravel.shoulder })),
+  ...graniteLinkTracks.map((t) => ({
+    poly: densify(
+      t.points.map((p) => [p[0], p[1]] as const),
+      1,
+    ),
+    reach: t.width / 2 + t.shoulder,
+  })),
+];
+const clearOfTracks = (x: number, z: number) =>
+  spurLines.every(({ poly, reach }) => {
+    for (let k = 0; k + 1 < poly.count; k++)
+      if (segmentDistance(x, z, poly.xs[k], poly.zs[k], poly.xs[k + 1], poly.zs[k + 1]).d < reach + 1.2)
+        return false;
+    return true;
+  });
 export const challengeSigns: PropDef[] = [
-  { kind: 'signpost', x: -143, z: 252, headingDeg: 270, text: 'Granite Crawl →' },
-  { kind: 'signpost', x: -56, z: 204.5, headingDeg: 210, text: 'Granite Crawl →' },
-  ...routes.flatMap((route, i) => {
-    const start = pointAt(polys[i], 1),
-      end = pointAt(polys[i], polys[i].length - 1);
-    const sign = (p: typeof start, text: string): PropDef => ({
-      kind: 'signpost',
-      x: p.x - p.dz * 4.2,
-      z: p.z + p.dx * 4.2,
-      headingDeg: ((Math.atan2(p.dx, -p.dz) * 180) / Math.PI + 180) % 360,
-      text,
-    });
-    return [
-      sign(start, `${route.difficulty.toUpperCase()} · ${route.name}`),
-      sign(end, i === routes.length - 1 ? 'Crawl complete → Granite Link' : `Next → ${routes[i + 1].name}`),
-    ];
+  { kind: 'signpost', x: -143, z: 252, headingDeg: 270, text: 'Granite Spur →' },
+  { kind: 'signpost', x: -64, z: 207, headingDeg: 210, text: 'Granite Spur 4WD' },
+  ...obstacles.flatMap((o, i) => {
+    const poly = polys[i];
+    // Each end gets a sign facing the traffic arriving there, on the driver's left if
+    // there is room, moved along and out until it is clear of every track's grading.
+    const sign = (end: 0 | 1, text: string): PropDef => {
+      for (let along = 1.5; ; along += 0.5)
+        for (const side of end ? [1, -1] : [-1, 1])
+          for (const out of [0.9, 1.6, 2.4, 3.2, 4.2]) {
+            const p = pointAt(poly, end ? poly.length - along : along),
+              off = side * (o.track.width / 2 + o.track.shoulder + out);
+            const x = p.x - p.dz * off,
+              z = p.z + p.dx * off;
+            // On the hillside each post gets a small level pad dug into the slope.
+            if (clearOfTracks(x, z) || along > 10)
+              return {
+                kind: 'signpost',
+                x,
+                z,
+                headingDeg: (heading(p) + (end ? 0 : 180) + 360) % 360,
+                text,
+                flatten: 1.6,
+              };
+          }
+    };
+    const label = `${o.difficulty.toUpperCase()} · ${o.name}`;
+    return [sign(0, label), sign(1, label)];
   }),
 ];
 
+/** The suggested order: easy to extreme, round the hill and back to Granite Link. */
 export const challengeLoopRoute = [
-  'challenge-entry',
-  'rock-garden',
-  'crawl-link-steps',
-  'step-ups',
-  'crawl-link-crevice',
-  'crevice-run',
-  'crawl-link-boulders',
-  'boulder-field',
-  'crawl-link-slab',
-  'off-camber-slab',
-  'crawl-link-face',
-  'rock-face',
-  'challenge-return',
+  'creek-bed',
+  'ft-whoa-boys',
+  'whoa-boys',
+  'rock-steps',
+  'log-step',
+  'sidling',
+  'ft-southeast',
+  'boulder-gully',
+  'the-chute',
+  'ft-summit-south',
+  'washout-ruts',
+  'ft-ruts-end',
 ];
-export const challengeEasyRoute = challengeLoopRoute.map((id) =>
-  routes.some((route) => route.id === id) ? `${id}-bypass` : id,
-);
+/**
+ * The no-lockers way round, as [track, driven backwards] legs: the foot of the hill
+ * from the Granite Link bypass, and the climb from Granite Link to the summit.
+ */
+export const challengeEasyRoutes: ReadonlyArray<ReadonlyArray<readonly [string, boolean]>> = [
+  [
+    ['ft-return', true],
+    ['ft-south', true],
+    ['ft-southeast', true],
+  ],
+  [
+    ['ft-west', false],
+    ['ft-whoa-boys', false],
+    ['ft-north', false],
+    ['ft-summit-west', false],
+    ['ft-summit-south', true],
+    ['ft-summit-east', false],
+  ],
+];
 
 /** Optional scored runs on the crawl trails (src/sim/crawlRuns.ts). */
 export const crawlScoring = {

@@ -388,7 +388,7 @@ export class WorldProps {
           trail.difficulty ?? 'moderate'
         ],
       );
-      markedTracks.set(trail.bypassTrackId, '#72975A');
+      if (trail.bypassTrackId) markedTracks.set(trail.bypassTrackId, '#72975A');
     }
     for (const track of world.features.tracks)
       if (track.def.markerColor)

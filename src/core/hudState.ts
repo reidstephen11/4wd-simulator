@@ -102,13 +102,18 @@ export function buildHudState(i: HudInputs): HudState {
       break;
     }
 
-  if (!courseHint && i.mode === 'drive')
-    for (const trail of i.crawlTrails ?? []) {
-      const near = (i.tracks ?? [])
-        .filter((t) => t.def.id === trail.trackId || t.def.id === trail.bypassTrackId)
-        .map((track) => ({ track, ...trailProgress(track, p.x, p.z) }))
-        .sort((a, b) => a.distance - b.distance)[0];
-      if (!near || near.distance > near.track.def.width / 2 + 1) continue;
+  if (!courseHint && i.mode === 'drive') {
+    // The nearest crawl trail, so where one obstacle ends and the next begins the hint
+    // follows the one the car is on.
+    const near = (i.crawlTrails ?? [])
+      .flatMap((trail) =>
+        (i.tracks ?? [])
+          .filter((t) => t.def.id === trail.trackId || t.def.id === trail.bypassTrackId)
+          .map((track) => ({ trail, track, ...trailProgress(track, p.x, p.z) })),
+      )
+      .sort((a, b) => a.distance - b.distance)[0];
+    if (near && near.distance <= near.track.def.width / 2 + 1) {
+      const trail = near.trail;
       const bypass = near.track.def.id === trail.bypassTrackId;
       const section = trail.sections.find((s) => near.along >= s.from && near.along <= s.to);
       courseHint = {
@@ -123,8 +128,8 @@ export function buildHudState(i: HudInputs): HudState {
           ? 'L low range · P crawl · Z / X lockers · C views'
           : 'Y low range · LB tools · LB + R3 views',
       };
-      break;
     }
+  }
 
   if (!courseHint && i.mode === 'drive') {
     const link = (i.tracks ?? [])

@@ -11,6 +11,7 @@ import { buildVehicleBody } from './vehicleBody';
 import { buildVehicleWheel } from './vehicleWheel';
 import { buildRackPlank } from './vehicleEquipment';
 import { VehicleSuspension } from './vehicleSuspension';
+import { VehicleInstruments } from './vehicleInstruments';
 export { BodyZone } from './vehicleGeometry';
 
 /** Detailed 40 Series-inspired short-wheelbase 4WD, driven by the existing simulation. */
@@ -22,6 +23,7 @@ export class VehicleModel {
   readonly wheels: { pivot: THREE.Group; spin: THREE.Group }[] = [];
   readonly bodyMaterial: THREE.MeshPhysicalMaterial;
   readonly suspension: VehicleSuspension;
+  readonly instruments: VehicleInstruments;
   private readonly rearLampMaterial: THREE.MeshStandardMaterial;
   private readonly glass: THREE.MeshPhysicalMaterial;
   private readonly tmpQ = { x: 0, y: 0, z: 0, w: 1 };
@@ -119,6 +121,8 @@ export class VehicleModel {
       this.rackPlanks.add(mesh);
     }
     this.bodyGroup.add(this.rackPlanks);
+    this.instruments = new VehicleInstruments(tuning, materials);
+    this.bodyGroup.add(this.instruments.group);
     groupVehicleMaterials(this.wheelGeo);
     this.wheelBaseCol = Float32Array.from(this.wheelGeo.getAttribute('color').array);
     for (const wheel of tuning.wheels) {
@@ -250,6 +254,7 @@ export class VehicleModel {
       ww.spin.rotation.x = -(w.rotation + this.spinExtra[i]);
     }
     this.suspension.update(this.wheels.map((w) => w.pivot.position.y));
+    this.instruments.update(v, dt);
     this.rearLampMaterial.emissiveIntensity = v.brake > 0.1 ? 0.9 : 0.13;
   }
 }

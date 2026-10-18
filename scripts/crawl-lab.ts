@@ -1,5 +1,5 @@
 /**
- * Dev helper: drive the Granite Crawl obstacles headlessly and print how the vehicle
+ * Dev helper: drive the Granite Spur obstacles headlessly and print how the vehicle
  * behaves (time, speed spread, throttle and rpm swings, wheel loads, body contact).
  * Usage: npx vite-node scripts/crawl-lab.ts [trailId] [open|rear|both|high] [crawl|manual] [throttle]
  */

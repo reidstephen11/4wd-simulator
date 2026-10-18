@@ -11,6 +11,7 @@ import {
 import { Terrain, GroundTint, NO_WATER } from '../src/sim/world/terrain';
 import { TerrainMesh } from '../src/render/terrainMesh';
 import { VehicleModel } from '../src/render/vehicleModel';
+import { DIAL_START, DIAL_SWEEP, dashDials } from '../src/render/vehicleInstruments';
 import { vehicleTuning } from '../src/data/vehicle';
 import { createCondition } from '../src/sim/vehicle/condition';
 import { makeScene } from './helpers/scenes';
@@ -144,6 +145,30 @@ describe('graphics geometry regression', () => {
     const position = scene.vehicle.body.translation();
     expect(model.root.position.toArray()).toEqual([position.x, position.y, position.z]);
     expect(model.suspension.axles.every((axle) => axle.position.toArray().every(Number.isFinite))).toBe(true);
+    scene.physics.world.free();
+  });
+
+  it('turns the steering wheel with the front wheels and drives the dash gauges', async () => {
+    const scene = await makeScene({ speed: 5 });
+    const model = new VehicleModel(vehicleTuning);
+    scene.run(0.5, { steer: 1, throttle: 0.4 });
+    for (let i = 0; i < 120; i++) model.update(scene.vehicle, 1, 1 / 60);
+    // A right turn winds the wheel clockwise as the driver sees it, over a full turn at lock.
+    expect(model.instruments.wheel.rotation.z).toBeLessThan(-Math.PI * 2);
+    const kmh = Math.abs(scene.vehicle.speed) * 3.6;
+    expect(kmh).toBeGreaterThan(5);
+    expect(-model.instruments.needles.speed.rotation.z).toBeCloseTo(
+      DIAL_START + (DIAL_SWEEP * kmh) / dashDials.speed.max,
+      2,
+    );
+    const rpm = scene.vehicle.drivetrain.rpm;
+    expect(-model.instruments.needles.rpm.rotation.z).toBeCloseTo(
+      DIAL_START + (DIAL_SWEEP * rpm) / dashDials.rpm.max,
+      2,
+    );
+    scene.run(0.3, { steer: -1 });
+    model.update(scene.vehicle, 1, 1 / 60);
+    expect(model.instruments.wheel.rotation.z).toBeGreaterThan(0);
     scene.physics.world.free();
   });
 });

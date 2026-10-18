@@ -10,7 +10,7 @@ import { trailPoint } from '../src/sim/world/crawlTrail';
 import { testWorld } from './world';
 
 const DT = 1 / 60;
-const trail = challengeTrails.find((t) => t.id === 'rock-garden')!;
+const trail = challengeTrails.find((t) => t.id === 'whoa-boys')!;
 
 function setup() {
   const world = testWorld();
@@ -71,13 +71,25 @@ describe('scored crawl runs', () => {
     if (end?.type === 'failed') expect(end.result.dnf).toBe('left');
   });
 
+  it('starts the run for the obstacle the car is on where one ends and the next begins', () => {
+    const world = testWorld();
+    const runs = new CrawlRuns(challengeTrails, world.features.tracks);
+    // The Log Step ends where The Sidling starts.
+    const sidling = world.features.tracks.find((t) => t.def.id === 'sidling')!;
+    const p = trailPoint(sidling, 0.6);
+    const e = runs.update({ x: p.x, z: p.z, tiltDeg: 5, knock: false, winchAttached: false, dt: DT });
+    expect(e?.type).toBe('started');
+    expect(runs.run?.trail.id).toBe('sidling');
+    expect(runs.run?.dir).toBe(1);
+  });
+
   it('ranks fewer penalty points first, then the quicker time', () => {
     expect(betterRun({ points: 1, seconds: 90 }, { points: 2, seconds: 30 })).toBe(true);
     expect(betterRun({ points: 2, seconds: 25 }, { points: 2, seconds: 30 })).toBe(true);
     expect(betterRun({ points: 2, seconds: 35 }, { points: 2, seconds: 30 })).toBe(false);
   });
 
-  it('scores a real drive through the Rock Garden', async () => {
+  it('scores a real drive up the Whoa-boys', async () => {
     const world = testWorld();
     const sim = new Simulation(await loadRapier(), world, lateAfternoon);
     const track = world.features.tracks.find((t) => t.def.id === trail.trackId)!;
@@ -131,7 +143,7 @@ describe('scored crawl runs', () => {
     expect(events.map((e) => e.type)).toEqual(['started', 'finished']);
     const done = events[1];
     if (done.type !== 'finished') return;
-    expect(done.result.trailId).toBe('rock-garden');
+    expect(done.result.trailId).toBe('whoa-boys');
     expect(done.result.seconds).toBeGreaterThan(8);
     expect(done.result.seconds).toBeLessThan(40);
     expect(done.result.reverses).toBe(0);
