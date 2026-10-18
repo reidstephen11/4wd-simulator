@@ -272,7 +272,7 @@ export function buildVehicleBody(tuning: VehicleTuning, wheel: THREE.BufferGeome
   const b = new VehicleBuilder();
   front(b);
   sidesAndRear(b);
-  addVehicleInterior(b);
+  addVehicleInterior(b, tuning.engine.redlineRpm);
   addVehicleEquipment(b, tuning, wheel);
   return b.build();
 }
