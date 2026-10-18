@@ -7,6 +7,10 @@ import type { CreekInfo, GullyInfo, StaticBox, TerrainFeatures, TrackInfo } from
 
 /** Macro relief is evaluated on a coarser grid and upsampled. */
 const MACRO_STEP = 2;
+/** Distance from the creek centreline over which the banks are carved. */
+const CREEK_BANK_REACH = 34;
+/** Steepest rise (height per metre) of the valley sides beyond the carved banks. */
+const CREEK_WALL_SLOPE = 1.5;
 
 interface Grid {
   res: number;
@@ -208,11 +212,12 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
   const creekPts = map.creek.points.map((p) => [p.x, p.z] as const);
   const creekPoly = densify(creekPts, 1);
   const creekU = (p: number) => atParam(creekPoly.u, p);
-  const creekAttr = (key: 'water' | 'halfWidth' | 'depth', u: number) =>
-    attrAt(
-      map.creek.points.map((p) => p[key]),
-      u,
-    );
+  const creekCols = {
+    water: map.creek.points.map((p) => p.water),
+    halfWidth: map.creek.points.map((p) => p.halfWidth),
+    depth: map.creek.points.map((p) => p.depth),
+  };
+  const creekAttr = (key: keyof typeof creekCols, u: number) => attrAt(creekCols[key], u);
   const creekBankSlope = map.creek.points.map((p) => p.bankSlope ?? 0.55);
   const creekGravel = map.creek.points.map((p) => (p.bed === 'gravel' ? 1 : 0));
 
@@ -270,6 +275,32 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
       }
       macro[i] = h;
     }
+  }
+
+  // Valley sides: beyond the carved banks the ground may rise no faster than
+  // CREEK_WALL_SLOPE, so tall relief beside the creek (the border mountains at either
+  // end) meets the bank carve without a cliff. The reach is long enough for the cap to
+  // rise above the tallest relief, so it ends without a step.
+  let top = -Infinity;
+  for (let i = 0; i < macro.length; i++) top = Math.max(top, macro[i]);
+  let lowBank = Infinity;
+  for (let k = 0; k < map.creek.points.length; k++) {
+    const p = map.creek.points[k];
+    lowBank = Math.min(lowBank, p.water + (CREEK_BANK_REACH - p.halfWidth) * creekBankSlope[k]);
+  }
+  const wallReach = CREEK_BANK_REACH + Math.max(0, top - lowBank) / CREEK_WALL_SLOPE + MACRO_STEP;
+  const wallPoly = densify(creekPts, 4);
+  const mWallDist = new Float32Array(mres * mres).fill(1e9);
+  const mWallParam = new Float32Array(mres * mres);
+  stampPolyline(wallPoly, wallReach, mgrid, mWallDist, mWallParam);
+  for (let i = 0; i < macro.length; i++) {
+    const d = mWallDist[i];
+    if (d > wallReach) continue;
+    const u = atParam(wallPoly.u, mWallParam[i]);
+    const bankTop =
+      creekAttr('water', u) + (CREEK_BANK_REACH - creekAttr('halfWidth', u)) * attrAt(creekBankSlope, u);
+    const wall = bankTop + Math.max(0, d - CREEK_BANK_REACH) * CREEK_WALL_SLOPE;
+    if (macro[i] > wall) macro[i] = wall;
   }
 
   yield { progress: 0.18, label: 'Adding detail' };
@@ -338,13 +369,13 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
   const water = new Float32Array(n).fill(NO_WATER);
   const creekDist = new Float32Array(n).fill(1e9);
   const creekParam = new Float32Array(n);
-  stampPolyline(creekPoly, 34, grid, creekDist, creekParam);
+  stampPolyline(creekPoly, CREEK_BANK_REACH, grid, creekDist, creekParam);
   const creekHalfAt = new Float32Array(n); // half width at the nearest creek point (0 if far)
   const surface = new Uint8Array(n).fill(SurfaceId.Grass);
   const tint = new Uint8Array(n).fill(GroundTint.GrassDry);
   for (let i = 0; i < n; i++) {
     const d = creekDist[i];
-    if (d > 34) continue;
+    if (d > CREEK_BANK_REACH) continue;
     const u = creekU(creekParam[i]);
     const W = creekAttr('water', u);
     const hw = creekAttr('halfWidth', u);
