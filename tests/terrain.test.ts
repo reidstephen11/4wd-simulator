@@ -67,6 +67,22 @@ describe('terrain generation', () => {
     }
   });
 
+  it('has no cliffs between adjacent samples in the playable area', () => {
+    // The steepest border slopes rise about 4.2 m per sample and the Falls drop about
+    // 4.6 m; a taller jump is a seam between generation steps.
+    const w = testWorld();
+    const t = w.terrain;
+    const extent = w.map.wallHalfExtent;
+    let worst = { jump: 0, x: 0, z: 0 };
+    for (let iz = t.half - extent; iz < t.half + extent; iz++)
+      for (let ix = t.half - extent; ix < t.half + extent; ix++) {
+        const h = t.sample(ix, iz);
+        const jump = Math.max(Math.abs(t.sample(ix + 1, iz) - h), Math.abs(t.sample(ix, iz + 1) - h));
+        if (jump > worst.jump) worst = { jump, x: ix - t.half, z: iz - t.half };
+      }
+    expect(worst.jump, `jump at (${worst.x}, ${worst.z})`).toBeLessThan(5);
+  });
+
   it('marks surfaces from map features', () => {
     const w = testWorld();
     const bog = w.map.bogs[0];
