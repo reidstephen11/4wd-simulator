@@ -7,6 +7,10 @@ import type { CreekInfo, GullyInfo, StaticBox, TerrainFeatures, TrackInfo } from
 
 /** Macro relief is evaluated on a coarser grid and upsampled. */
 const MACRO_STEP = 2;
+/** Distance from the creek centreline over which the banks are carved. */
+const CREEK_BANK_REACH = 34;
+/** Steepest rise (height per metre) of the valley sides beyond the carved banks. */
+const CREEK_WALL_SLOPE = 1.5;
 
 interface Grid {
   res: number;
@@ -208,11 +212,12 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
   const creekPts = map.creek.points.map((p) => [p.x, p.z] as const);
   const creekPoly = densify(creekPts, 1);
   const creekU = (p: number) => atParam(creekPoly.u, p);
-  const creekAttr = (key: 'water' | 'halfWidth' | 'depth', u: number) =>
-    attrAt(
-      map.creek.points.map((p) => p[key]),
-      u,
-    );
+  const creekCols = {
+    water: map.creek.points.map((p) => p.water),
+    halfWidth: map.creek.points.map((p) => p.halfWidth),
+    depth: map.creek.points.map((p) => p.depth),
+  };
+  const creekAttr = (key: keyof typeof creekCols, u: number) => attrAt(creekCols[key], u);
   const creekBankSlope = map.creek.points.map((p) => p.bankSlope ?? 0.55);
   const creekGravel = map.creek.points.map((p) => (p.bed === 'gravel' ? 1 : 0));
 
@@ -270,6 +275,32 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
       }
       macro[i] = h;
     }
+  }
+
+  // Valley sides: beyond the carved banks the ground may rise no faster than
+  // CREEK_WALL_SLOPE, so tall relief beside the creek (the border mountains at either
+  // end) meets the bank carve without a cliff. The reach is long enough for the cap to
+  // rise above the tallest relief, so it ends without a step.
+  let top = -Infinity;
+  for (let i = 0; i < macro.length; i++) top = Math.max(top, macro[i]);
+  let lowBank = Infinity;
+  for (let k = 0; k < map.creek.points.length; k++) {
+    const p = map.creek.points[k];
+    lowBank = Math.min(lowBank, p.water + (CREEK_BANK_REACH - p.halfWidth) * creekBankSlope[k]);
+  }
+  const wallReach = CREEK_BANK_REACH + Math.max(0, top - lowBank) / CREEK_WALL_SLOPE + MACRO_STEP;
+  const wallPoly = densify(creekPts, 4);
+  const mWallDist = new Float32Array(mres * mres).fill(1e9);
+  const mWallParam = new Float32Array(mres * mres);
+  stampPolyline(wallPoly, wallReach, mgrid, mWallDist, mWallParam);
+  for (let i = 0; i < macro.length; i++) {
+    const d = mWallDist[i];
+    if (d > wallReach) continue;
+    const u = atParam(wallPoly.u, mWallParam[i]);
+    const bankTop =
+      creekAttr('water', u) + (CREEK_BANK_REACH - creekAttr('halfWidth', u)) * attrAt(creekBankSlope, u);
+    const wall = bankTop + Math.max(0, d - CREEK_BANK_REACH) * CREEK_WALL_SLOPE;
+    if (macro[i] > wall) macro[i] = wall;
   }
 
   yield { progress: 0.18, label: 'Adding detail' };
@@ -338,13 +369,13 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
   const water = new Float32Array(n).fill(NO_WATER);
   const creekDist = new Float32Array(n).fill(1e9);
   const creekParam = new Float32Array(n);
-  stampPolyline(creekPoly, 34, grid, creekDist, creekParam);
+  stampPolyline(creekPoly, CREEK_BANK_REACH, grid, creekDist, creekParam);
   const creekHalfAt = new Float32Array(n); // half width at the nearest creek point (0 if far)
   const surface = new Uint8Array(n).fill(SurfaceId.Grass);
   const tint = new Uint8Array(n).fill(GroundTint.GrassDry);
   for (let i = 0; i < n; i++) {
     const d = creekDist[i];
-    if (d > 34) continue;
+    if (d > CREEK_BANK_REACH) continue;
     const u = creekU(creekParam[i]);
     const W = creekAttr('water', u);
     const hw = creekAttr('halfWidth', u);
@@ -424,7 +455,9 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
     heights[i] = h + (target - h) * w;
   }
 
-  // Staircase ledges: granite steps across the track (static boxes).
+  // Staircase ledges: granite steps across the track (static boxes). Each leans with the
+  // graded track across it and reaches below the ground under its whole footprint, so an
+  // end over a falling hillside juts out of the slope instead of floating above it.
   const boxes: StaticBox[] = [];
   for (const t of tracks) {
     for (const st of t.def.steps ?? []) {
@@ -433,22 +466,39 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
         const dx = t.poly.xs[k + 1] - t.poly.xs[k];
         const dz = t.poly.zs[k + 1] - t.poly.zs[k];
         const len = Math.hypot(dx, dz) || 1;
+        const [ux, uz] = [dx / len, dz / len];
         const grade = Math.max(0.12, (t.profile[Math.min(t.poly.count - 1, k + 3)] - t.profile[k]) / 3);
         const depthAlong = clamp(st.rise / grade, 0.5, 2.4);
         const yTop = t.profile[k] + st.rise;
-        const thick = st.rise + 0.8;
-        // Box centred half its length uphill of the step face.
-        const cx = t.poly.xs[k] + (dx / len) * (depthAlong / 2);
-        const cz = t.poly.zs[k] + (dz / len) * (depthAlong / 2);
+        const hx = t.def.width / 2 + 0.9;
+        const hz = depthAlong / 2;
+        // Box centred half its length uphill of the step face; local +x is (uz, -ux).
+        const cx = t.poly.xs[k] + ux * hz;
+        const cz = t.poly.zs[k] + uz * hz;
+        const edge = t.def.width / 2;
+        const roll = Math.atan2(
+          sampleH(cx + uz * edge, cz - ux * edge) - sampleH(cx - uz * edge, cz + ux * edge),
+          2 * edge,
+        );
+        const [cr, sr] = [Math.cos(roll), Math.sin(roll)];
+        let hy = (st.rise + 0.8) / 2;
+        for (let u = -hx; u <= hx + 1e-6; u += hx / 8)
+          for (let w = -hz; w <= hz + 1e-6; w += hz / 2) {
+            // Bottom point across from the top centre (the box centre sits hy·sin(roll) out).
+            const across = u * cr + 2 * hy * sr;
+            const ground = sampleH(cx + uz * across + ux * w, cz - ux * across + uz * w);
+            hy = Math.max(hy, (yTop + u * sr - ground + 0.15) / (2 * cr));
+          }
         boxes.push({
           kind: 'ledge',
-          x: cx,
-          y: yTop - thick / 2,
-          z: cz,
-          hx: t.def.width / 2 + 0.9,
-          hy: thick / 2,
-          hz: depthAlong / 2,
+          x: cx + uz * hy * sr,
+          y: yTop - hy * cr,
+          z: cz - ux * hy * sr,
+          hx,
+          hy,
+          hz,
           yaw: Math.atan2(dx, dz),
+          roll,
         });
       }
     }

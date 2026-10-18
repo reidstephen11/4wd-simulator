@@ -1,6 +1,8 @@
 import { audioTuning } from '../data/audio';
 import { vehicleTuning } from '../data/vehicle';
 import { loop, type NoiseBank } from './buffers';
+import { ENGINE_PROCESSOR } from './engine/processorName';
+import workletUrl from './engine/engineWorklet?worker&url';
 import { engineGain, firingHz } from './mix';
 import { starter, stallClunk } from './oneShots';
 
@@ -11,16 +13,143 @@ export interface EngineFrame {
   running: boolean;
   /** Flooding is cutting the power right now. */
   powerCut: boolean;
+  /** 0..1 chance that a cylinder misfires (water in the intake). */
+  misfire: number;
+  /** Transfer-case input shaft speed (rev/s), for gear whine. */
+  shaftHz: number;
+  /** 0..1 transfer-case and gearbox whine level. */
+  whine: number;
 }
 
 const SMOOTH = 0.04;
 
+/** One way of making the engine sound. */
+interface EngineVoice {
+  readonly kind: 'synth' | 'oscillator';
+  update(e: EngineFrame): void;
+  /** Starter motor, then the engine catches. */
+  start(): void;
+  readonly level: number;
+}
+
 /**
- * Engine (SPEC §13): a harmonic-rich oscillator at the firing frequency, a crank-rate
+ * Engine (SPEC §13). Uses the inline-six synthesiser on the audio thread
+ * (engine/engineSynth.ts) and falls back to an oscillator engine where AudioWorklet
+ * isn't available. The worklet module loads asynchronously; a start requested before
+ * it is ready plays once it is.
+ */
+export class EngineSound {
+  private voice: EngineVoice | null = null;
+  private startPending = false;
+  hz = 0;
+
+  constructor(
+    private readonly ctx: AudioContext,
+    private readonly bus: AudioNode,
+    private readonly noise: NoiseBank,
+  ) {
+    const fallback = () => this.useVoice(new OscillatorEngine(ctx, bus, noise));
+    if (!ctx.audioWorklet || typeof AudioWorkletNode === 'undefined') fallback();
+    else
+      ctx.audioWorklet
+        .addModule(workletUrl)
+        .then(() => this.useVoice(new SynthEngine(ctx, bus)))
+        .catch(fallback);
+  }
+
+  private useVoice(v: EngineVoice): void {
+    this.voice = v;
+    if (this.startPending) v.start();
+    this.startPending = false;
+  }
+
+  update(e: EngineFrame): void {
+    this.hz = Math.max(4, firingHz(e.rpm));
+    this.voice?.update(e);
+  }
+
+  stalled(): void {
+    stallClunk(this.ctx, this.bus, this.noise);
+  }
+
+  /** Play the starter and the engine catching (after a stall, or when sound first starts). */
+  restarted(): void {
+    if (this.voice) this.voice.start();
+    else this.startPending = true;
+  }
+
+  get level(): number {
+    return this.voice?.level ?? 0;
+  }
+
+  /** Which engine sound is playing ('loading' until the worklet module is ready). */
+  get kind(): EngineVoice['kind'] | 'loading' {
+    return this.voice?.kind ?? 'loading';
+  }
+}
+
+/** The inline-six synthesiser running in an AudioWorkletNode. */
+class SynthEngine implements EngineVoice {
+  readonly kind = 'synth';
+  private readonly node: AudioWorkletNode;
+  private readonly out: GainNode;
+  private readonly params: Record<
+    'rpm' | 'load' | 'throttle' | 'running' | 'misfire' | 'shaftHz' | 'whine',
+    AudioParam
+  >;
+
+  constructor(
+    private readonly ctx: AudioContext,
+    bus: AudioNode,
+  ) {
+    this.node = new AudioWorkletNode(ctx, ENGINE_PROCESSOR, {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [1],
+    });
+    const param = (name: string) => this.node.parameters.get(name) as AudioParam;
+    this.params = {
+      rpm: param('rpm'),
+      load: param('load'),
+      throttle: param('throttle'),
+      running: param('running'),
+      misfire: param('misfire'),
+      shaftHz: param('shaftHz'),
+      whine: param('whine'),
+    };
+    this.out = ctx.createGain();
+    this.out.gain.value = audioTuning.engine.synthGain;
+    this.node.connect(this.out).connect(bus);
+  }
+
+  update(e: EngineFrame): void {
+    const t = this.ctx.currentTime;
+    const p = this.params;
+    p.rpm.setTargetAtTime(Math.max(0, e.rpm), t, 0.02);
+    p.load.setTargetAtTime(e.load, t, 0.03);
+    p.throttle.setTargetAtTime(e.throttle, t, 0.02);
+    p.running.setValueAtTime(e.running ? 1 : 0, t);
+    p.misfire.setValueAtTime(e.powerCut ? Math.max(0.85, e.misfire) : e.misfire, t);
+    p.shaftHz.setTargetAtTime(e.shaftHz, t, 0.03);
+    p.whine.setTargetAtTime(e.whine, t, 0.05);
+  }
+
+  start(): void {
+    this.node.port.postMessage({ type: 'start' });
+  }
+
+  get level(): number {
+    return this.out.gain.value;
+  }
+}
+
+/**
+ * Fallback engine: a harmonic-rich oscillator at the firing frequency, a crank-rate
  * rumble under it and combustion noise pulsed at the firing rate. Load brings in noise
  * and distortion and opens the filter.
  */
-export class EngineSound {
+class OscillatorEngine implements EngineVoice {
+  readonly kind = 'oscillator';
   private readonly osc: OscillatorNode;
   private readonly sub: OscillatorNode;
   private readonly pulse: OscillatorNode;
@@ -32,12 +161,11 @@ export class EngineSound {
   private readonly out: GainNode;
   /** Mute while the starter cranks after a restart. */
   private mutedUntil = 0;
-  hz = 0;
 
   constructor(
     private readonly ctx: AudioContext,
     private readonly bus: AudioNode,
-    private readonly noise: NoiseBank,
+    noise: NoiseBank,
   ) {
     const E = audioTuning.engine;
     const real = new Float32Array(E.harmonics.length + 1);
@@ -103,7 +231,6 @@ export class EngineSound {
     const E = audioTuning.engine;
     const t = this.ctx.currentTime;
     const hz = Math.max(4, firingHz(e.rpm));
-    this.hz = hz;
     this.osc.frequency.setTargetAtTime(hz, t, SMOOTH);
     this.sub.frequency.setTargetAtTime(hz / 2, t, SMOOTH);
     this.pulse.frequency.setTargetAtTime(hz, t, SMOOTH);
@@ -126,11 +253,7 @@ export class EngineSound {
     this.out.gain.setTargetAtTime(level, t, e.powerCut ? 0.015 : 0.05);
   }
 
-  stalled(): void {
-    stallClunk(this.ctx, this.bus, this.noise);
-  }
-
-  restarted(): void {
+  start(): void {
     starter(this.ctx, this.bus);
     this.mutedUntil = this.ctx.currentTime + audioTuning.engine.starter.seconds * 0.75;
   }

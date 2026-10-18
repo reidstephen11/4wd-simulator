@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PerspectiveCamera, Vector3 } from 'three';
+import { PerspectiveCamera, Quaternion, Vector3 } from 'three';
 import { ChaseCamera, type ChaseTarget, type Blocker } from '../src/render/chaseCamera';
-import { cameraTuning as C, cameraPresets } from '../src/data/camera';
+import { cameraTuning as C, cameraPresets, cockpit } from '../src/data/camera';
 import { InputManager } from '../src/sim/input/inputManager';
 import { Pad } from '../src/data/controls';
 
@@ -54,8 +54,37 @@ describe('vehicle camera orbit', () => {
     expect(chase.preset).toBe('rear');
     expect(camera.position.x).toBeLessThan(-3);
     chase.cyclePreset();
+    expect(chase.preset).toBe('cockpit');
+    chase.cyclePreset();
     expect(chase.preset).toBe('follow');
     expect(chase.distance).toBe(distance);
+  });
+
+  it("sits in the right-hand driver's seat, looks ahead, tilts with the body and turns its head", () => {
+    const { camera, chase, t } = fixture();
+    t.position.set(10, 2, 5);
+    t.rotation = new Quaternion();
+    chase.selectPreset('cockpit');
+    chase.update(1 / 60, t);
+    expect(camera.position.x).toBeCloseTo(10 + cockpit.eye.x, 5);
+    expect(camera.position.y).toBeCloseTo(2 + cockpit.eye.y, 5);
+    expect(camera.near).toBe(cockpit.near);
+    const dir = camera.getWorldDirection(new Vector3());
+    expect(dir.z).toBeLessThan(-0.95);
+    // Body rolled 20° to the right: the view rolls with it.
+    t.rotation.setFromAxisAngle(new Vector3(0, 0, 1), -0.35);
+    chase.update(1 / 60, t);
+    const up = new Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+    expect(up.x).toBeGreaterThan(0.25);
+    // Look right, then recentre back to the follow camera with its normal near plane.
+    t.rotation.identity();
+    chase.orbit(1.2, 0);
+    for (let i = 0; i < 60; i++) chase.update(1 / 60, t);
+    expect(camera.getWorldDirection(new Vector3()).x).toBeGreaterThan(0.6);
+    chase.recenter();
+    chase.update(1 / 60, t);
+    expect(chase.preset).toBe('follow');
+    expect(camera.near).toBe(C.near);
   });
 
   it('keeps crawler presets above terrain and clear of blockers; reset restores follow view', () => {

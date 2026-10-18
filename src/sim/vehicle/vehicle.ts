@@ -25,6 +25,9 @@ const LOOSENESS: Partial<Record<SurfaceId, number>> = {
   [SurfaceId.Dirt]: 0.25,
 };
 
+/** Rolling back against the selected gear slower than this (m/s), the pedal for that gear is throttle. */
+const SLIP_BACK = 1.5;
+
 /** Rapier's positive steering turns left; our input is + = right. */
 const STEER_SIGN = -1;
 
@@ -94,6 +97,12 @@ export class Vehicle {
   floodEvent: FloodEvent = null;
   /** Engine power multiplier applied this step (dips while flooding sputters). */
   enginePower = 1;
+  /**
+   * The chassis (not the tyres) touching the ground this step: how hard it presses
+   * (N), how fast it slides at the contact (m/s), what it's on, and the sharpest
+   * new knock (impulse, N·s; 0 = none). Sound and the HUD read these.
+   */
+  readonly bodyContact = { force: 0, slide: 0, surface: SurfaceId.Rock as SurfaceId, knock: 0 };
   /** Compression speed of each wheel that hit hard this step (0 = no hit). */
   readonly wheelImpacts = [0, 0, 0, 0];
   private readonly impactCooldown = [0.5, 0.5, 0.5, 0.5];
@@ -118,6 +127,8 @@ export class Vehicle {
   private readonly rawWheelRotation = [0, 0, 0, 0];
   private readonly wheelRotationDelta = [0, 0, 0, 0];
   private articulationBlend = 0;
+  /** Seconds the hill-start assist has held the brakes for this pull-away. */
+  private hillHold = 0;
 
   constructor(
     readonly id: string,
@@ -307,21 +318,24 @@ export class Vehicle {
     if (input.toggleRearDiff) this.toggleDiff('rear');
     if (input.togglePrecision) this.precisionCrawl = !this.precisionCrawl;
 
-    // Throttle / brake / reverse, automatic-style.
+    // Throttle / brake / reverse, automatic-style. Accelerating against the way the
+    // car is rolling brakes it, unless it is rolling back against the selected gear
+    // (slipping back down a rock): then the throttle fights the roll, as in a real car.
     let throttle = 0;
     let brake = 0;
-    let reverse = this.drivetrain.gear < 0;
+    const inReverse = this.drivetrain.gear < 0;
+    let reverse = inReverse;
     const f = input.throttle;
     const b = input.brake;
     if (f > 0.02 && b > 0.02) brake = Math.max(f, b);
     else if (f > 0.02) {
-      if (this.speed < -0.5) brake = f;
+      if (this.speed < -0.5 && (inReverse || this.speed < -SLIP_BACK)) brake = f;
       else {
         throttle = f;
         reverse = false;
       }
     } else if (b > 0.02) {
-      if (this.speed > 0.5) brake = b;
+      if (this.speed > 0.5 && (!inReverse || this.speed > SLIP_BACK)) brake = b;
       else {
         throttle = b;
         reverse = true;
@@ -334,7 +348,9 @@ export class Vehicle {
       throttle = Math.max(0, Math.min(1, error * crawl.speedGain));
       // Regulate descents as well as level ground. Driver braking above still has full authority.
       if (error < -0.05) brake = Math.min(1, -error * crawl.brakeGain);
-    }
+    } else if (this.precisionCrawl && throttle === 0 && brake === 0 && Math.abs(this.speed) > 0.05)
+      // Controls released: crawl control brakes to a stop instead of letting it idle on.
+      brake = Math.min(1, Math.abs(this.speed) * t.crawling.brakeGain);
     this.throttle = throttle;
     this.brake = brake;
 
@@ -348,12 +364,15 @@ export class Vehicle {
     this.enginePower =
       enginePowerMultiplier(this.condition) * floodPower(this.condition.flood, this.sputterRand);
 
-    const drive = updateDrivetrain(
+    let drive = updateDrivetrain(
       t,
       this.drivetrain,
       { throttle, reverse, speed: this.speed, enginePower: this.enginePower },
       dt,
     );
+    // Off the throttle while the winch pulls, the gearbox sits in neutral so the car
+    // neither creeps on the cable nor drags against it.
+    if (this.freeRoll && throttle === 0) drive = 0;
 
     // Grip available at each wheel.
     for (let i = 0; i < 4; i++) {
@@ -399,13 +418,27 @@ export class Vehicle {
     // Brakes.
     const stopped = Math.abs(this.speed) < 0.5;
     const engineBrake = throttle === 0 && brake === 0 && !stopped ? engineBrakeForce(t, this.drivetrain) : 0;
-    const hold = throttle === 0 && brake === 0 && stopped && !this.freeRoll ? t.holdBrakeForce : 0;
+    let hold = throttle === 0 && brake === 0 && stopped && !this.freeRoll ? t.holdBrakeForce : 0;
+    // Hill-start assist: pulling away on a slope, the brakes stay on while the engine
+    // and converter build up enough drive to hold the car (for at most a moment).
+    const pull = 9.81 * t.mass * fwd.y * (reverse ? -1 : 1);
+    if (
+      throttle > 0 &&
+      Math.abs(this.speed) < 0.3 &&
+      this.hillHold < t.hillStartHold &&
+      Math.abs(drive) < pull
+    ) {
+      this.hillHold += dt;
+      hold = t.brakeForce;
+    } else if (throttle === 0 || Math.abs(this.speed) >= 0.3) this.hillHold = 0;
+    else this.hillHold = t.hillStartHold;
+    const holding = hold > 0 && throttle > 0;
     for (let i = 0; i < 4; i++) {
       const front = t.wheels[i].front;
       let bf = (brake * t.brakeForce * (front ? t.brakeFrontBias : 1 - t.brakeFrontBias)) / 2;
       if (input.handbrake && !front) bf += t.handbrakeForce / 2;
       bf += (engineBrake + hold) / 4;
-      if (bf > 0 && !(throttle > 0 && !input.handbrake)) {
+      if (bf > 0 && (holding || !(throttle > 0 && !input.handbrake))) {
         c.setWheelEngineForce(i, 0);
         c.setWheelBrake(i, bf * dt);
       } else {
@@ -601,6 +634,53 @@ export class Vehicle {
     return max;
   }
 
+  /** Sum the chassis boxes' contacts with the world (skid plates and rails on rock). */
+  private senseBodyContact(dt: number, vel: Vec3, ang: Vec3, com: Vec3): void {
+    const world = this.physics.world;
+    const bc = this.bodyContact;
+    const wasTouching = bc.force > 0;
+    let impulse = 0;
+    let slideSum = 0;
+    let surface: SurfaceId = bc.surface;
+    let biggest = 0;
+    const own = this.colliders;
+    for (let k = 0; k < this.tuning.bodyBoxes.length; k++) {
+      const box = own[k];
+      world.contactPairsWith(box, (other) => {
+        if (other.parent() === this.body) return;
+        world.contactPair(box, other, (m) => {
+          const n = m.numSolverContacts();
+          if (n === 0) return;
+          let j = 0;
+          for (let i = 0; i < m.numContacts(); i++) j += m.contactImpulse(i);
+          if (j <= 0) return;
+          const p = m.solverContactPoint(0);
+          if (!p) return;
+          const normal = m.normal();
+          // Chassis velocity at the contact, minus its component along the normal.
+          const rx = p.x - com.x;
+          const ry = p.y - com.y;
+          const rz = p.z - com.z;
+          const vx = vel.x + ang.y * rz - ang.z * ry;
+          const vy = vel.y + ang.z * rx - ang.x * rz;
+          const vz = vel.z + ang.x * ry - ang.y * rx;
+          const vn = vx * normal.x + vy * normal.y + vz * normal.z;
+          const slide = Math.hypot(vx - normal.x * vn, vy - normal.y * vn, vz - normal.z * vn);
+          impulse += j;
+          slideSum += slide * j;
+          if (j > biggest) {
+            biggest = j;
+            surface = this.physics.surfaceOfCollider(other, p.x, p.z);
+          }
+        });
+      });
+    }
+    bc.force = impulse / dt;
+    bc.slide = impulse > 0 ? slideSum / impulse : 0;
+    bc.surface = surface;
+    bc.knock = !wasTouching && impulse > this.tuning.bodyKnockImpulse ? impulse : 0;
+  }
+
   /** Read back wheel state after the physics step. */
   postStep(dt: number): void {
     const c = this.controller;
@@ -665,6 +745,7 @@ export class Vehicle {
       a.rotation += delta - this.wheelRotationDelta[i];
       b.rotation += delta - this.wheelRotationDelta[j];
     }
+    this.senseBodyContact(dt, vel, ang, com);
     // Impact detection: sudden change in velocity.
     const dvx = vel.x - this.lastVel.x;
     const dvy = vel.y - this.lastVel.y;

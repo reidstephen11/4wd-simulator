@@ -1,3 +1,4 @@
+import { BUILD_LABEL } from '../core/buildInfo';
 import { controlsTable } from '../data/controls';
 import type { Settings } from '../sim/save/save';
 
@@ -62,7 +63,8 @@ export class PauseMenu {
         <button data-focus data-act="map">Map</button>
         <button data-focus data-act="camp">Return to last campsite<small></small></button>
         <button data-focus data-act="settings">Settings</button>
-        <button data-focus data-act="controls">Controls</button>`;
+        <button data-focus data-act="controls">Controls</button>
+        <p class="build-label">Version ${BUILD_LABEL}</p>`;
       (card.querySelector('small') as HTMLElement).textContent = this.campsiteName;
     } else if (page === 'settings') {
       const s = this.settings;

@@ -63,7 +63,8 @@ const rockGarden: TrailStoneDef[] = [
   boulder(19.8, 0.82, 0.25, 1.0, 1.0),
   boulder(22.2, -0.6, 0.2, 0.9, 0.9),
   boulder(23.4, 0.9, 0.18, 0.9, 0.8),
-  ...borders(4, 24, 4.5, 2.3),
+  // The bypass leaves on the left at the entrance.
+  ...borders(4, 24, 4.5, 2.3).filter((rock) => rock.at > 5 || rock.lateral > 0),
 ];
 
 // Moderate: a granite staircase. Rises of 0.26–0.4 m, the third staggered so only one
@@ -120,7 +121,8 @@ const boulderField: TrailStoneDef[] = [
   boulder(16.8, -0.75, 0.52, 1.5, 1.6, 35),
   boulder(19.1, 0.8, 0.5, 1.3, 1.4),
   boulder(21.4, -0.7, 0.45, 1.2, 1.2),
-  ...borders(4, 21, 3.5, 2.25),
+  // The bypass leaves on the left at the entrance.
+  ...borders(4, 21, 3.5, 2.25).filter((rock) => rock.at > 5 || rock.lateral > 0),
 ];
 
 // Hard: a broad granite slab tilted towards a drop on its low side. It leans the car
@@ -432,7 +434,7 @@ export const challengeAnchors = polys.map((poly) => {
 });
 export const challengeSigns: PropDef[] = [
   { kind: 'signpost', x: -143, z: 252, headingDeg: 270, text: 'Granite Crawl →' },
-  { kind: 'signpost', x: -52, z: 209, headingDeg: 210, text: 'Granite Crawl →' },
+  { kind: 'signpost', x: -56, z: 204.5, headingDeg: 210, text: 'Granite Crawl →' },
   ...routes.flatMap((route, i) => {
     const start = pointAt(polys[i], 1),
       end = pointAt(polys[i], polys[i].length - 1);
@@ -468,3 +470,26 @@ export const challengeLoopRoute = [
 export const challengeEasyRoute = challengeLoopRoute.map((id) =>
   routes.some((route) => route.id === id) ? `${id}-bypass` : id,
 );
+
+/** Optional scored runs on the crawl trails (src/sim/crawlRuns.ts). */
+export const crawlScoring = {
+  /** Penalty points: backing up, the chassis knocking a rock, hooking up the winch. */
+  reverse: 1,
+  knock: 1,
+  winch: 5,
+  /** A run starts within this distance (m) of either end of the technical line. */
+  startZone: 2.5,
+  /** And finishes this close to the far end (m). */
+  finishZone: 2.5,
+  /** Dropping back this far (m) from the furthest point counts as backing up... */
+  reverseDistance: 0.5,
+  /** ...and the car must move forward this far again before the next one counts. */
+  rearmDistance: 0.4,
+  /** Knocks closer together than this (s) count once. */
+  knockSpacing: 0.8,
+  /** Further than this outside the line's edge (m) ends the run. */
+  offLine: 1.5,
+  /** Leaving within this time (s) of starting, near the start, just cancels it. */
+  falseStartSeconds: 4,
+  rolledTiltDeg: 75,
+};

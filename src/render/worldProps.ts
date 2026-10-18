@@ -500,6 +500,9 @@ export class WorldProps {
     plane.position.set(p.x + off.x, base + propDims.signpost.h - 0.25, p.z + off.z);
     plane.rotation.y = yaw + Math.PI;
     this.group.add(plane);
+    // An arrow at either end points one way, so only the front is lettered; from behind
+    // it would point the wrong way.
+    if (/^←|→$/.test(p.text ?? '')) return;
     const back = plane.clone();
     const off2 = new THREE.Vector3(0, 0, -0.05).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
     back.position.set(p.x + off2.x, base + propDims.signpost.h - 0.25, p.z + off2.z);

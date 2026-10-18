@@ -19,10 +19,12 @@ const LAYERS: Record<TyreLayer, LayerSpec> = {
   water: { buffer: 'white', filter: 'bandpass', rate: [1, 1] },
   wood: { buffer: 'crunch', filter: 'bandpass', rate: [0.4, 0.9] },
   scrub: { buffer: 'white', filter: 'bandpass', rate: [1, 1] },
+  squeal: { buffer: 'white', filter: 'bandpass', rate: [1, 1] },
 };
 
 interface Layer {
   src: AudioBufferSourceNode;
+  filter: BiquadFilterNode;
   gain: GainNode;
   spec: LayerSpec;
 }
@@ -52,7 +54,7 @@ export class TyreSound {
       const gain = ctx.createGain();
       gain.gain.value = 0;
       src.connect(f).connect(gain).connect(bus);
-      this.layers.set(name, { src, gain, spec });
+      this.layers.set(name, { src, filter: f, gain, spec });
     }
   }
 
@@ -62,7 +64,14 @@ export class TyreSound {
     const fast = Math.min(1, Math.abs(speed) / audioTuning.tyres.fullSpeed);
     for (const [name, l] of this.layers) {
       const w = this.weights[name];
-      l.gain.gain.setTargetAtTime(w * audioTuning.tyres.layers[name].gain, t, 0.08);
+      let level = w * audioTuning.tyres.layers[name].gain;
+      if (name === 'squeal' && w > 0) {
+        // Stick-slip: the pitch and level chatter as the rubber grabs and lets go.
+        const base = audioTuning.tyres.layers.squeal.filterHz;
+        l.filter.frequency.setTargetAtTime(base * (0.8 + 0.5 * Math.random()), t, 0.02);
+        level *= 0.55 + 0.9 * Math.random();
+      }
+      l.gain.gain.setTargetAtTime(level, t, name === 'squeal' ? 0.02 : 0.08);
       const [r0, r1] = l.spec.rate;
       if (r0 !== r1) l.src.playbackRate.setTargetAtTime(r0 + (r1 - r0) * fast, t, 0.1);
     }

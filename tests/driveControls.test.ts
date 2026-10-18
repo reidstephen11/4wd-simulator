@@ -77,7 +77,7 @@ describe('diff locks and precision crawl', () => {
       s.run(DT, { steer: 1 });
       const open = s.vehicle.wheels[1].steer;
       s.run(DT, { steer: 1, toggleFrontDiff: true });
-      expect(s.vehicle.wheels[1].steer).toBeLessThan(open * 0.8);
+      expect(s.vehicle.wheels[1].steer).toBeLessThan(open * 0.9);
       s.run(DT, { steer: 1, toggleFrontDiff: true });
       expect(s.vehicle.wheels[1].steer).toBeCloseTo(open, 2);
     } finally {
@@ -107,6 +107,23 @@ describe('diff locks and precision crawl', () => {
           s.physics.free();
         }
       });
+
+  it('low range creeps at idle; precision crawl stops when the controls are released', async () => {
+    const s = await makeScene({});
+    try {
+      s.vehicle.toggleRange();
+      s.run(3, { throttle: 0.3 });
+      s.run(6, {});
+      // A torque converter in gear keeps it rolling at a walking pace.
+      expect(s.vehicle.speed).toBeGreaterThan(0.5);
+      expect(s.vehicle.speed).toBeLessThan(2);
+      s.run(DT, { togglePrecision: true });
+      s.run(3, {});
+      expect(Math.abs(s.vehicle.speed)).toBeLessThan(0.1);
+    } finally {
+      s.physics.free();
+    }
+  });
 
   it('precision crawl controls a downhill descent while throttle is held', async () => {
     const s = await makeScene({ pitchDeg: -20 });

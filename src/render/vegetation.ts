@@ -259,6 +259,23 @@ function geometrySize(geos: THREE.BufferGeometry[]): number {
   return geos.reduce((n, g) => n + g.getAttribute('position').count, 0);
 }
 
+/** Ground-cover placement attempts per tile. */
+export function coverTries(q: QualityPreset): number {
+  const tile = groundCover.tile;
+  return Math.round(
+    ((tile * tile) / 100) * (groundCover.tussockDensity + groundCover.shrubDensity) * q.vegetationDensity,
+  );
+}
+
+/**
+ * Most ground-cover instances a quality level can place: every attempt succeeding in
+ * every tile within reach (tile centres within grassDistance + 0.7 tiles of the eye).
+ */
+export function coverCapacity(q: QualityPreset): number {
+  const reach = q.grassDistance / groundCover.tile + 0.7 + Math.SQRT1_2;
+  return Math.ceil(Math.PI * reach * reach) * coverTries(q);
+}
+
 /**
  * Trees, rocks, logs (from the sim scatter) and decorative ground cover. Trees switch
  * between near and far models per instance; ground cover is generated in tiles around
@@ -372,7 +389,8 @@ export class Vegetation {
 
     // --- Ground cover (filled in around the camera) ---
     const coverGeos = [buildTussock(0), buildTussock(1), buildTussock(2), buildShrub(0), buildShrub(1)];
-    this.cover = new THREE.BatchedMesh(9000, geometrySize(coverGeos), 0, this.material);
+    this.cover = new THREE.BatchedMesh(coverCapacity(quality), geometrySize(coverGeos), 0, this.material);
+    this.cover.name = 'ground-cover';
     this.cover.castShadow = false;
     this.cover.receiveShadow = true;
     for (const g of coverGeos) this.coverGeo.push(this.cover.addGeometry(g));
@@ -384,6 +402,7 @@ export class Vegetation {
     this.meadow.setQuality(q);
     for (const ids of this.coverTiles.values()) for (const id of ids) this.cover.deleteInstance(id);
     this.coverTiles.clear();
+    this.cover.setInstanceCount(coverCapacity(q));
   }
 
   update(eye: THREE.Vector3, dt: number): void {
@@ -418,25 +437,31 @@ export class Vegetation {
   private updateCover(eye: THREE.Vector3): void {
     const tile = groundCover.tile;
     const R = this.quality.grassDistance;
-    const keep = new Set<string>();
+    const inReach = (tx: number, tz: number) =>
+      Math.hypot((tx + 0.5) * tile - eye.x, (tz + 0.5) * tile - eye.z) <= R + tile * 0.7;
+    let changed = false;
+    // Free tiles that fell out of reach before filling new ones, so the batch never runs out.
+    for (const [key, ids] of this.coverTiles) {
+      const [tx, tz] = key.split(',').map(Number);
+      if (inReach(tx, tz)) continue;
+      for (const id of ids) this.cover.deleteInstance(id);
+      this.coverTiles.delete(key);
+      changed = true;
+    }
     const t0x = Math.floor((eye.x - R) / tile);
     const t1x = Math.floor((eye.x + R) / tile);
     const t0z = Math.floor((eye.z - R) / tile);
     const t1z = Math.floor((eye.z + R) / tile);
     for (let tz = t0z; tz <= t1z; tz++)
       for (let tx = t0x; tx <= t1x; tx++) {
-        const cx = (tx + 0.5) * tile;
-        const cz = (tz + 0.5) * tile;
-        if (Math.hypot(cx - eye.x, cz - eye.z) > R + tile * 0.7) continue;
         const key = `${tx},${tz}`;
-        keep.add(key);
-        if (!this.coverTiles.has(key)) this.coverTiles.set(key, this.fillTile(tx, tz));
+        if (!inReach(tx, tz) || this.coverTiles.has(key)) continue;
+        this.coverTiles.set(key, this.fillTile(tx, tz));
+        changed = true;
       }
-    for (const [key, ids] of this.coverTiles) {
-      if (keep.has(key)) continue;
-      for (const id of ids) this.cover.deleteInstance(id);
-      this.coverTiles.delete(key);
-    }
+    // three.js keeps the batch's first bounding sphere; without this the whole batch is
+    // culled once the camera leaves the area it was first drawn in.
+    if (changed) this.cover.computeBoundingSphere();
   }
 
   private fillTile(tx: number, tz: number): number[] {
@@ -445,10 +470,7 @@ export class Vegetation {
     const tile = groundCover.tile;
     const rand = mulberry32(Math.floor(hash2(tx, tz, this.world.map.seed + 77) * 1e9));
     const ids: number[] = [];
-    const density = this.quality.vegetationDensity;
-    const tries = Math.round(
-      ((tile * tile) / 100) * (groundCover.tussockDensity + groundCover.shrubDensity) * density,
-    );
+    const tries = coverTries(this.quality);
     const shrubShare = groundCover.shrubDensity / (groundCover.tussockDensity + groundCover.shrubDensity);
     for (let k = 0; k < tries; k++) {
       const x = (tx + rand()) * tile;
@@ -466,7 +488,7 @@ export class Vegetation {
       const forest = tint === GroundTint.ForestFloor;
       const shrub = r1 < (forest ? shrubShare * 4 : shrubShare * 0.35);
       if (!shrub && forest && r2 < 0.6) continue;
-      if (this.cover.instanceCount >= 8990) break;
+      if (this.cover.instanceCount >= this.cover.maxInstanceCount) break;
       const geo = shrub ? this.coverGeo[3 + Math.floor(r2 * 2)] : this.coverGeo[Math.floor(r2 * 3)];
       const id = this.cover.addInstance(geo);
       const s = shrub ? 0.8 + r3 * 0.9 : 0.7 + r3 * 0.6;

@@ -1,5 +1,6 @@
 import { SAVE_KEY } from '../../core/config';
 import type { ExplorationState } from '../exploration';
+import type { CrawlBests } from '../crawlRuns';
 
 export interface Settings {
   quality: 'low' | 'medium' | 'high';
@@ -13,6 +14,8 @@ export interface SaveData {
   version: 1;
   exploration: ExplorationState;
   settings: Settings;
+  /** Best scored run per crawl trail (added later; older saves have none). */
+  crawlBests?: CrawlBests;
 }
 
 export const defaultSettings: Settings = {
@@ -66,10 +69,22 @@ export function loadSave(s: KeyValueStore | null = store()): SaveData | null {
         ambienceVolume: clamp01(st.ambienceVolume, defaultSettings.ambienceVolume),
         units: st.units === 'mph' ? 'mph' : 'kmh',
       },
+      crawlBests: readBests(data.crawlBests),
     };
   } catch {
     return null;
   }
+}
+
+function readBests(raw: unknown): CrawlBests {
+  const out: CrawlBests = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
+    const b = v as { points?: unknown; seconds?: unknown } | null;
+    if (b && typeof b.points === 'number' && typeof b.seconds === 'number' && Number.isFinite(b.seconds))
+      out[id] = { points: b.points, seconds: b.seconds };
+  }
+  return out;
 }
 
 /** Write the save. Returns false (and never throws) if storage is unavailable. */

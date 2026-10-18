@@ -67,6 +67,19 @@ test('wheel-placement views, controller shortcut, and technical/bypass guidance'
     Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => [pad] });
     Object.assign(window, { trailPad: pad });
   });
+  // Rear close → Driver (the right-hand seat), then on to Follow.
+  await expect(view).toContainText('Driver');
+  await page.evaluate(() => {
+    const pad = (window as unknown as { trailPad: { buttons: { pressed: boolean; value: number }[] } })
+      .trailPad;
+    pad.buttons[11] = { pressed: false, value: 0 };
+  });
+  await waitSim(page, 0.1);
+  await page.evaluate(() => {
+    const pad = (window as unknown as { trailPad: { buttons: { pressed: boolean; value: number }[] } })
+      .trailPad;
+    pad.buttons[11] = { pressed: true, value: 1 };
+  });
   await expect(view).toContainText('Follow');
   expect((await page.evaluate(() => window.__game!.ui())).toolMenu).toBe(false);
   expect((await page.evaluate(() => window.__game!.vehicle())).frontLocked).toBe(false);

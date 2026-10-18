@@ -15,6 +15,8 @@ export interface GameHook {
   setCamera(x: number, y: number, z: number, tx: number, ty: number, tz: number): void;
   useChaseCamera(): void;
   camera(): { position: number[]; direction: number[]; distance: number; preset: CameraPreset };
+  /** Switch the chase camera to a view (follow, crawler views, driver's seat). */
+  cameraPreset(preset: CameraPreset): void;
   stats(): {
     fps: number;
     frameMs: number;
@@ -100,6 +102,7 @@ export function installHook(game: Game): void {
       distance: g.chase.distance,
       preset: g.chase.preset,
     }),
+    cameraPreset: (preset) => g.chase.selectPreset(preset),
     stats: () => ({
       fps: g.overlay?.fps ?? 0,
       frameMs: g.overlay?.frameMs ?? 0,
@@ -154,6 +157,7 @@ export function installHook(game: Game): void {
     }),
     heightAt: (x, z) => g.world.terrain.heightAt(x, z),
     teleport: (x, z, h) => {
+      g.crawlRuns.cancel();
       g.vehicle.teleport(g.sim.poseAt(x, z, h));
       g.chase.reset();
       g.view.snap();

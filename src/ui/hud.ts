@@ -1,5 +1,6 @@
 import { icons, type PoiIcon } from './icons';
 import { cameraPresets, type CameraPreset } from '../data/camera';
+import { CrawlGauges, type GaugeMode, type GaugeState } from './crawlGauges';
 
 export interface Prompt {
   /** Key or button glyphs, e.g. "E" or "Hold J". */
@@ -17,6 +18,9 @@ export interface CompassPoi {
 }
 
 export interface HudState {
+  gauges: GaugeState;
+  /** A scored crawl run in progress. */
+  run: { name: string; seconds: number; points: number } | null;
   /** Camera heading (degrees, 0 = north). */
   heading: number;
   pois: CompassPoi[];
@@ -57,6 +61,12 @@ export class Hud {
   private readonly cameraHint: HTMLElement;
   private readonly cameraResetKey: HTMLElement;
   private readonly cameraPresetButton: HTMLButtonElement;
+  private readonly gauges: CrawlGauges;
+  private readonly runEl: HTMLElement;
+  /** Crawl gauges: 'auto' shows them in low range, precision crawl or the driver's seat. */
+  gaugeMode: GaugeMode = 'auto';
+  /** Set by the game: the driver's-seat camera is in use. */
+  cockpitView = false;
   private lastCompassKey = '';
   private lastPromptKey = '';
   private readonly iconImages = new Map<string, HTMLImageElement>();
@@ -82,9 +92,12 @@ export class Hud {
         <button type="button" class="camera-preset" aria-label="Camera view" title="Cycle wheel-placement views: C / hold LB + click right stick">View: <span>Follow</span> <kbd>C</kbd></button>
         <button type="button" class="camera-reset" title="Return behind the vehicle">Reset view <kbd>V</kbd></button>
       </div>
+      <div class="crawl-run paper hidden"><strong></strong><span class="crawl-run-time"></span><span class="crawl-run-points"></span></div>
       <div class="toasts"></div>
       <div class="discovery"></div>`;
     root.appendChild(this.el);
+    this.gauges = new CrawlGauges(this.el);
+    this.runEl = this.el.querySelector('.crawl-run') as HTMLElement;
     this.compass = this.el.querySelector('.compass canvas') as HTMLCanvasElement;
     this.cctx = this.compass.getContext('2d') as CanvasRenderingContext2D;
     this.status = this.el.querySelector('.status') as HTMLElement;
@@ -147,6 +160,18 @@ export class Hud {
 
   update(s: HudState): void {
     this.drawCompass(s);
+    const showGauges =
+      this.gaugeMode === 'on' ||
+      (this.gaugeMode === 'auto' && (s.range === 'low' || s.precisionCrawl || this.cockpitView));
+    this.gauges.visible = showGauges;
+    if (showGauges) this.gauges.update(s.gauges);
+    this.runEl.classList.toggle('hidden', !s.run);
+    if (s.run) {
+      this.runEl.querySelector('strong')!.textContent = s.run.name;
+      this.runEl.querySelector('.crawl-run-time')!.textContent = clock(s.run.seconds);
+      this.runEl.querySelector('.crawl-run-points')!.textContent =
+        s.run.points === 0 ? 'clean' : `${s.run.points} pt${s.run.points === 1 ? '' : 's'}`;
+    }
     this.rangeEl.textContent = s.range === 'high' ? 'H' : 'L';
     this.rangeEl.classList.toggle('low', s.range === 'low');
     const active = [s.frontLocked, s.rearLocked, s.precisionCrawl];
@@ -254,6 +279,20 @@ export class Hud {
     setTimeout(() => el.remove(), ms + 500);
   }
 
+  /** Result card for a scored crawl run. */
+  runResult(title: string, name: string, detail: string): void {
+    const el = document.createElement('div');
+    el.className = 'discovery-card run-card paper';
+    el.innerHTML = `<div><div class="discovery-label"></div><div class="discovery-name"></div><div class="run-detail"></div></div>`;
+    (el.querySelector('.discovery-label') as HTMLElement).textContent = title;
+    (el.querySelector('.discovery-name') as HTMLElement).textContent = name;
+    (el.querySelector('.run-detail') as HTMLElement).textContent = detail;
+    this.discovery.innerHTML = '';
+    this.discovery.appendChild(el);
+    setTimeout(() => el.classList.add('out'), 6500);
+    setTimeout(() => el.remove(), 7200);
+  }
+
   /** "Discovered: …" paper card that unfolds near the top of the screen. */
   discovered(name: string, kind: PoiIcon): void {
     const el = document.createElement('div');
@@ -265,4 +304,11 @@ export class Hud {
     setTimeout(() => el.classList.add('out'), 3800);
     setTimeout(() => el.remove(), 4500);
   }
+}
+
+/** m:ss.s for run times. */
+export function clock(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds - m * 60;
+  return `${m}:${s < 10 ? '0' : ''}${s.toFixed(1)}`;
 }
