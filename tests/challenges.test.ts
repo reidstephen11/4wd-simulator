@@ -49,7 +49,10 @@ interface Scene {
   lockers: { front: boolean; rear: boolean };
 }
 
-function runLeg(s: Scene, track: TrackInfo, back = false, limit = 110) {
+/** Hands the event loop back to Vitest so its worker messages don't time out on long drives. */
+const yieldToRunner = () => new Promise((resolve) => setImmediate(resolve));
+
+async function runLeg(s: Scene, track: TrackInfo, back = false, limit = 110) {
   const { sim, v, inputs } = s;
   const high = v.drivetrain.range === 'high';
   const pilot = new Autopilot(pathFor(track, back), high ? 1.5 : 0.7);
@@ -61,7 +64,8 @@ function runLeg(s: Scene, track: TrackInfo, back = false, limit = 110) {
     sustained = 0,
     deviation = 0,
     time = 0;
-  for (; time < limit; time += DT) {
+  for (let step = 0; time < limit; time += DT, step++) {
+    if (step % 600 === 599) await yieldToRunner();
     const command = pilot.input(v, DT);
     if (pilot.done) break;
     if (!high) {
@@ -86,8 +90,8 @@ function runLeg(s: Scene, track: TrackInfo, back = false, limit = 110) {
   return { done: pilot.done, remaining: pilot.remaining(v), time, tilt, pitch, roll, speed, deviation };
 }
 
-function driveLeg(s: Scene, track: TrackInfo, back = false, limit = 110) {
-  const result = runLeg(s, track, back, limit);
+async function driveLeg(s: Scene, track: TrackInfo, back = false, limit = 110) {
+  const result = await runLeg(s, track, back, limit);
   expect(result.done, `${track.def.id} stopped ${result.remaining.toFixed(1)} m from the end`).toBe(true);
   return result;
 }
@@ -118,7 +122,7 @@ async function scene(trackId: string, back = false, lockers: Lockers = 'both') {
 async function drive(trackId: string, lockers: Lockers = 'both', back = false, limit = 110) {
   const s = await scene(trackId, back, lockers);
   try {
-    return runLeg(s, s.track, back, limit);
+    return await runLeg(s, s.track, back, limit);
   } finally {
     s.sim.physics.free();
   }
@@ -153,7 +157,7 @@ describe('Granite Spur', () => {
       it(`drives ${t.name} with both lockers ${back ? 'from its far end' : 'from its near end'}`, async () => {
         const s = await scene(t.trackId, back);
         try {
-          const result = driveLeg(s, s.track, back);
+          const result = await driveLeg(s, s.track, back);
           expect(result.tilt).toBeLessThan(maxTilt[t.difficulty!]);
           expect(result.speed).toBeLessThan(crawlMax + (t.difficulty === 'extreme' ? 0.7 : 0.5));
           expect(result.deviation).toBeLessThan(s.track.def.width / 2 + 0.3);
@@ -246,7 +250,7 @@ describe('Granite Spur', () => {
       const start = { ...s.v.position };
       for (const id of challengeLoopRoute) {
         const track = trackOf(id);
-        const r = driveLeg(s, track);
+        const r = await driveLeg(s, track);
         expect(r.tilt, id).toBeLessThan(maxTilt[trail(id)?.difficulty ?? 'easy']);
         expect(r.deviation, id).toBeLessThan(track.def.width / 2 + 0.7);
       }
@@ -262,7 +266,7 @@ describe('Granite Spur', () => {
       const s = await scene(first, firstBack, 'open');
       try {
         for (const [id, back] of route) {
-          const r = driveLeg(s, trackOf(id), back);
+          const r = await driveLeg(s, trackOf(id), back);
           expect(r.tilt, id).toBeLessThan(25);
         }
       } finally {
