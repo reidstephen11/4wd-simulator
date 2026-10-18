@@ -16,6 +16,8 @@ import { poiApproach } from '../sim/world/poiApproach';
 import { headingOf } from '../sim/vehicle/math';
 import { Exploration } from '../sim/exploration';
 import { defaultSettings, loadSave, writeSave, type Settings } from '../sim/save/save';
+import { CrawlRuns, type CrawlBests, type CrawlRunEvent } from '../sim/crawlRuns';
+import { clock } from '../ui/hud';
 import type { ToolEvent } from '../sim/tools/tools';
 import { GameRenderer } from '../render/renderer';
 import { VehicleModel } from '../render/vehicleModel';
@@ -56,6 +58,8 @@ export class Game {
   readonly toolsView: ToolsView;
   readonly tool: ToolController;
   readonly exploration: Exploration;
+  /** Optional scored runs on the crawl trails. */
+  readonly crawlRuns: CrawlRuns;
   readonly hud: Hud;
   readonly toolMenu: ToolMenu;
   readonly map: PaperMap;
@@ -88,10 +92,12 @@ export class Game {
     uiRoot: HTMLElement,
     settings: Settings,
     exploration: Exploration,
+    crawlBests: CrawlBests,
   ) {
     this.debug = new URLSearchParams(location.search).has('debug');
     this.settings = settings;
     this.exploration = exploration;
+    this.crawlRuns = new CrawlRuns(world.map.crawlTrails ?? [], world.features.tracks, crawlBests);
     this.input = new InputManager(window);
     this.audio = new AudioSystem(settings);
     // Loading puts you at the last campsite (SPEC §14).
@@ -224,7 +230,7 @@ export class Game {
       qualityPresets[settings.quality],
       sim.dynamics.values(),
     );
-    return new Game(world, sim, view, uiEl, settings, exploration);
+    return new Game(world, sim, view, uiEl, settings, exploration, save?.crawlBests ?? {});
   }
 
   get vehicle(): Vehicle {
@@ -238,7 +244,12 @@ export class Game {
   // --- Saving ---------------------------------------------------------------
 
   save(): void {
-    const ok = writeSave({ version: 1, exploration: this.exploration.state(), settings: this.settings });
+    const ok = writeSave({
+      version: 1,
+      exploration: this.exploration.state(),
+      settings: this.settings,
+      crawlBests: this.crawlRuns.bests,
+    });
     if (!ok && this.storageOk) {
       this.storageOk = false;
       console.warn('4WD Simulator: browser storage is unavailable, progress will not be saved.');
@@ -294,12 +305,14 @@ export class Game {
     await this.fade.run(() => {
       this.tool.cancel();
       this.sim.returnToCampsite(LOCAL_VEHICLE, this.exploration.lastCampsite);
+      this.crawlRuns.cancel();
       this.chase.reset();
       this.view.snap();
     });
   }
 
   teleportToPoi(p: PoiDef): void {
+    this.crawlRuns.cancel();
     const r = p.reset ?? { x: p.x, z: p.z + 12, headingDeg: 0 };
     this.vehicle.teleport(this.sim.poseAt(r.x, r.z, r.headingDeg));
     this.chase.reset();
@@ -432,6 +445,42 @@ export class Game {
       if (camp && !found.discovered.includes(camp)) this.hud.toast(`Campsite: ${camp.name}`);
     }
     if (found.discovered.length > 0 || found.campsite) this.save();
+    const v = this.vehicle;
+    const run = this.crawlRuns.update({
+      x: p.x,
+      z: p.z,
+      tiltDeg: v.tiltDeg(),
+      knock: v.bodyContact.knock > 0,
+      winchAttached: this.sim.toolsOf(LOCAL_VEHICLE).winch.attached,
+      dt,
+    });
+    if (run) this.onCrawlRun(run);
+  }
+
+  private onCrawlRun(e: CrawlRunEvent): void {
+    if (e.type === 'started') {
+      this.hud.toast(`${e.run.trail.name}: scored run started`, 1600);
+      return;
+    }
+    const r = e.result;
+    const parts = [
+      r.reverses ? `${r.reverses} back-up${r.reverses === 1 ? '' : 's'}` : '',
+      r.knocks ? `${r.knocks} knock${r.knocks === 1 ? '' : 's'}` : '',
+      r.winches ? `winch ×${r.winches}` : '',
+    ].filter(Boolean);
+    if (e.type === 'failed') {
+      this.hud.toast(`${r.name}: run over — ${r.dnf === 'rolled' ? 'rolled' : 'left the line'}`, 2600);
+      return;
+    }
+    const best = this.crawlRuns.bests[r.trailId];
+    const points = r.points === 0 ? 'clean run' : `${r.points} penalty point${r.points === 1 ? '' : 's'}`;
+    this.hud.runResult(
+      e.best ? 'New best' : 'Run complete',
+      `${r.name} · ${clock(r.seconds)}`,
+      `${points}${parts.length ? ` (${parts.join(', ')})` : ''}${e.best ? '' : ` · best ${clock(best.seconds)}, ${best.points} pts`}`,
+    );
+    this.audio.discovery();
+    this.save();
   }
 
   /** Menus, map and tool menu input; runs every frame. */
@@ -566,6 +615,7 @@ export class Game {
         crawlTrails: this.world.map.crawlTrails,
         tracks: this.world.features.tracks,
         anchorInReach: this.anchorInReach,
+        run: this.crawlRuns.run,
       }),
     );
     if (this.overlay) {

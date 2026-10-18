@@ -9,6 +9,7 @@ import { trailProgress } from '../sim/world/crawlTrail';
 import { headingOf } from '../sim/vehicle/math';
 import type { CompassPoi, HudState, Prompt } from '../ui/hud';
 import type { GaugeState } from '../ui/crawlGauges';
+import { penaltyPoints, type CrawlRun } from '../sim/crawlRuns';
 import { rotate } from '../sim/vehicle/math';
 import type { ToolMode } from './toolController';
 
@@ -25,6 +26,8 @@ export interface HudInputs {
   tracks?: readonly TrackInfo[];
   /** Is there a winch anchor in reach (checked a few times a second)? */
   anchorInReach: boolean;
+  /** Scored crawl run in progress, if any. */
+  run?: CrawlRun | null;
 }
 
 /** Build what the HUD shows this frame, including context prompts (SPEC §9). */
@@ -138,6 +141,7 @@ export function buildHudState(i: HudInputs): HudState {
 
   return {
     gauges: gaugeState(v),
+    run: i.run ? { name: i.run.trail.name, seconds: i.run.seconds, points: penaltyPoints(i.run) } : null,
     heading: i.cameraHeading,
     pois,
     range: v.drivetrain.range,

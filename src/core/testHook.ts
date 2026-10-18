@@ -157,6 +157,7 @@ export function installHook(game: Game): void {
     }),
     heightAt: (x, z) => g.world.terrain.heightAt(x, z),
     teleport: (x, z, h) => {
+      g.crawlRuns.cancel();
       g.vehicle.teleport(g.sim.poseAt(x, z, h));
       g.chase.reset();
       g.view.snap();

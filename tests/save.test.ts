@@ -24,6 +24,28 @@ describe('exploration and saving (M5)', () => {
     expect(ex.lastCampsite).toBe('mountain-hut');
   });
 
+  it('keeps crawl run bests, drops malformed ones, and loads older saves without them', () => {
+    const s = new MemoryStore();
+    const exploration = { discovered: [], lastCampsite: 'river-flat-camp' };
+    writeSave(
+      {
+        version: 1,
+        exploration,
+        settings: defaultSettings,
+        crawlBests: { 'rock-garden': { points: 1, seconds: 31.5 } },
+      },
+      s,
+    );
+    expect(loadSave(s)!.crawlBests).toEqual({ 'rock-garden': { points: 1, seconds: 31.5 } });
+    s.setItem(
+      [...s.data.keys()][0],
+      JSON.stringify({ version: 1, exploration, settings: {}, crawlBests: { a: { points: 'x' }, b: null } }),
+    );
+    expect(loadSave(s)!.crawlBests).toEqual({});
+    s.setItem([...s.data.keys()][0], JSON.stringify({ version: 1, exploration, settings: {} }));
+    expect(loadSave(s)!.crawlBests).toEqual({});
+  });
+
   it('round-trips through storage', () => {
     const s = new MemoryStore();
     const ex = new Exploration(highCountryMap.pois, { discovered: ['falls'], lastCampsite: 'mountain-hut' });

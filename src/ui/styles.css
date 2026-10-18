@@ -343,6 +343,44 @@ body {
   outline-offset: 2px;
 }
 
+.crawl-run {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 4px 16px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.crawl-run strong {
+  font-family: var(--font-hand);
+  font-size: 22px;
+}
+
+.crawl-run-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+}
+
+.crawl-run-points {
+  color: var(--accent);
+}
+
+.crawl-run.hidden {
+  display: none;
+}
+
+.run-detail {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
 .crawl-gauges {
   position: absolute;
   right: 18px;
