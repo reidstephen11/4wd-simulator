@@ -114,9 +114,10 @@ test('M5: with storage blocked the game still runs', async ({ page }) => {
       },
     });
   });
+  await recordDiscoveryCards(page);
   await page.goto('/');
   await waitReady(page);
-  await expect(page.locator('.discovery-name')).toHaveText('River Flat Camp', { timeout: 30_000 });
+  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('River Flat Camp');
   const t0 = await page.evaluate(() => window.__game!.simTime());
   await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
   await page.waitForTimeout(3000);
