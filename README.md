@@ -1,6 +1,6 @@
 # 4WD Simulator
 
-A relaxed, single-player off-road exploration and rock-crawling game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD, or the Army green Land Rover 110 Perentie from the _Bush Tucker Man_ TV series, through a patch of Australian high country, using low range, lockers, a winch, planks and careful line choice to get over rough ground. No races — just the drive, what's over the next hill, and optional scored runs on the rock trails if you want them.
+A relaxed, single-player off-road exploration and rock-crawling game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD, or the Army green Land Rover 110 Perentie from the _Bush Tucker Man_ TV series, through a patch of Australian high country or round a purpose-built 4WD park, using low range, lockers, a winch, planks and careful line choice to get over rough ground. No races — just the drive, what's over the next hill, and optional scored runs on the rock trails if you want them.
 
 Built with Three.js, Rapier physics and TypeScript. Everything, including leaf textures, terrain detail and sound, is generated in code; there are no downloaded asset files. Graphics use smooth terrain lighting, fine eucalyptus foliage, reflective water and detailed vehicle materials. High quality uses the full resolution of displays with up to 2× pixel density.
 
@@ -27,7 +27,7 @@ Other scripts:
 
 Sound starts after your first click or key press (browser rule).
 
-The version number (for example v0.07) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
+The version number (for example v0.08) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
 
 ## Vehicles
 
@@ -40,6 +40,30 @@ Pick one from **pause menu → Vehicle**. The new vehicle appears where you are,
 
 The Perentie shifts its own gears like the other vehicle (the game has no clutch). Its longer wheelbase makes it steadier on the fire trail and harder on crests: it climbs The Chute, but coming down it the chassis grounds on a rock step.
 
+## Maps
+
+Pick one from **pause menu → Location**. The game reloads into the new map at its last campsite, in the vehicle you're driving, and each map keeps its own progress.
+
+**High Country** is the original open map: creeks, an escarpment, the high plain and Granite Spur's eight obstacles, described below.
+
+**Ironbark 4WD Park** is a purpose-built park. A gravel loop (green markers) rings Ironbark Hill, a flat-topped hill with steep faces, and eleven numbered, signposted stations hang off it. Each station has an easier and a harder line that leave the loop and rejoin it (or the ring track on the hilltop), so the loop is always the way round. Start at Park HQ on the south side.
+
+| Station           | Easier line                                        | Harder line                                                                |
+| ----------------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
+| 1. Mud Pits       | Two shallow bog holes (easy)                       | Three deep bog holes with churned ruts; much slower without lockers (hard) |
+| 2. Axle Twisters  | Shallow holes under alternate wheels (moderate)    | Holes beside mounds that lift diagonal tyres; needs a locker (hard)        |
+| 3. Log Crossing   | Small logs at an angle (easy)                      | Logs as tall as the chassis rails, and a doubled pair (hard)               |
+| 4. Ditch Crossing | Two broad dips (moderate)                          | Three short, steep ditches that test approach and departure angles (hard)  |
+| 5. Rock Garden    | Scattered stones (easy)                            | Tyre-high boulders packed tight; needs both lockers (extreme)              |
+| 6. Water Crossing | A wide gravel ford (easy)                          | A deep hole between steep banks; mind the air intake (hard)                |
+| 7. Hill Climb     | Slanting up the north face at about 18° (moderate) | Straight up it at 30° (hard). One way, uphill                              |
+| 8. Steep Descent  | Slanting down the south face (moderate)            | Straight down 28° through erosion ruts (hard). One way, downhill           |
+| 9. Side Slope     | Low on an earth bank, leaning about 15° (moderate) | High on it, leaning about 25° (hard)                                       |
+| 10. Rock Steps    | Low steps slanting up the west face (moderate)     | Tall split ledges straight up it (hard). One way, uphill                   |
+| 11. Whoa-boys     | Low drainage humps (moderate)                      | Tall humps with ditches behind, some angled (hard)                         |
+
+Every line is drive-tested with both vehicles. The scored runs work on every line, and the paper map labels each station once you've found it.
+
 ## Controls
 
 | Action                         | Keyboard                                              | Gamepad                                              |
@@ -47,7 +71,7 @@ The Perentie shifts its own gears like the other vehicle (the game has no clutch
 | Accelerate                     | W / ↑                                                 | RT                                                   |
 | Brake / reverse                | S / ↓ (hold when stopped to reverse)                  | LT                                                   |
 | Steer                          | A D / ← →                                             | Left stick                                           |
-| Handbrake                      | Space                                                 | X / Square                                           |
+| Handbrake on / off             | Space (press again to let it off)                     | X / Square                                           |
 | Toggle high/low range          | L (below 20 km/h)                                     | Y / Triangle                                         |
 | Front / rear diff lock         | Z / X (below 5 km/h to engage)                        | Hold LB → front / rear diff                          |
 | Precision crawl                | P                                                     | Hold LB → precision crawl                            |
@@ -79,7 +103,9 @@ Toggle the **rear locker with X** and **front locker with Z**. A locked axle kee
 
 Low range also softens the springs and anti-roll bars, adds 6 cm of suspension droop and adjusts the dampers. The tyres can stay loaded over diagonal rocks while parked body height and bump clearance stay the same. Returning to high range restores the normal suspension support.
 
-Press **C** or click **View** to cycle Follow → Front left → Front right → Rear close → Driver. The front views look low across the tyres for placing a wheel on a rock; the rear view helps judge the belly and rear axle. The driver view sits in the right-hand seat and tilts with the body; drag (or the right stick) turns your head. The steering wheel turns with the front wheels, and the dash works: speedometer, tachometer and oil pressure, plus lamps for low range, each locker, crawl control and a stalled engine. Mouse drag, right-stick orbit and zoom still work. **V / R3 / Reset view** returns to follow and restores its previous zoom. On gamepad, hold **LB and click R3** to cycle views without choosing a tool.
+Press **C** or click **View** to cycle Follow → Front left → Front right → Rear close → Driver. The front views look low across the tyres for placing a wheel on a rock; the rear view helps judge the belly and rear axle. The driver view sits in the right-hand seat and tilts with the body; drag (or the right stick) turns your head. The steering wheel turns with the front wheels, and the dash works: speedometer, tachometer and oil pressure, plus lamps for low range, each locker, crawl control, a stalled engine and the handbrake. The handbrake lever (or the pull handle under the 40 Series-style dash) moves when you pull it on. In the driver's seat the on-screen panels shrink, turn partly see-through and sit low in the corners, clear of the windscreen and mirrors. Mouse drag, right-stick orbit and zoom still work. **V / R3 / Reset view** returns to follow and restores its previous zoom. On gamepad, hold **LB and click R3** to cycle views without choosing a tool.
+
+The **handbrake** stays on once pulled (Space or X/Square), until you press it again. A red **P** shows in the status strip while it's on; it ratchets on and clunks off, and if you try to drive away with it on, a prompt tells you to let it off.
 
 **Crawl gauges** appear at the bottom right in low range, with precision crawl or in the driver view (**I** cycles auto / always / off). The inclinometer shows pitch and roll and turns red near tipping angles (about 32° pitch, 28° roll). The tyre diagram shades each tyre by how much weight it carries, draws a lifted tyre as a dashed outline and a spinning one in orange, and marks locked axles. It warns when the belly is on a rock, and shows gear (L1, H2, R…), speed and revs.
 
@@ -131,7 +157,10 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] Driving feel: in low range with precision crawl off, a light steady throttle should settle at a steady crawl; releasing W creeps rather than stopping (brake with S); a 20–25° climb from a standstill pulls away without rolling back; coasting down a steep slope in low range holds the speed back.
 - [ ] Crawl gauges and driver view: pitch/roll and lifted tyres match what you see (try C → Driver on the Off-camber Slab); I cycles the gauges.
 - [ ] Scored runs: complete a Granite Spur obstacle, then try to beat your points or time; back up once and check it costs a point.
-- [ ] **Land Rover 110:** pause menu → Vehicle → Land Rover 110 Perentie. Check the look against the _Bush Tucker Man_ vehicle, the diesel clatter at idle and its starter, the driver's view (C → Driver), and the Granite Spur loop. Reload the page and it should still be the Land Rover.
+- [ ] **Ironbark 4WD Park:** pause menu → Location → Ironbark 4WD Park. Drive the loop from Park HQ, then try the easier and harder line at each station. The harder Axle Twisters and Rock Garden should stop you with open diffs; Side Slope should lean about 15° and 25°. Change back to the High Country and check your progress there is kept.
+- [ ] **Handbrake:** press Space; the red P and dash lamp come on and stay on. Try to drive off (the car drags and a prompt appears), then press Space again.
+- [ ] **Driver's seat panels:** C → Driver in both vehicles; the windscreen and mirrors should be clear.
+- [ ] **Land Rover 110:** pause menu → Vehicle → Land Rover 110 Perentie. Check the look against the _Bush Tucker Man_ vehicle, the diesel clatter at idle and its starter (no turbo-like whistle as it speeds up), the driver's view (C → Driver), and the Granite Spur loop. Reload the page and it should still be the Land Rover.
 
 ## Project layout
 

@@ -337,7 +337,7 @@ export class PaperMap {
     g.font = '44px "Patrick Hand", "Nunito", sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText('High Country', SIZE / 2, MARGIN / 2 - 2);
+    g.fillText(this.world.map.name, SIZE / 2, MARGIN / 2 - 2);
     // North arrow.
     const nx = SIZE - MARGIN - 50;
     const ny = MARGIN + 70;

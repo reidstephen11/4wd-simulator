@@ -321,6 +321,26 @@ body {
   color: var(--paper);
 }
 
+.status-park {
+  display: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #a3311f;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px var(--paper),
+    inset 0 0 0 4px #a3311f;
+  color: #a3311f;
+  font-family: var(--font-hand);
+  font-size: 19px;
+  line-height: 1;
+}
+
+.status-park.shown {
+  display: grid;
+}
+
 .status-drive {
   pointer-events: auto;
   border: 1px solid var(--ink);
@@ -395,6 +415,53 @@ body {
 
 .crawl-gauges.hidden {
   display: none;
+}
+
+/*
+ * Driver's seat: the windscreen and mirrors need to stay clear, so the panels shrink,
+ * let the view show through and sit low in the corners over the doors and dash.
+ */
+.hud.cockpit .crawl-gauges {
+  right: 10px;
+  bottom: 46px;
+  transform: scale(0.68);
+  transform-origin: bottom right;
+  opacity: 0.78;
+}
+
+.hud.cockpit .camera-help {
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+  padding: 4px 6px;
+  opacity: 0.72;
+}
+
+.hud.cockpit .camera-help .camera-hint {
+  display: none;
+}
+
+.hud.cockpit .camera-help button {
+  margin: 0;
+  font-size: 11px;
+}
+
+.hud.cockpit .status,
+.hud.cockpit .course-hint {
+  transform: scale(0.82);
+  transform-origin: bottom left;
+  opacity: 0.8;
+}
+
+.hud.cockpit .status {
+  left: 10px;
+  bottom: 10px;
+}
+
+.hud.cockpit .course-hint {
+  left: 10px;
+  bottom: 58px;
 }
 
 .course-hint {

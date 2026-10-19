@@ -155,7 +155,8 @@ export class InputManager {
     const rate = this.steeringRates.padRate * dt;
     this.padSteer += Math.max(-rate, Math.min(rate, padTarget - this.padSteer));
     inp.steer = Math.max(-1, Math.min(1, Math.abs(this.padSteer) > Math.abs(kb) ? this.padSteer : kb));
-    inp.handbrake = this.held('handbrake');
+    // The handbrake key pulls the park brake on, and the next press lets it off.
+    inp.toggleParkBrake = edges.has('handbrake');
     inp.winchIn = this.held('winchIn');
     inp.winchOut = this.held('winchOut');
     inp.horn = this.held('horn');

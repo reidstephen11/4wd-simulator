@@ -1,3 +1,4 @@
+import type { MapId } from '../data/maps';
 import * as THREE from 'three';
 import type { VehicleInput } from '../sim/input/vehicleInput';
 import type { AudioInfo } from '../audio/audioSystem';
@@ -80,6 +81,11 @@ export interface GameHook {
   /** Swap to another vehicle where the current one stands (no fade). */
   setVehicle(id: VehicleId): void;
   vehicleId(): VehicleId;
+  /** The loaded map; `setMap` saves another as current and reloads the page. */
+  mapId(): MapId;
+  setMap(id: MapId): void;
+  /** Set the park brake directly (the key toggles it). */
+  setParkBrake(on: boolean): void;
 }
 
 declare global {
@@ -227,6 +233,11 @@ export function installHook(game: Game): void {
     bird: (kind) => g.audio.bird(kind),
     setVehicle: (id) => g.swapVehicle(id),
     vehicleId: () => g.vehicleId,
+    mapId: () => g.mapId,
+    setMap: (id) => void g.changeMap(id),
+    setParkBrake: (on) => {
+      g.vehicle.parkBrake = on;
+    },
     vehicle: () => {
       const v = g.vehicle;
       const p = v.body.translation();

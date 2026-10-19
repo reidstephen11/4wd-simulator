@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { highCountryMap } from '../data/map';
+import { maps, type MapId } from '../data/maps';
 import { lateAfternoon } from '../data/environment';
 import { qualityPresets } from '../data/quality';
 import type { VehicleId } from '../data/vehicle';
@@ -15,8 +15,8 @@ import type { VehicleInput } from '../sim/input/vehicleInput';
 import type { PoiDef } from '../sim/world/mapTypes';
 import { poiApproach } from '../sim/world/poiApproach';
 import { headingOf } from '../sim/vehicle/math';
-import { Exploration } from '../sim/exploration';
-import { defaultSettings, loadSave, writeSave, type Settings } from '../sim/save/save';
+import { Exploration, type ExplorationState } from '../sim/exploration';
+import { defaultSettings, explorationFor, loadSave, writeSave, type Settings } from '../sim/save/save';
 import { CrawlRuns, type CrawlBests, type CrawlRunEvent } from '../sim/crawlRuns';
 import { clock } from '../ui/hud';
 import type { ToolEvent } from '../sim/tools/tools';
@@ -58,6 +58,10 @@ export class Game {
   model: VehicleModel;
   /** Which vehicle the player drives (saved). */
   vehicleId: VehicleId;
+  /** Which map is loaded (saved); changing it reloads the game. */
+  readonly mapId: MapId;
+  /** Progress on the other maps, kept in the save. */
+  private readonly mapProgress: Partial<Record<MapId, ExplorationState>>;
   readonly toolsView: ToolsView;
   readonly tool: ToolController;
   readonly exploration: Exploration;
@@ -97,11 +101,15 @@ export class Game {
     exploration: Exploration,
     crawlBests: CrawlBests,
     vehicleId: VehicleId,
+    mapId: MapId,
+    mapProgress: Partial<Record<MapId, ExplorationState>>,
   ) {
     this.debug = new URLSearchParams(location.search).has('debug');
     this.settings = settings;
     this.exploration = exploration;
     this.vehicleId = vehicleId;
+    this.mapId = mapId;
+    this.mapProgress = { ...mapProgress };
     const tuning = vehicles[vehicleId].tuning;
     this.crawlRuns = new CrawlRuns(world.map.crawlTrails ?? [], world.features.tracks, crawlBests);
     this.input = new InputManager(window);
@@ -152,10 +160,15 @@ export class Game {
           this.closePause();
           void this.changeVehicle(id);
         },
+        changeMap: (id) => {
+          this.closePause();
+          void this.changeMap(id);
+        },
       },
       settings,
     );
     this.pause.setVehicle(vehicleId);
+    this.pause.setMap(mapId);
     this.fade = new Fade(uiRoot);
 
     this.overlay = this.debug ? new DebugOverlay(uiRoot) : null;
@@ -186,6 +199,11 @@ export class Game {
       );
       this.audio.drivetrainClunk(locked ? 'lockOn' : 'lockOff');
     });
+    sim.events.on('parkBrakeChanged', ({ id, on }) => {
+      if (id !== LOCAL_VEHICLE) return;
+      this.hud.toast(on ? 'Handbrake on' : 'Handbrake off', 1200);
+      this.audio.parkBrake(on);
+    });
     sim.events.on('diffBlocked', () => this.hud.toast('Slow below 5 km/h to engage diff locks'));
     sim.events.on('precisionChanged', ({ enabled }) =>
       this.hud.toast(enabled ? 'Precision crawl — hold throttle for walking pace' : 'Precision crawl off'),
@@ -215,11 +233,14 @@ export class Game {
     appEl: HTMLElement,
     uiEl: HTMLElement,
     progress: (p: number, label: string) => void,
+    onMap?: (name: string) => void,
   ): Promise<Game> {
     const save = loadSave();
     const settings = save?.settings ?? { ...defaultSettings };
+    const mapId = save?.map ?? 'high-country';
+    onMap?.(maps[mapId].def.name);
     const rapier = loadRapier();
-    const gen = buildWorldSteps(highCountryMap);
+    const gen = buildWorldSteps(maps[mapId].def);
     let r = gen.next();
     while (!r.done) {
       progress(r.value.progress, r.value.label);
@@ -229,7 +250,7 @@ export class Game {
     const world = r.value;
     const exploration = new Exploration(
       world.pois,
-      save?.exploration ?? { discovered: [], lastCampsite: world.map.spawnCampsite },
+      explorationFor(save, mapId) ?? { discovered: [], lastCampsite: world.map.spawnCampsite },
     );
     progress(0.86, 'Starting physics');
     await nextFrame();
@@ -254,6 +275,8 @@ export class Game {
       exploration,
       save?.crawlBests ?? {},
       save?.vehicle ?? 'shortie',
+      mapId,
+      save?.maps ?? {},
     );
   }
 
@@ -267,18 +290,22 @@ export class Game {
 
   // --- Saving ---------------------------------------------------------------
 
-  save(): void {
+  save(map: MapId = this.mapId): boolean {
+    const progress = { ...this.mapProgress, [this.mapId]: this.exploration.state() };
     const ok = writeSave({
       version: 1,
-      exploration: this.exploration.state(),
+      exploration: progress[map] ?? { discovered: [], lastCampsite: '' },
       settings: this.settings,
       crawlBests: this.crawlRuns.bests,
       vehicle: this.vehicleId,
+      map,
+      maps: progress,
     });
     if (!ok && this.storageOk) {
       this.storageOk = false;
       console.warn('4WD Simulator: browser storage is unavailable, progress will not be saved.');
     }
+    return ok;
   }
 
   changeSettings(s: Partial<Settings>): void {
@@ -333,6 +360,23 @@ export class Game {
       this.crawlRuns.cancel();
       this.chase.reset();
       this.view.snap();
+    });
+  }
+
+  /**
+   * Go to another map (pause menu): save with it as the current map and reload, which
+   * builds its world and puts you at its last campsite in the same vehicle.
+   */
+  async changeMap(id: MapId): Promise<void> {
+    if (id === this.mapId) return;
+    // The map is chosen on load from the save, so without storage it can't change.
+    if (!this.save(id)) {
+      this.hud.toast('Can’t change map: this browser isn’t letting the game save', 3200);
+      return;
+    }
+    await this.fade.run(() => {
+      this.loop.paused = true;
+      location.reload();
     });
   }
 

@@ -48,6 +48,7 @@ export interface SimEvents extends Record<string, unknown> {
   diffChanged: { id: string; axle: 'front' | 'rear'; locked: boolean };
   diffBlocked: { id: string; axle: 'front' | 'rear' };
   precisionChanged: { id: string; enabled: boolean };
+  parkBrakeChanged: { id: string; on: boolean };
   tool: { id: string; event: ToolEvent };
   engine: { id: string; event: 'stalled' | 'restarted' };
   dent: { id: string; impact: number };
@@ -71,6 +72,7 @@ export interface SimState {
     gear: number;
     differentials: { front: boolean; rear: boolean };
     precisionCrawl: boolean;
+    parkBrake: boolean;
     engineRunning: boolean;
     flood: { timer: number; stalled: boolean; dryTime: number };
     dirt: { front: number; sides: number; rear: number; wheels: number };
@@ -310,7 +312,9 @@ export class Simulation {
       const frontBefore = v.differentials.front;
       const rearBefore = v.differentials.rear;
       const precisionBefore = v.precisionCrawl;
+      const parkBefore = v.parkBrake;
       v.step(input, dt);
+      if (v.parkBrake !== parkBefore) this.events.emit('parkBrakeChanged', { id, on: v.parkBrake });
       if (v.drivetrain.range !== before) this.events.emit('rangeChanged', { id, range: v.drivetrain.range });
       for (const axle of ['front', 'rear'] as const) {
         const previous = axle === 'front' ? frontBefore : rearBefore;
@@ -530,6 +534,7 @@ export class Simulation {
           gear: v.drivetrain.gear,
           differentials: { ...v.differentials },
           precisionCrawl: v.precisionCrawl,
+          parkBrake: v.parkBrake,
           engineRunning: v.drivetrain.engineRunning,
           flood: {
             timer: v.condition.flood.timer,

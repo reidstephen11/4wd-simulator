@@ -157,7 +157,7 @@ export const controlsTable: ReadonlyArray<readonly [string, string, string]> = [
   ['Accelerate', 'W / ↑', 'RT'],
   ['Brake / reverse', 'S / ↓', 'LT'],
   ['Steer', 'A D / ← →', 'Left stick'],
-  ['Handbrake', 'Space', 'X / Square'],
+  ['Handbrake on / off', 'Space', 'X / Square'],
   ['Toggle high/low range', 'L', 'Y / Triangle'],
   ['Toggle front / rear diff lock', 'Z / X (below 5 km/h to engage)', 'Hold LB → front / rear diff'],
   ['Toggle precision crawl', 'P (6 km/h forward, 5 km/h reverse)', 'Hold LB → precision crawl'],

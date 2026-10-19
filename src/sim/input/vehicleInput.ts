@@ -9,8 +9,10 @@ export interface VehicleInput {
   brake: number;
   /** -1 (left) .. 1 (right), already smoothed. */
   steer: number;
+  /** Hold the handbrake on this step (tool modes, scripts), on top of the park brake. */
   handbrake: boolean;
   /** Edge-triggered: true for one step when pressed. */
+  toggleParkBrake: boolean;
   toggleRange: boolean;
   toggleFrontDiff: boolean;
   toggleRearDiff: boolean;
@@ -30,6 +32,7 @@ export function emptyInput(): VehicleInput {
     brake: 0,
     steer: 0,
     handbrake: false,
+    toggleParkBrake: false,
     toggleRange: false,
     toggleFrontDiff: false,
     toggleRearDiff: false,

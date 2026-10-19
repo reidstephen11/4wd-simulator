@@ -28,6 +28,8 @@ export interface HudState {
   frontLocked: boolean;
   rearLocked: boolean;
   precisionCrawl: boolean;
+  /** The park brake is on. */
+  parkBrake: boolean;
   courseHint: { title: string; text: string; controls: string } | null;
   planksCarried: number;
   planksTotal: number;
@@ -49,6 +51,7 @@ export class Hud {
   private readonly cctx: CanvasRenderingContext2D;
   private readonly status: HTMLElement;
   private readonly rangeEl: HTMLElement;
+  private readonly parkEl: HTMLElement;
   private readonly driveButtons: HTMLButtonElement[];
   private readonly courseHint: HTMLElement;
   private readonly planksEl: HTMLElement;
@@ -81,6 +84,7 @@ export class Hud {
         <button type="button" class="status-drive" data-drive="frontDiff" aria-label="Front differential lock" aria-pressed="false" title="Front diff lock: Z / LB menu">F OPEN</button>
         <button type="button" class="status-drive" data-drive="rearDiff" aria-label="Rear differential lock" aria-pressed="false" title="Rear diff lock: X / LB menu">R OPEN</button>
         <button type="button" class="status-drive" data-drive="precision" aria-label="Precision crawl" aria-pressed="false" title="Precision crawl: P / LB menu. Hold throttle for walking pace.">CRAWL</button>
+        <div class="status-park" title="Handbrake on: Space / X">P</div>
         <div class="status-item status-planks" title="Planks">${icons.planks}<span>2/2</span></div>
         <div class="status-item status-winch" title="Winch attached">${icons.winch}</div>
         <div class="status-item status-engine" title="Engine flooding">${icons.engine}</div>
@@ -102,6 +106,7 @@ export class Hud {
     this.cctx = this.compass.getContext('2d') as CanvasRenderingContext2D;
     this.status = this.el.querySelector('.status') as HTMLElement;
     this.rangeEl = this.el.querySelector('.status-range') as HTMLElement;
+    this.parkEl = this.el.querySelector('.status-park') as HTMLElement;
     this.driveButtons = [...this.el.querySelectorAll<HTMLButtonElement>('[data-drive]')];
     this.courseHint = this.el.querySelector('.course-hint') as HTMLElement;
     for (const button of this.driveButtons)
@@ -159,6 +164,7 @@ export class Hud {
   }
 
   update(s: HudState): void {
+    this.el.classList.toggle('cockpit', this.cockpitView);
     this.drawCompass(s);
     const showGauges =
       this.gaugeMode === 'on' ||
@@ -174,6 +180,7 @@ export class Hud {
     }
     this.rangeEl.textContent = s.range === 'high' ? 'H' : 'L';
     this.rangeEl.classList.toggle('low', s.range === 'low');
+    this.parkEl.classList.toggle('shown', s.parkBrake);
     const active = [s.frontLocked, s.rearLocked, s.precisionCrawl];
     this.driveButtons.forEach((button, index) => {
       button.setAttribute('aria-pressed', String(active[index]));

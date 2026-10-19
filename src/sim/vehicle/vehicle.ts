@@ -87,7 +87,10 @@ export class Vehicle {
   speed = 0;
   throttle = 0;
   brake = 0;
+  /** The handbrake is holding the rear wheels this step (park brake or a hold). */
   handbrake = false;
+  /** The latching park brake: on until the driver lets it off. */
+  parkBrake = false;
   horn = false;
   /** When true the hold brake stays off (e.g. while winching). */
   freeRoll = false;
@@ -322,7 +325,9 @@ export class Vehicle {
     const vel = this.body.linvel();
     this.speed = dot(vel, fwd);
     this.horn = input.horn;
-    this.handbrake = input.handbrake;
+    if (input.toggleParkBrake) this.parkBrake = !this.parkBrake;
+    const handbrake = input.handbrake || this.parkBrake;
+    this.handbrake = handbrake;
     if (input.toggleRange) this.toggleRange();
     if (input.toggleFrontDiff) this.toggleDiff('front');
     if (input.toggleRearDiff) this.toggleDiff('rear');
@@ -390,7 +395,7 @@ export class Vehicle {
       const grip = surfaceGrip(w.surface, this.env.wetness) * tyreGripMultiplier(this.condition, i);
       this.caps[i] = w.contact ? t.longitudinalGrip * grip * w.load : 0;
       c.setWheelFrictionSlip(i, t.lateralGrip * grip);
-      c.setWheelSideFrictionStiffness(i, input.handbrake && !t.wheels[i].front ? t.handbrakeSideGrip : 1);
+      c.setWheelSideFrictionStiffness(i, handbrake && !t.wheels[i].front ? t.handbrakeSideGrip : 1);
     }
 
     // Open axles are limited by the weak tyre; locked axles can use both tyres' grip.
@@ -446,14 +451,14 @@ export class Vehicle {
     for (let i = 0; i < 4; i++) {
       const front = t.wheels[i].front;
       let bf = (brake * t.brakeForce * (front ? t.brakeFrontBias : 1 - t.brakeFrontBias)) / 2;
-      if (input.handbrake && !front) bf += t.handbrakeForce / 2;
+      if (handbrake && !front) bf += t.handbrakeForce / 2;
       bf += (engineBrake + hold) / 4;
-      if (bf > 0 && (holding || !(throttle > 0 && !input.handbrake))) {
+      if (bf > 0 && (holding || !(throttle > 0 && !handbrake))) {
         c.setWheelEngineForce(i, 0);
         c.setWheelBrake(i, bf * dt);
       } else {
-        c.setWheelEngineForce(i, input.handbrake && !front ? 0 : this.requests[i]);
-        c.setWheelBrake(i, input.handbrake && !front ? (t.handbrakeForce / 2) * dt : 0);
+        c.setWheelEngineForce(i, handbrake && !front ? 0 : this.requests[i]);
+        c.setWheelBrake(i, handbrake && !front ? (t.handbrakeForce / 2) * dt : 0);
       }
     }
 
