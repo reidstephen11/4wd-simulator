@@ -7,7 +7,7 @@ import { createNoiseBank, type NoiseBank } from './buffers';
 import { EngineSound, HornSound } from './engineSound';
 import type { AudioFrame } from './frame';
 import { knockLevel, thumpLevel } from './mix';
-import { clunk, dentCrunch, knock, thump } from './oneShots';
+import { clunk, dentCrunch, knock, ratchet, thump } from './oneShots';
 import { TyreSound } from './tyreSound';
 import { UiSounds } from './uiSounds';
 import { WinchSound } from './winchSound';
@@ -260,6 +260,12 @@ export class AudioSystem {
   drivetrainClunk(kind: 'range' | 'lockOn' | 'lockOff'): void {
     const g = this.live();
     if (g) clunk(g.ctx, g.fxBus, g.noise, kind);
+  }
+
+  /** The handbrake ratchets on or clunks off. */
+  parkBrake(on: boolean): void {
+    const g = this.live();
+    if (g) ratchet(g.ctx, g.fxBus, g.noise, on);
   }
 
   /** The body was dented (impact speed, m/s). */

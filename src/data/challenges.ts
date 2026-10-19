@@ -12,7 +12,17 @@ import type {
   TrailStoneDef,
   XZ,
 } from '../sim/world/mapTypes';
-import { densify, pointAt, segmentDistance } from '../sim/world/polyline';
+import { densify, pointAt } from '../sim/world/polyline';
+import {
+  banks,
+  boulder,
+  endSign,
+  gradedLine,
+  headingOf as heading,
+  rockStep,
+  slab,
+  tread,
+} from './courseKit';
 import { graniteLinkTracks } from './crawlTrail';
 
 /**
@@ -51,42 +61,6 @@ export const spurRidges: RidgeDef[] = [
 ];
 export const spurClearings: ClearingDef[] = [{ x: 16, z: 216, radius: 15 }];
 export const spurTors: TorDef[] = [{ id: 'spur-tor', x: 40, z: 236, radius: 4, count: 3 }];
-
-const boulder = (
-  at: number,
-  lateral: number,
-  height: number,
-  width: number,
-  length = width,
-  yawDeg = 0,
-  base = 0,
-): TrailStoneDef => ({ shape: 'boulder', at, lateral, height, width, length, yawDeg, base });
-const slab = (
-  at: number,
-  lateral: number,
-  height: number,
-  width: number,
-  length: number,
-  rollDeg = 0,
-  yawDeg = 0,
-): TrailStoneDef => ({ shape: 'slab', at, lateral, height, width, length, rollDeg, yawDeg });
-/** Larger rocks just off the line, sunk `sink` metres into the banks, alternating sides. */
-const banks = (
-  from: number,
-  to: number,
-  step: number,
-  offset: number,
-  size = 1,
-  sink = 0.2,
-): TrailStoneDef[] => {
-  const out: TrailStoneDef[] = [];
-  for (let at = from, k = 0; at <= to; at += step, k++) {
-    const side = k % 2 ? 1 : -1;
-    const h = (0.55 + ((k * 7) % 4) * 0.12) * size;
-    out.push(boulder(at, side * (offset + (k % 3) * 0.15), h + sink, 1.2 * size, 1.5 * size, k * 37, -sink));
-  }
-  return out;
-};
 
 // Easy: a dry creek bed cut a metre into the foot of the hill, floored with rounded
 // stones. Each tyre climbs a stone in turn and the body rocks, but nothing is big
@@ -129,22 +103,6 @@ const whoaBoyHumps = [
 // steps of Billy Goat Bluff. Each is a band of bedrock: a riser at its downhill edge,
 // then a tread flatter than the hill that runs back into the slope. Two are split so
 // one front tyre climbs before the other.
-const rockStep = (at: number, lateral: number, rise: number, width: number, depth: number, rollDeg = 0) => ({
-  shape: 'ridge' as const,
-  at,
-  lateral,
-  width,
-  length: depth,
-  height: rise,
-  rollDeg,
-  profile: [
-    [-depth / 2, rise * 0.7],
-    [-depth / 2 + 0.25, rise],
-    [depth / 2, 0.04],
-  ] as const,
-});
-// Each tread runs back into the slope about 1.4 m for a 0.4 m riser.
-const tread = (rise: number) => rise / 0.28 + 0.2;
 const rockSteps: TrailStoneDef[] = [
   rockStep(3.2, 0, 0.32, 4.4, tread(0.32), 3),
   rockStep(6.8, -1.1, 0.42, 2.2, tread(0.42), -4),
@@ -668,7 +626,6 @@ const polys = obstacles.map((o) =>
     1,
   ),
 );
-const heading = (p: { dx: number; dz: number }) => (Math.atan2(p.dx, -p.dz) * 180) / Math.PI;
 export const challengePois: PoiDef[] = [
   ...obstacles.map((o, i) => {
     // Centred on the obstacle, or nearer the end on the fire trail for the long ones,
@@ -716,52 +673,16 @@ export const challengeAnchors: BoulderDef[] = (
 
 /** Track centrelines here and how far their grading reaches, so signs stand clear of every one. */
 const spurLines = [
-  ...obstacles.map((o, i) => ({ poly: polys[i], reach: o.track.width / 2 + o.track.shoulder })),
-  ...fireTrail.map((f) => ({ poly: densify(f.points, 1), reach: gravel.width / 2 + gravel.shoulder })),
-  ...graniteLinkTracks.map((t) => ({
-    poly: densify(
-      t.points.map((p) => [p[0], p[1]] as const),
-      1,
-    ),
-    reach: t.width / 2 + t.shoulder,
-  })),
+  ...obstacles.map((o) => gradedLine(o.track.points, o.track.width / 2 + o.track.shoulder)),
+  ...fireTrail.map((f) => gradedLine(f.points, gravel.width / 2 + gravel.shoulder)),
+  ...graniteLinkTracks.map((t) => gradedLine(t.points, t.width / 2 + t.shoulder)),
 ];
-const clearOfTracks = (x: number, z: number) =>
-  spurLines.every(({ poly, reach }) => {
-    for (let k = 0; k + 1 < poly.count; k++)
-      if (segmentDistance(x, z, poly.xs[k], poly.zs[k], poly.xs[k + 1], poly.zs[k + 1]).d < reach + 1.2)
-        return false;
-    return true;
-  });
 export const challengeSigns: PropDef[] = [
   { kind: 'signpost', x: -143, z: 252, headingDeg: 270, text: 'Granite Spur →' },
   { kind: 'signpost', x: -64, z: 207, headingDeg: 210, text: 'Granite Spur 4WD' },
   ...obstacles.flatMap((o, i) => {
-    const poly = polys[i];
-    // Each end gets a sign facing the traffic arriving there, on the driver's left if
-    // there is room, moved along and out until it is clear of every track's grading.
-    const sign = (end: 0 | 1, text: string): PropDef => {
-      for (let along = 1.5; ; along += 0.5)
-        for (const side of end ? [1, -1] : [-1, 1])
-          for (const out of [0.9, 1.6, 2.4, 3.2, 4.2]) {
-            const p = pointAt(poly, end ? poly.length - along : along),
-              off = side * (o.track.width / 2 + o.track.shoulder + out);
-            const x = p.x - p.dz * off,
-              z = p.z + p.dx * off;
-            // On the hillside each post gets a small level pad dug into the slope.
-            if (clearOfTracks(x, z) || along > 10)
-              return {
-                kind: 'signpost',
-                x,
-                z,
-                headingDeg: (heading(p) + (end ? 0 : 180) + 360) % 360,
-                text,
-                flatten: 1.6,
-              };
-          }
-    };
     const label = `${o.difficulty.toUpperCase()} · ${o.name}`;
-    return [sign(0, label), sign(1, label)];
+    return [endSign(spurLines[i], 0, label, spurLines), endSign(spurLines[i], 1, label, spurLines)];
   }),
 ];
 

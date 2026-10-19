@@ -54,6 +54,9 @@ export function buildHudState(i: HudInputs): HudState {
       { keys: g.back ?? 'Esc', text: 'Cancel' },
     );
   } else {
+    // Trying to drive off with the park brake on.
+    if (v.parkBrake && v.throttle > 0.1)
+      prompts.push({ keys: g.handbrake ?? 'Space', text: 'Release the handbrake' });
     if (t.jack.state === 'available')
       prompts.push({ keys: `Hold ${g.jack}`, text: 'Right vehicle', progress: t.jack.holdProgress });
     if (flood.stalled) {
@@ -153,6 +156,7 @@ export function buildHudState(i: HudInputs): HudState {
     frontLocked: v.differentials.front,
     rearLocked: v.differentials.rear,
     precisionCrawl: v.precisionCrawl,
+    parkBrake: v.parkBrake,
     courseHint,
     planksCarried: t.planks.carried,
     planksTotal: 2,

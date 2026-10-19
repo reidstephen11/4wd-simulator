@@ -1,9 +1,9 @@
 /**
  * Dev helper: render a top-down preview of the generated map to a PNG.
- * Usage: npx vite-node scripts/map-preview.ts [out.png] [scale]
+ * Usage: npx vite-node scripts/map-preview.ts [out.png] [scale] [high-country|ironbark-park]
  */
 import { writeFileSync } from 'node:fs';
-import { highCountryMap } from '../src/data/map';
+import { isMapId, maps } from '../src/data/maps';
 import { palette } from '../src/data/palette';
 import { generateTerrain } from '../src/sim/world/terrainGen';
 import { GroundTint, NO_WATER } from '../src/sim/world/terrain';
@@ -11,8 +11,11 @@ import { encodePng } from './png';
 
 const out = process.argv[2] ?? 'map-preview.png';
 const scale = Number(process.argv[3] ?? 1);
+const mapId = process.argv[4] ?? 'high-country';
+if (!isMapId(mapId)) throw new Error(`Unknown map ${mapId}`);
+const map = maps[mapId].def;
 const t0 = performance.now();
-const { terrain, features } = generateTerrain(highCountryMap);
+const { terrain, features } = generateTerrain(map);
 console.log(`generated in ${(performance.now() - t0).toFixed(0)} ms`);
 
 const hex = (h: string) => [
@@ -87,12 +90,11 @@ const mark = (x: number, z: number, col: number[], r = 3) => {
       img[o + 2] = col[2];
     }
 };
-for (const p of highCountryMap.pois)
-  mark(p.x, p.z, p.kind === 'campsite' ? [255, 255, 255] : [200, 30, 30], 4);
+for (const p of map.pois) mark(p.x, p.z, p.kind === 'campsite' ? [255, 255, 255] : [200, 30, 30], 4);
 for (const b of features.boxes) mark(b.x, b.z, [40, 40, 40], 0);
 writeFileSync(out, encodePng(W, W, img));
 console.log(`wrote ${out} (${W}x${W}); height range ${minH.toFixed(1)}..${maxH.toFixed(1)}`);
-for (const p of highCountryMap.pois)
+for (const p of map.pois)
   console.log(
     `${p.id.padEnd(18)} h=${terrain.heightAt(p.x, p.z).toFixed(1).padStart(6)} slope=${terrain.slopeDegAt(p.x, p.z).toFixed(1)}`,
   );

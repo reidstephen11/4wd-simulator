@@ -5,6 +5,7 @@ export class LoadingScreen {
   readonly el: HTMLElement;
   private readonly bar: HTMLElement;
   private readonly label: HTMLElement;
+  private readonly subtitle: HTMLElement;
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div');
@@ -12,11 +13,11 @@ export class LoadingScreen {
     this.el.innerHTML = `
       <div class="loading-card paper">
         <h1>4WD Simulator</h1>
-        <p class="subtitle">High Country</p>
+        <p class="subtitle"></p>
         <div class="progress"><div class="progress-fill"></div></div>
         <p class="progress-label">Starting…</p>
         <ul class="controls-reminder">
-          <li><b>W / S</b> drive and brake · <b>A / D</b> steer</li>
+          <li><b>W / S</b> drive and brake · <b>A / D</b> steer · <b>Space</b> handbrake</li>
           <li><b>L</b> high / low range · <b>E</b> winch · <b>Q</b> tools</li>
           <li><b>M</b> map · <b>Esc</b> pause</li>
         </ul>
@@ -25,6 +26,12 @@ export class LoadingScreen {
     root.appendChild(this.el);
     this.bar = this.el.querySelector('.progress-fill') as HTMLElement;
     this.label = this.el.querySelector('.progress-label') as HTMLElement;
+    this.subtitle = this.el.querySelector('.subtitle') as HTMLElement;
+  }
+
+  /** The name of the map being loaded. */
+  setSubtitle(text: string): void {
+    this.subtitle.textContent = text;
   }
 
   set(progress: number, label: string): void {

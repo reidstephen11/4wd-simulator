@@ -71,8 +71,9 @@ interface Lamp {
 
 /**
  * The parts of the cabin that move: the steering wheel turns with the front wheels,
- * the needles follow road speed, engine revs and oil pressure, and the warning lamps
- * show low range, the lockers, crawl control and a stalled engine.
+ * the needles follow road speed, engine revs and oil pressure, the handbrake comes up
+ * (or out) when it is on, and the warning lamps show low range, the lockers, crawl
+ * control, a stalled engine and the handbrake.
  */
 export class VehicleInstruments {
   readonly group = new THREE.Group();
@@ -81,6 +82,9 @@ export class VehicleInstruments {
   readonly needles: Record<keyof CabinLayout['dials'], THREE.Group>;
   private readonly values = { speed: 0, rpm: 0, oil: 0 };
   private readonly lamps: Lamp[] = [];
+  /** Pivots (lever) or slides (pull handle) between off and on. */
+  readonly handbrake = new THREE.Group();
+  private handbrakeOn = 0;
 
   constructor(
     private readonly tuning: VehicleTuning,
@@ -132,6 +136,33 @@ export class VehicleInstruments {
     lamp(2, '#E89A2C', (v) => v.differentials.rear);
     lamp(3, '#6FCB5A', (v) => v.precisionCrawl);
     lamp(4, '#E2402F', (v) => !v.drivetrain.engineRunning);
+    lamp(5, '#E2402F', (v) => v.handbrake);
+
+    const hb = cabin.handbrake;
+    this.handbrake.position.set(hb.base.x, hb.base.y, hb.base.z);
+    const handle = new THREE.Mesh(buildHandbrake(hb), materials);
+    handle.castShadow = true;
+    this.handbrake.add(handle);
+    this.group.add(this.handbrake);
+    this.setHandbrake(0);
+  }
+
+  /** 0 = off (lever down, handle pushed in) .. 1 = on. */
+  private setHandbrake(on: number): void {
+    const hb = this.cabin.handbrake;
+    if (hb.kind === 'lever') this.handbrake.rotation.x = -(1 - on) * hb.travel;
+    else {
+      const dx = hb.tip.x - hb.base.x,
+        dy = hb.tip.y - hb.base.y,
+        dz = hb.tip.z - hb.base.z;
+      const len = Math.hypot(dx, dy, dz);
+      const back = (1 - on) * hb.travel;
+      this.handbrake.position.set(
+        hb.base.x - (dx / len) * back,
+        hb.base.y - (dy / len) * back,
+        hb.base.z - (dz / len) * back,
+      );
+    }
   }
 
   update(v: Vehicle, dt: number): void {
@@ -153,7 +184,31 @@ export class VehicleInstruments {
       this.needles[key].rotation.z = -angle;
     }
     for (const lamp of this.lamps) lamp.material.emissiveIntensity = lamp.on(v) ? 1.6 : 0;
+    // A quick pull up or push down, about a fifth of a second.
+    const goal = v.handbrake ? 1 : 0;
+    this.handbrakeOn += Math.max(-dt * 5, Math.min(dt * 5, goal - this.handbrakeOn));
+    this.setHandbrake(this.handbrakeOn);
   }
+}
+
+/**
+ * The handbrake, built from its pivot (base): a lever rod with a rubber grip and a
+ * release button, or a T-handle on a short rod that comes out of the dash.
+ */
+function buildHandbrake(hb: CabinLayout['handbrake']): THREE.BufferGeometry {
+  const b = new VehicleBuilder();
+  const tip = { x: hb.tip.x - hb.base.x, y: hb.tip.y - hb.base.y, z: hb.tip.z - hb.base.z };
+  if (hb.kind === 'lever') {
+    b.rod({ x: 0, y: 0, z: 0 }, tip, 0.012, metal, M.Metal);
+    b.block(tip.x, tip.y, tip.z, 0.03, 0.03, 0.08, dark, M.Rubber, BodyZone.Trim, 0.01);
+    b.block(tip.x, tip.y + 0.005, tip.z - 0.045, 0.014, 0.014, 0.012, metal, M.Metal, BodyZone.Trim, 0.004);
+  } else {
+    b.rod({ x: 0, y: 0, z: 0 }, tip, 0.007, metal, M.Metal);
+    b.block(tip.x, tip.y, tip.z, 0.1, 0.022, 0.022, dark, M.Rubber, BodyZone.Trim, 0.008);
+  }
+  const geometry = b.build();
+  groupVehicleMaterials(geometry);
+  return geometry;
 }
 
 /**

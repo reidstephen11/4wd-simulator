@@ -7,7 +7,12 @@ async function boot(): Promise<void> {
   const uiEl = document.getElementById('ui') as HTMLElement;
   const loading = new LoadingScreen(uiEl);
   try {
-    const game = await Game.create(appEl, uiEl, (p, label) => loading.set(p, label));
+    const game = await Game.create(
+      appEl,
+      uiEl,
+      (p, label) => loading.set(p, label),
+      (name) => loading.setSubtitle(name),
+    );
     loading.set(1, 'Ready');
     loading.hide();
     game.start();

@@ -3,6 +3,7 @@ import type { ExplorationState } from '../exploration';
 import type { CrawlBests } from '../crawlRuns';
 import type { VehicleId } from '../../data/vehicle';
 import { isVehicleId } from '../../data/vehicles';
+import { isMapId, type MapId } from '../../data/maps';
 
 export interface Settings {
   quality: 'low' | 'medium' | 'high';
@@ -14,12 +15,17 @@ export interface Settings {
 
 export interface SaveData {
   version: 1;
+  /** Progress on the map being played (`map`). */
   exploration: ExplorationState;
   settings: Settings;
   /** Best scored run per crawl trail (added later; older saves have none). */
   crawlBests?: CrawlBests;
   /** The vehicle last driven (added later; older saves mean the short-wheelbase 4WD). */
   vehicle?: VehicleId;
+  /** The map being played (added later; older saves mean the High Country). */
+  map?: MapId;
+  /** Progress on every map played, so changing map and back keeps it. */
+  maps?: Partial<Record<MapId, ExplorationState>>;
 }
 
 export const defaultSettings: Settings = {
@@ -56,16 +62,13 @@ export function loadSave(s: KeyValueStore | null = store()): SaveData | null {
     if (!raw) return null;
     const data = JSON.parse(raw) as Partial<SaveData>;
     if (data.version !== 1) return null;
-    const ex = data.exploration;
     const st = (data.settings ?? {}) as Partial<Settings>;
+    const maps: Partial<Record<MapId, ExplorationState>> = {};
+    if (data.maps && typeof data.maps === 'object')
+      for (const [id, ex] of Object.entries(data.maps)) if (isMapId(id)) maps[id] = readExploration(ex);
     return {
       version: 1,
-      exploration: {
-        discovered: Array.isArray(ex?.discovered)
-          ? ex.discovered.filter((x): x is string => typeof x === 'string')
-          : [],
-        lastCampsite: typeof ex?.lastCampsite === 'string' ? ex.lastCampsite : '',
-      },
+      exploration: readExploration(data.exploration),
       settings: {
         quality: st.quality === 'low' || st.quality === 'high' ? st.quality : 'medium',
         masterVolume: clamp01(st.masterVolume, defaultSettings.masterVolume),
@@ -75,10 +78,29 @@ export function loadSave(s: KeyValueStore | null = store()): SaveData | null {
       },
       crawlBests: readBests(data.crawlBests),
       vehicle: isVehicleId(data.vehicle) ? data.vehicle : 'shortie',
+      map: isMapId(data.map) ? data.map : 'high-country',
+      maps,
     };
   } catch {
     return null;
   }
+}
+
+function readExploration(raw: unknown): ExplorationState {
+  const ex = raw as Partial<ExplorationState> | null | undefined;
+  return {
+    discovered: Array.isArray(ex?.discovered)
+      ? ex.discovered.filter((x): x is string => typeof x === 'string')
+      : [],
+    lastCampsite: typeof ex?.lastCampsite === 'string' ? ex.lastCampsite : '',
+  };
+}
+
+/** Progress on one map: the current map's from `exploration`, any other's from `maps`. */
+export function explorationFor(save: SaveData | null, map: MapId): ExplorationState | null {
+  if (!save) return null;
+  if ((save.map ?? 'high-country') === map) return save.exploration;
+  return save.maps?.[map] ?? null;
 }
 
 function readBests(raw: unknown): CrawlBests {

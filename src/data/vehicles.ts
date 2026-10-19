@@ -22,8 +22,17 @@ export interface CabinLayout {
   dialY: number;
   dialZ: number;
   dials: { speed: DialLayout; rpm: DialLayout; oil: DialLayout };
-  /** Warning lamps in a row: low range, front and rear lockers, crawl control, engine stopped. */
+  /**
+   * Warning lamps in a row: low range, front and rear lockers, crawl control, engine
+   * stopped, handbrake on.
+   */
   lamps: { xs: readonly number[]; y: number; z: number };
+  /**
+   * The handbrake as the driver sees it: a lever on the tunnel that swings up about
+   * `base` (x axis) through `travel` radians, or a T-handle under the dash that pulls
+   * out `travel` metres towards the driver. `tip` is the grip with the brake on.
+   */
+  handbrake: { kind: 'lever' | 'pull'; base: Point; tip: Point; travel: number };
   steeringWheel: {
     centre: Point;
     columnBase: Point;
@@ -56,7 +65,14 @@ export const vehicles: Record<VehicleId, VehicleDef> = {
         rpm: { x: 0.215, radius: 0.039, max: 5000, major: 1000, minor: 500 },
         oil: { x: 0.5, radius: 0.039, max: 1, major: 0.5, minor: 0.25 },
       },
-      lamps: { xs: [0.22, 0.29, 0.36, 0.43, 0.5], y: 0.795, z: -0.33 },
+      lamps: { xs: [0.19, 0.255, 0.32, 0.385, 0.45, 0.515], y: 0.795, z: -0.33 },
+      // A pull handle under the dash, left of the column.
+      handbrake: {
+        kind: 'pull',
+        base: { x: 0.17, y: 0.7, z: -0.36 },
+        tip: { x: 0.17, y: 0.69, z: -0.22 },
+        travel: 0.1,
+      },
       steeringWheel: {
         centre: { x: 0.38, y: 0.93, z: -0.08 },
         columnBase: { x: 0.38, y: 0.68, z: -0.46 },
@@ -81,7 +97,14 @@ export const vehicles: Record<VehicleId, VehicleDef> = {
         rpm: { x: 0.29, radius: 0.04, max: 5000, major: 1000, minor: 500 },
         oil: { x: 0.55, radius: 0.04, max: 1, major: 0.5, minor: 0.25 },
       },
-      lamps: { xs: [0.31, 0.37, 0.43, 0.49, 0.55], y: 0.775, z: -0.466 },
+      lamps: { xs: [0.28, 0.335, 0.39, 0.445, 0.5, 0.555], y: 0.775, z: -0.466 },
+      // The transmission handbrake lever on the tunnel beside the driver.
+      handbrake: {
+        kind: 'lever',
+        base: { x: 0.22, y: 0.47, z: -0.08 },
+        tip: { x: 0.21, y: 0.67, z: -0.21 },
+        travel: 0.6,
+      },
       steeringWheel: {
         centre: { x: 0.42, y: 0.86, z: -0.24 },
         columnBase: { x: 0.42, y: 0.516, z: -0.479 },

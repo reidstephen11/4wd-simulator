@@ -86,8 +86,8 @@ export const audioTuning = {
     maxSpeed: 4,
     gain: 0.12,
   },
-  /** Drivetrain clunks: transfer-case range change, air lockers, selecting drive or reverse. */
-  clunk: { range: 0.45, locker: 0.3, gear: 0.22 },
+  /** Drivetrain clunks: transfer-case range change, air lockers, selecting drive or reverse, handbrake. */
+  clunk: { range: 0.45, locker: 0.3, gear: 0.22, handbrake: 0.25 },
 
   /** Suspension thumps: compression speed (m/s) from faint to full. */
   thump: { from: 1.2, full: 4.5, gain: 0.7 },

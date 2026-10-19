@@ -3,8 +3,9 @@ import { controlsTable } from '../data/controls';
 import type { Settings } from '../sim/save/save';
 import type { VehicleId } from '../data/vehicle';
 import { vehicleOrder, vehicles } from '../data/vehicles';
+import { mapOrder, maps, type MapId } from '../data/maps';
 
-type Page = 'main' | 'vehicle' | 'settings' | 'controls';
+type Page = 'main' | 'vehicle' | 'location' | 'settings' | 'controls';
 
 export interface MenuActions {
   resume(): void;
@@ -12,10 +13,12 @@ export interface MenuActions {
   returnToCampsite(): void;
   changeSettings(s: Partial<Settings>): void;
   changeVehicle(id: VehicleId): void;
+  changeMap(id: MapId): void;
 }
 
 /**
- * Pause menu (SPEC §9): Resume, Map, Return to last campsite, Vehicle, Settings, Controls.
+ * Pause menu (SPEC §9): Resume, Map, Return to last campsite, Vehicle, Location, Settings,
+ * Controls.
  * Works with mouse, keyboard (arrows + Enter, Esc) and gamepad (D-pad + A, B).
  */
 export class PauseMenu {
@@ -26,6 +29,7 @@ export class PauseMenu {
   private settings: Settings;
   private campsiteName = '';
   private vehicle: VehicleId = 'shortie';
+  private map: MapId = 'high-country';
 
   constructor(
     root: HTMLElement,
@@ -59,6 +63,11 @@ export class PauseMenu {
     this.vehicle = id;
   }
 
+  /** The map loaded, ticked on the Location page. */
+  setMap(id: MapId): void {
+    this.map = id;
+  }
+
   private buttons(): HTMLElement[] {
     return [...this.el.querySelectorAll<HTMLElement>('[data-focus]')];
   }
@@ -74,11 +83,13 @@ export class PauseMenu {
         <button data-focus data-act="map">Map</button>
         <button data-focus data-act="camp">Return to last campsite<small></small></button>
         <button data-focus data-act="vehicle">Vehicle<small class="vehicle-name"></small></button>
+        <button data-focus data-act="location">Location<small class="map-name"></small></button>
         <button data-focus data-act="settings">Settings</button>
         <button data-focus data-act="controls">Controls</button>
         <p class="build-label" title="Build ${BUILD_LABEL}">Version ${GAME_VERSION}</p>`;
       (card.querySelector('small') as HTMLElement).textContent = this.campsiteName;
       (card.querySelector('.vehicle-name') as HTMLElement).textContent = vehicles[this.vehicle].tuning.name;
+      (card.querySelector('.map-name') as HTMLElement).textContent = maps[this.map].def.name;
     } else if (page === 'vehicle') {
       card.innerHTML = `<h2>Vehicle</h2>
         ${vehicleOrder
@@ -88,6 +99,16 @@ export class PauseMenu {
           )
           .join('')}
         <p class="menu-note">Swapping puts the new vehicle where you are, with the winch and planks back on board.</p>
+        <button data-focus data-act="back">Back</button>`;
+    } else if (page === 'location') {
+      card.innerHTML = `<h2>Location</h2>
+        ${mapOrder
+          .map(
+            (id) =>
+              `<button data-focus data-map="${id}" class="vehicle-choice ${id === this.map ? 'on' : ''}">${maps[id].def.name}<small>${maps[id].blurb}</small></button>`,
+          )
+          .join('')}
+        <p class="menu-note">Changing location reloads the game. You start at that map’s last campsite in the same vehicle, and each map keeps its own progress.</p>
         <button data-focus data-act="back">Back</button>`;
     } else if (page === 'settings') {
       const s = this.settings;
@@ -131,6 +152,7 @@ export class PauseMenu {
     else if (act === 'map') this.actions.openMap();
     else if (act === 'camp') this.actions.returnToCampsite();
     else if (act === 'vehicle') this.show('vehicle');
+    else if (act === 'location') this.show('location');
     else if (act === 'settings') this.show('settings');
     else if (act === 'controls') this.show('controls');
     else if (act === 'back') this.show('main');
@@ -138,6 +160,10 @@ export class PauseMenu {
       const id = t.dataset.vehicle as VehicleId;
       if (id === this.vehicle) this.actions.resume();
       else this.actions.changeVehicle(id);
+    } else if (t.dataset.map) {
+      const id = t.dataset.map as MapId;
+      if (id === this.map) this.actions.resume();
+      else this.actions.changeMap(id);
     } else if (t.dataset.quality) {
       this.settings.quality = t.dataset.quality as Settings['quality'];
       this.actions.changeSettings({ quality: this.settings.quality });

@@ -203,6 +203,20 @@ export function squeak(ctx: BaseAudioContext, out: AudioNode, level: number, low
   o.stop(at + dur + 0.02);
 }
 
+/** Handbrake: the ratchet clicks as the lever comes up; letting it off, one click and a thunk. */
+export function ratchet(ctx: BaseAudioContext, out: AudioNode, noise: NoiseBank, on: boolean): void {
+  const at = ctx.currentTime;
+  const L = audioTuning.clunk.handbrake;
+  for (const t of on ? [0, 0.07, 0.13, 0.18, 0.22] : [0]) {
+    const click = burst(ctx, noise.white, at + t, 0.015);
+    const f = filter(ctx, 'bandpass', 2800, 3);
+    const g = gain(ctx, out);
+    click.connect(f).connect(g);
+    pluck(g.gain, at + t, L, 0.001, 0.01);
+  }
+  thud(ctx, out, at + (on ? 0.24 : 0.04), on ? 110 : 85, L * 0.5, 0.07);
+}
+
 /** Drivetrain clunks: transfer-case range change, an air locker, selecting drive or reverse. */
 export function clunk(
   ctx: BaseAudioContext,

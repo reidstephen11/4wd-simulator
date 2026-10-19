@@ -7,7 +7,8 @@ import { addDialFaces, addSteeringColumn } from './vehicleInstruments';
 /**
  * The Perentie's cab: three seats on the steel seat box, a plain steel dash with the
  * instrument binnacle in front of the right-hand driver, a big four-spoke wheel, the
- * gear and transfer levers and the handbrake on the tunnel, and the tilt hoops behind.
+ * gear and transfer levers on the tunnel (the handbrake lever moves: see
+ * vehicleInstruments.ts), and the tilt hoops behind.
  */
 export function addPerentieInterior(b: VehicleBuilder, redlineRpm: number): void {
   const cabin = vehicles.perentie.cabin;
@@ -53,7 +54,7 @@ export function addPerentieInterior(b: VehicleBuilder, redlineRpm: number): void
     b.block(x, x === 0 ? 0.76 : 0.86, 0.2, w, x === 0 ? 0.4 : 0.6, 0.1, seat, M.Fabric, Z.Trim, 0.035);
     for (const dx of [-w / 4, w / 4]) b.block(x + dx, 0.562, 0.0, 0.01, 0.006, 0.34, dark, M.Fabric, Z.Trim);
   }
-  // Main gear lever, transfer lever and the transmission handbrake.
+  // Main gear lever and transfer lever.
   for (const [x, top, z, knob] of [
     [0.13, 0.74, -0.33, dark],
     [0.03, 0.64, -0.36, new THREE.Color('#9E3B2C')],
@@ -65,8 +66,8 @@ export function addPerentieInterior(b: VehicleBuilder, redlineRpm: number): void
     b.pop();
   }
   b.block(0.12, 0.27, -0.42, 0.24, 0.24, 0.3, dark, M.Rubber, Z.Trim, 0.04);
-  b.rod({ x: 0.22, y: 0.47, z: -0.08 }, { x: 0.21, y: 0.66, z: -0.2 }, 0.012, metal);
-  b.block(0.21, 0.67, -0.21, 0.03, 0.03, 0.08, dark, M.Rubber, Z.Trim, 0.01);
+  // The handbrake lever moves, so it is one of the instruments; this is its gaiter.
+  b.block(0.22, 0.47, -0.08, 0.07, 0.04, 0.09, dark, M.Rubber, Z.Trim, 0.015);
   // Door pulls on the painted inner door skins.
   for (const side of [-1, 1])
     b.block(side * 0.81, 0.62, -0.1, 0.02, 0.04, 0.22, dark, M.Rubber, Z.Trim, 0.01);
