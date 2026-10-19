@@ -319,6 +319,30 @@ const builders: Record<PropDef['kind'], (b: MeshBuilder) => void> = {
   cattleGrid,
 };
 
+/**
+ * The lettered faces of a signpost's board: just in front of its front face, and just
+ * behind its back face unless the text has an arrow at one end (from behind, the arrow
+ * would point the wrong way).
+ */
+export function signFaces(p: PropDef, base: number, material: THREE.Material): THREE.Mesh[] {
+  const geometry = new THREE.PlaneGeometry(1.45, 0.36);
+  const yaw = propYaw(p.headingDeg);
+  const face = (offset: number, turn: number) => {
+    const m = new THREE.Mesh(geometry, material);
+    const off = new THREE.Vector3(0, 0, offset).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    m.position.set(p.x + off.x, base + propDims.signpost.h - 0.25, p.z + off.z);
+    // Set the whole rotation. (Cloning the front face and changing only rotation.y left
+    // the back face turned on most headings: the clone holds a yaw past 90° as a flip
+    // about x and z.)
+    m.rotation.set(0, yaw + turn, 0);
+    return m;
+  };
+  // The board's front faces local -z; a plane faces its own +z.
+  const faces = [face(-0.11, Math.PI)];
+  if (!/^←|→$/.test(p.text ?? '')) faces.push(face(-0.05, 0));
+  return faces;
+}
+
 /** Canvas texture with hand-lettered sign text. */
 function signTexture(text: string): THREE.CanvasTexture {
   const c = document.createElement('canvas');
@@ -521,23 +545,8 @@ export class WorldProps {
   }
 
   private addSignFace(p: PropDef, base: number): void {
-    const tex = signTexture(p.text ?? '');
-    const mat = patchFog(new THREE.MeshLambertMaterial({ map: tex }), 'sign');
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(1.45, 0.36), mat);
-    const yaw = propYaw(p.headingDeg);
-    // Face out of the board's front (-z local).
-    const off = new THREE.Vector3(0, 0, -0.11).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-    plane.position.set(p.x + off.x, base + propDims.signpost.h - 0.25, p.z + off.z);
-    plane.rotation.y = yaw + Math.PI;
-    this.group.add(plane);
-    // An arrow at either end points one way, so only the front is lettered; from behind
-    // it would point the wrong way.
-    if (/^←|→$/.test(p.text ?? '')) return;
-    const back = plane.clone();
-    const off2 = new THREE.Vector3(0, 0, -0.05).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-    back.position.set(p.x + off2.x, base + propDims.signpost.h - 0.25, p.z + off2.z);
-    back.rotation.y = yaw;
-    this.group.add(back);
+    const mat = patchFog(new THREE.MeshLambertMaterial({ map: signTexture(p.text ?? '') }), 'sign');
+    for (const face of signFaces(p, base, mat)) this.group.add(face);
   }
 
   private buildFallenTree(length: number, radius: number): THREE.BufferGeometry {
