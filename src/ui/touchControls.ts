@@ -83,6 +83,9 @@ export class TouchControls {
 
     // Long presses must not open the text-selection or context menu.
     this.el.addEventListener('contextmenu', (e) => e.preventDefault());
+    // No click after a tap: it would land on whatever the tap just opened (the tool menu's
+    // or the map's background) and close it again.
+    this.el.addEventListener('touchend', (e) => e.cancelable && e.preventDefault(), { passive: false });
     for (const b of this.el.querySelectorAll<HTMLElement>('[data-tap]')) {
       const actions = (b.dataset.tap as string).split(' ') as Action[];
       b.addEventListener('pointerdown', (e) => {
@@ -133,7 +136,7 @@ export class TouchControls {
 
     const full = this.el.querySelector('.touch-fullscreen') as HTMLButtonElement;
     full.hidden = !document.fullscreenEnabled;
-    full.addEventListener('click', () => {
+    full.addEventListener('pointerup', () => {
       if (document.fullscreenElement) void document.exitFullscreen();
       else void document.documentElement.requestFullscreen?.().catch(() => undefined);
     });

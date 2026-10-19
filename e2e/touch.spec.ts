@@ -30,6 +30,12 @@ async function fingers(page: Page) {
       down.delete(id);
       await send('touchEnd');
     },
+    async tapAt(x: number, y: number) {
+      down.set(98, { x, y });
+      await send('touchStart');
+      down.delete(98);
+      await send('touchEnd');
+    },
     async tap(selector: string) {
       await this.press(99, selector);
       await this.lift(99);
@@ -94,8 +100,9 @@ test.describe('phone', () => {
     await f.tap('[data-tap="map"]');
     await expect(page.locator('.paper-map')).toBeVisible();
     await expect(controls).toBeHidden();
-    await page.locator('.paper-map').click({ position: { x: 10, y: 10 } });
+    await f.tapAt(10, 200);
     await expect(page.locator('.paper-map')).toBeHidden();
+    await expect(controls).toBeVisible();
     await f.tap('[data-tap="pause"]');
     await expect(page.locator('.pause')).toBeVisible();
     await shot(page, 'touch', 'pause');

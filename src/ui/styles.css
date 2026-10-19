@@ -1072,7 +1072,7 @@ table.controls td {
 .touch-btn.down {
   transform: translate(1px, 2px);
   box-shadow: none;
-  background: var(--paper-dark);
+  filter: brightness(0.85);
 }
 
 .touch-btn[aria-pressed='true'] {
@@ -1261,10 +1261,6 @@ table.controls td {
 
   .touch-mode .toasts {
     top: 108px;
-  }
-
-  .touch-mode .camera-help .camera-preset span {
-    display: none;
   }
 
   .touch-mode .crawl-gauges,
