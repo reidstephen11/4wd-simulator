@@ -105,6 +105,29 @@ Every line is drive-tested with both vehicles. The scored runs work on every lin
 
 Placing planks: choose **Place planks** in the tool menu, move them with W/S, turn them with A/D, place with E, cancel with Esc. Prompts on screen switch between keyboard and gamepad glyphs depending on what you last touched.
 
+### Phones and tablets
+
+On a touch screen the game shows on-screen controls. They work held sideways (landscape) or upright (portrait).
+
+| Action                                | Touch                                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Steer                                 | Joystick, bottom left (push part way for part lock)                                                    |
+| Accelerate / brake and reverse        | GAS / BRAKE, bottom right (hold BRAKE when stopped to reverse)                                         |
+| Handbrake on / off                    | HAND                                                                                                   |
+| High / low range                      | LOW                                                                                                    |
+| Precision crawl, diff locks           | CRAWL, F LOCK, R LOCK                                                                                  |
+| Winch attach / detach, pick up planks | USE                                                                                                    |
+| Winch in / out                        | Hold IN / OUT (shown while the winch is attached)                                                      |
+| Right vehicle                         | Hold UPRIGHT (shown when needed)                                                                       |
+| Tool menu                             | TOOLS, then tap an option (tap the space around it to close)                                           |
+| Placing planks / choosing anchor      | Joystick, then USE to confirm or BACK to cancel                                                        |
+| Orbit camera                          | Drag a finger on the view                                                                              |
+| Camera distance                       | Pinch with two fingers on the view                                                                     |
+| Cycle views / recenter camera         | View and Reset view, top right                                                                         |
+| Map / pause                           | MAP and II, top left (tap outside the map to close it); ⛶ goes full screen where the browser allows it |
+
+The controls appear on phones and tablets, and whenever the screen is touched; pressing a key or using a gamepad hides them. A phone or tablet with no saved settings starts on the Low graphics preset. Add `?touch` to the address to show the touch controls on a desktop browser.
+
 ## Rock crawling
 
 The **Camp Rock Course** is about 40 m east of River Flat Camp; follow the sign beside camp. Three marked lines progress from low warm-up steps to cross-axle rocks and a harder ledge line. Each line has entrance and exit markers, a difficulty sign and nearby driving hints. The course also appears on the map once discovered.

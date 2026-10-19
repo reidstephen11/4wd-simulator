@@ -27,6 +27,8 @@ import { CameraDrag } from '../render/cameraDrag';
 import { ToolsView } from '../render/tools';
 import { Hud } from '../ui/hud';
 import { ToolMenu, type ToolOption } from '../ui/toolMenu';
+import { TouchControls, isTouchDevice } from '../ui/touchControls';
+import { touchTuning } from '../data/touch';
 import { PaperMap } from '../ui/paperMap';
 import { Fade, PauseMenu } from '../ui/menus';
 import { FreeCamera } from '../debug/freeCamera';
@@ -77,6 +79,7 @@ export class Game {
   readonly crawlRuns: CrawlRuns;
   readonly hud: Hud;
   readonly toolMenu: ToolMenu;
+  readonly touch: TouchControls;
   readonly map: PaperMap;
   readonly pause: PauseMenu;
   private readonly fade: Fade;
@@ -151,6 +154,8 @@ export class Game {
     this.hud.onCameraPreset = () => this.chase.cyclePreset();
     this.toolMenu = new ToolMenu(uiRoot);
     this.toolMenu.onPick = (id) => this.pickTool(id);
+    this.touch = new TouchControls(uiRoot, this.input);
+    if (isTouchDevice()) this.input.usePointer('touch');
     this.map = new PaperMap(uiRoot, world);
     this.map.onClose = () => this.closeMap();
     this.pause = new PauseMenu(
@@ -235,11 +240,19 @@ export class Game {
     this.cameraDrag = new CameraDrag(
       view.renderer.domElement,
       () => !this.freeCamOn && !this.loop.paused && !this.toolMenu.isOpen,
-      (yaw, pitch) => {
-        this.input.usePointer();
+      (yaw, pitch, pointerType) => {
+        this.input.usePointer(pointerType);
         this.chase.orbit(yaw, pitch);
       },
+      (steps) => {
+        this.input.usePointer('touch');
+        this.chase.zoom(steps);
+      },
     );
+    // Touching the view brings the touch controls back after a key or gamepad hid them.
+    view.renderer.domElement.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') this.input.usePointer('touch');
+    });
     installHook(this);
     // Draw the paper map in the background so the first open is instant.
     setTimeout(() => void this.map.prepare(), 2500);
@@ -257,7 +270,11 @@ export class Game {
     audioContext?: AudioContext,
   ): Promise<Game> {
     const save = loadSave();
-    const settings = save?.settings ?? { ...defaultSettings };
+    // Phones and tablets start on the lightest graphics preset.
+    const settings = save?.settings ?? {
+      ...defaultSettings,
+      quality: isTouchDevice() ? touchTuning.defaultQuality : defaultSettings.quality,
+    };
     const mapId = choice.map;
     const env = environmentFor(choice.conditions);
     const rapier = loadRapier();
@@ -643,7 +660,7 @@ export class Game {
       return;
     }
     if (this.toolMenu.isOpen) {
-      if (!inp.held('toolMenu')) this.toolMenu.close(true);
+      if (!inp.held('toolMenu') && !this.toolMenu.sticky) this.toolMenu.close(true);
       else {
         const s = inp.stick();
         const kx = (inp.held('menuRight') ? 1 : 0) - (inp.held('menuLeft') ? 1 : 0);
@@ -655,7 +672,7 @@ export class Game {
     if (this.tool.mode !== 'drive') return;
     if (inp.pressed('pause')) this.openPause();
     else if (inp.pressed('map')) this.openMap();
-    else if (inp.pressed('toolMenu')) this.toolMenu.open(this.toolOptions());
+    else if (inp.pressed('toolMenu')) this.toolMenu.open(this.toolOptions(), inp.activeDevice === 'touch');
   }
 
   private renderFrame(alpha: number, frameDt: number): void {
@@ -747,6 +764,17 @@ export class Game {
         this.sim.env.rain,
       ),
     );
+    this.touch.update({
+      covered: this.map.isOpen || this.pause.isOpen || this.toolMenu.isOpen || this.freeCamOn,
+      mode: this.tool.mode,
+      lowRange: v.drivetrain.range === 'low',
+      parkBrake: v.parkBrake,
+      frontLocked: v.differentials.front,
+      rearLocked: v.differentials.rear,
+      precision: v.precisionCrawl,
+      winchAttached: tools.winch.attached,
+      jackAvailable: tools.jack.state === 'available',
+    });
     this.hud.update(
       buildHudState({
         vehicle: v,

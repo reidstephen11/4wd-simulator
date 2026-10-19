@@ -1,4 +1,5 @@
 import { BUILD_LABEL, GAME_VERSION } from '../core/buildInfo';
+import { isTouchDevice } from './touchControls';
 
 /** Loading screen (SPEC §9): title, progress bar, short controls reminder. */
 export class LoadingScreen {
@@ -16,10 +17,16 @@ export class LoadingScreen {
         <p class="subtitle"></p>
         <div class="progress"><div class="progress-fill"></div></div>
         <p class="progress-label">Starting…</p>
-        <ul class="controls-reminder">
+        <ul class="controls-reminder">${
+          isTouchDevice()
+            ? `
+          <li><b>Stick</b> steer · <b>GAS / BRAKE</b> drive, brake and reverse · <b>HAND</b> handbrake</li>
+          <li><b>LOW</b> range · <b>USE</b> winch · <b>TOOLS</b> tools · drag the view to look around</li>`
+            : `
           <li><b>W / S</b> drive and brake · <b>A / D</b> steer · <b>Space</b> handbrake</li>
           <li><b>L</b> high / low range · <b>E</b> winch · <b>Q</b> tools</li>
-          <li><b>M</b> map · <b>Esc</b> pause</li>
+          <li><b>M</b> map · <b>Esc</b> pause</li>`
+        }
         </ul>
         <p class="build-label" title="Build ${BUILD_LABEL}">Version ${GAME_VERSION}</p>
       </div>`;

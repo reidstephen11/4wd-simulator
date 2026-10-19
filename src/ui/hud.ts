@@ -149,12 +149,19 @@ export class Hud {
     this.el.classList.toggle('hidden', !v);
   }
 
-  cameraHelp(device: 'keyboard' | 'gamepad', visible: boolean, driving: boolean, preset: CameraPreset): void {
+  cameraHelp(
+    device: 'keyboard' | 'gamepad' | 'touch',
+    visible: boolean,
+    driving: boolean,
+    preset: CameraPreset,
+  ): void {
     this.cameraHelpEl.hidden = !visible;
     const hint =
       device === 'keyboard'
         ? 'Drag to orbit · Scroll to zoom'
-        : `Right stick to orbit${driving ? ' · D-pad ←/→ to zoom' : ''}`;
+        : device === 'touch'
+          ? 'Drag the view to look around'
+          : `Right stick to orbit${driving ? ' · D-pad ←/→ to zoom' : ''}`;
     if (this.cameraHint.textContent !== hint) this.cameraHint.textContent = hint;
     const key = device === 'keyboard' ? 'V' : 'R3';
     if (this.cameraResetKey.textContent !== key) this.cameraResetKey.textContent = key;
