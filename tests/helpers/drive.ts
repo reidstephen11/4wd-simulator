@@ -53,6 +53,7 @@ export async function runLeg(s: Scene, track: TrackInfo, back = false, limit = 1
     speed = 0,
     sustained = 0,
     deviation = 0,
+    water = 0,
     time = 0;
   for (let step = 0; time < limit; time += DT, step++) {
     if (step % 600 === 599) await yieldToRunner();
@@ -73,11 +74,23 @@ export async function runLeg(s: Scene, track: TrackInfo, back = false, limit = 1
     // Dropping off a ledge spikes the speed for a moment; crawl control holds the average.
     sustained += (Math.abs(v.speed) - sustained) * (DT / 0.5);
     speed = Math.max(speed, sustained);
+    for (const w of v.wheels) water = Math.max(water, w.water);
     const near = trailProgress(track, v.position.x, v.position.z);
     // At a junction the vehicle begins behind this leg's finite centreline.
     if (near.along > 1 && near.along < track.poly.length - 1) deviation = Math.max(deviation, near.distance);
   }
-  return { done: pilot.done, remaining: pilot.remaining(v), time, tilt, pitch, roll, speed, deviation };
+  return {
+    done: pilot.done,
+    remaining: pilot.remaining(v),
+    time,
+    tilt,
+    pitch,
+    roll,
+    speed,
+    deviation,
+    /** Deepest water any wheel stood in (m). */
+    water,
+  };
 }
 
 export async function driveLeg(s: Scene, track: TrackInfo, back = false, limit = 110) {

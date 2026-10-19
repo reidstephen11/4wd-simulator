@@ -36,6 +36,8 @@ export const particleTuning = {
   },
 
   splash: {
+    /** Water at the wheel (m) before it splashes: a puddle on the track is enough. */
+    minDepth: 0.02,
     /** Speed (m/s) for any splash and for full rate. */
     fromSpeed: 1.2,
     fullSpeed: 6,

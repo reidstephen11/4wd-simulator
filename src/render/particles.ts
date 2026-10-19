@@ -324,8 +324,8 @@ export class Particles {
       const rx = -this.fwd.z;
       const rz = this.fwd.x;
 
-      if (w.water > 0.05 && w.contact) {
-        const sp = P.splash;
+      const sp = P.splash;
+      if (w.water > sp.minDepth && w.contact) {
         if (speed > sp.fromSpeed) {
           const k = Math.min(1, (speed - sp.fromSpeed) / (sp.fullSpeed - sp.fromSpeed));
           const n = this.count(i, 0, sp.rate * k * S * dt);

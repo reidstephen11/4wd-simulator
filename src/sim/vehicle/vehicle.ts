@@ -1,5 +1,5 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
-import { SurfaceId, surfaceGrip, surfaces, waterDrag } from '../../data/surfaces';
+import { SurfaceId, surfaceGrip, surfaces, tyreLock, waterDrag } from '../../data/surfaces';
 import type { VehicleTuning } from '../../data/vehicle';
 import { Groups, groups, type Physics } from '../physics';
 import type { VehicleInput } from '../input/vehicleInput';
@@ -46,6 +46,8 @@ export interface WheelState {
   spin: number;
   /** Sideways sliding speed at the contact (m/s). */
   slide: number;
+  /** Braked past its grip: the wheel is locked and the tyre skids (m/s of skid, 0 = rolling). */
+  skid: number;
   /** Mud sink (m). */
   sink: number;
   /** Normal load (N). */
@@ -211,6 +213,7 @@ export class Vehicle {
       steer: 0,
       spin: 0,
       slide: 0,
+      skid: 0,
       sink: 0,
       load: 0,
       contactPoint: v3(),
@@ -476,8 +479,20 @@ export class Vehicle {
     for (let i = 0; i < 4; i++) {
       const front = t.wheels[i].front;
       let bf = (brake * t.brakeForce * (front ? t.brakeFrontBias : 1 - t.brakeFrontBias)) / 2;
-      if (handbrake && !front) bf += t.handbrakeForce / 2;
       bf += (engineBrake + hold) / 4;
+      const w = this.wheels[i];
+      const grounded = w.contact && w.load > 0;
+      const moving = Math.abs(this.speed) > tyreLock.minSpeed;
+      // Stopping hard, a load-sensing valve keeps the rear brakes from locking first.
+      if (!front && grounded && moving) bf = Math.min(bf, w.load * tyreLock.rearValve);
+      if (handbrake && !front) bf += t.handbrakeForce / 2;
+      // A tyre brakes only as hard as it grips (less on wet ground). Asked for more it
+      // locks and skids, gripping less and no longer steering.
+      const cap = this.caps[i] * tyreLock.peak;
+      const lockedUp = grounded && moving && bf > cap;
+      if (grounded) bf = Math.min(bf, lockedUp ? cap * tyreLock.slideGrip : cap);
+      w.skid = lockedUp ? Math.abs(this.speed) : 0;
+      if (lockedUp) c.setWheelSideFrictionStiffness(i, tyreLock.sideGrip);
       if (bf > 0 && (holding || !(throttle > 0 && !handbrake))) {
         c.setWheelEngineForce(i, 0);
         c.setWheelBrake(i, bf * dt);

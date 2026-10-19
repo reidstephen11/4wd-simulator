@@ -107,6 +107,27 @@ export const surfaces: Record<SurfaceId, SurfaceDef> = {
   },
 };
 
+/**
+ * Braking past the grip a tyre has locks the wheel (no ABS on either vehicle): it slides
+ * with a share of its grip and barely steers until the driver eases off.
+ */
+export const tyreLock = {
+  /** Peak braking grip against the grip used for driving: a tyre just short of locking. */
+  peak: 1.12,
+  /** Grip of a sliding, locked tyre against its peak grip. */
+  slideGrip: 0.75,
+  /** Sideways grip of a locked tyre against a rolling one. */
+  sideGrip: 0.3,
+  /** Below this speed (m/s) the brakes just hold the car. */
+  minSpeed: 1.5,
+  /**
+   * The rear brakes' load-sensing valve lets them brake up to this share of the rear
+   * wheels' load (about dry grip), so on dry ground the rears, light under hard braking,
+   * don't lock; on wet ground they still can.
+   */
+  rearValve: 0.95,
+};
+
 /** Water drag (SPEC §6.3: scales with depth and speed). */
 export const waterDrag = {
   /** N per (m depth · (m/s)^2) */
