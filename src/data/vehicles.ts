@@ -25,7 +25,7 @@ export interface CabinLayout {
   dials: { speed: DialLayout; rpm: DialLayout; oil: DialLayout };
   /**
    * Warning lamps in a row: low range, front and rear lockers, crawl control, engine
-   * stopped, handbrake on.
+   * stopped, handbrake on, high beam.
    */
   lamps: { xs: readonly number[]; y: number; z: number };
   /**
@@ -63,7 +63,7 @@ const shortieCabin: CabinLayout = {
     rpm: { x: 0.215, radius: 0.039, max: 5000, major: 1000, minor: 500 },
     oil: { x: 0.5, radius: 0.039, max: 1, major: 0.5, minor: 0.25 },
   },
-  lamps: { xs: [0.19, 0.255, 0.32, 0.385, 0.45, 0.515], y: 0.795, z: -0.33 },
+  lamps: { xs: [0.19, 0.255, 0.32, 0.385, 0.45, 0.515, 0.58], y: 0.795, z: -0.33 },
   // A pull handle under the dash, left of the column.
   handbrake: {
     kind: 'pull',
@@ -106,7 +106,7 @@ export const vehicles: Record<VehicleId, VehicleDef> = {
         rpm: { x: 0.29, radius: 0.04, max: 5000, major: 1000, minor: 500 },
         oil: { x: 0.55, radius: 0.04, max: 1, major: 0.5, minor: 0.25 },
       },
-      lamps: { xs: [0.28, 0.335, 0.39, 0.445, 0.5, 0.555], y: 0.775, z: -0.466 },
+      lamps: { xs: [0.28, 0.335, 0.39, 0.445, 0.5, 0.555, 0.61], y: 0.775, z: -0.466 },
       // The transmission handbrake lever on the tunnel beside the driver.
       handbrake: {
         kind: 'lever',

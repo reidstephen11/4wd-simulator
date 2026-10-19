@@ -107,8 +107,12 @@ export class WelcomeScreen {
     }
     this.rows.flat().forEach((b) => b.classList.remove('focused'));
     this.rows[this.row][this.col]?.classList.add('focused');
+    const c = this.choice.conditions;
     (this.el.querySelector('.welcome-note') as HTMLElement).textContent =
-      weatherNotes[this.choice.conditions.weather];
+      weatherNotes[c.weather] +
+      (c.time === 'night' || c.time === 'dusk'
+        ? ' The headlights come on as you arrive (N switches them).'
+        : '');
   }
 
   private move(dRow: number, dCol: number): void {

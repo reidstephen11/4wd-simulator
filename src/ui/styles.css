@@ -502,8 +502,18 @@ body {
 }
 
 .status-winch,
-.status-engine {
+.status-engine,
+.status-lights {
   display: none;
+}
+
+.status-lights.shown {
+  display: flex;
+  color: #3f7a34;
+}
+
+.status-lights.high {
+  color: #2a5db0;
 }
 
 .status-winch.shown,

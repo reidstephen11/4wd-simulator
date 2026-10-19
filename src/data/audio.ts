@@ -87,7 +87,7 @@ export const audioTuning = {
     gain: 0.12,
   },
   /** Drivetrain clunks: transfer-case range change, air lockers, selecting drive or reverse, handbrake. */
-  clunk: { range: 0.45, locker: 0.3, gear: 0.22, handbrake: 0.25 },
+  clunk: { range: 0.45, locker: 0.3, gear: 0.22, handbrake: 0.25, lightSwitch: 0.2 },
 
   /** Suspension thumps: compression speed (m/s) from faint to full. */
   thump: { from: 1.2, full: 4.5, gain: 0.7 },
@@ -127,6 +127,15 @@ export const audioTuning = {
       maxInterval: 32,
       kookaburraChance: 0.3,
       gain: 0.2,
+    },
+    /** At night the birds are quiet and crickets chirp: short trills of a few pulses. */
+    crickets: {
+      gain: 0.035,
+      /** Pitch range (Hz), pulses per trill and seconds between trills. */
+      hz: [4300, 4900],
+      pulses: [3, 5],
+      pulseSeconds: 0.018,
+      gapSeconds: [0.25, 0.9],
     },
   },
 

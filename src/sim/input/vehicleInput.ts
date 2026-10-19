@@ -21,6 +21,8 @@ export interface VehicleInput {
   winchIn: boolean;
   winchOut: boolean;
   horn: boolean;
+  /** Edge-triggered: switch the headlights to the next setting (off, low, high). */
+  cycleLights: boolean;
   /** Held. */
   jack: boolean;
   interact: boolean;
@@ -41,6 +43,7 @@ export function emptyInput(): VehicleInput {
     winchIn: false,
     winchOut: false,
     horn: false,
+    cycleLights: false,
     jack: false,
     interact: false,
   };

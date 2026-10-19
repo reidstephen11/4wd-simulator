@@ -34,7 +34,8 @@ The game opens on a **welcome screen**: choose the world, the vehicle, the time 
 | Morning        | Low, cool-gold sun from the east-north-east                                                                                                                                                              |
 | Midday         | High sun from the north, short shadows                                                                                                                                                                   |
 | Late afternoon | Warm low sun from the west-north-west (the original lighting)                                                                                                                                            |
-| Dusk           | Sun on the horizon, pink and orange sky, long shadows                                                                                                                                                    |
+| Dusk           | Sun on the horizon, pink and orange sky, long shadows; the headlights come on as you arrive                                                                                                              |
+| Night          | Faint blue moonlight from the north-east and a sky full of stars; you need the headlights. The birds are quiet and crickets chirp                                                                        |
 | Clear          | Dry ground and sunshine                                                                                                                                                                                  |
 | After rain     | Overcast, soft shadows, dark damp ground; tyres grip less (on dirt about three quarters as well), no dust, the creeks up 5 cm, a few puddles on the tracks                                               |
 | Raining        | Rain falling (not inside the cab), heavier haze, wetter ground with less grip still (on dirt about two thirds), the creeks up 12 cm, many more puddles; rain hisses outside and drums on the roof inside |
@@ -43,7 +44,11 @@ On wet ground hard braking takes longer and can lock the wheels: a locked tyre s
 
 The engine starts as you arrive: the starter cranks for about a second (a little longer for the diesel) and the car stays put until the engine catches. The same happens after swapping vehicles and when restarting a flooded engine.
 
-The version number (for example v0.13) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
+The version number (for example v0.14) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
+
+## Headlights
+
+**N** switches the headlights: off, low beam, high beam, then off again (gamepad: tool menu → Headlights; touch: LIGHTS, top left). At dusk and night they come on, on low beam, as you arrive. Low beam lights the ground for about 20 m ahead and spreads wide, which suits slow work among rocks and trees; high beam reaches the trees about 40 m away, in a narrower beam. The Camel Trophy 4WD's four roof lamps come on with high beam. In daylight the lamps glow but light nothing, as in the real world. A green lamp in the status strip shows the headlights are on, blue for high beam; in the driver's seat the dial needles light up and the dash has a blue high-beam lamp.
 
 ## Vehicles
 
@@ -124,6 +129,7 @@ Every section is drive-tested with both vehicles in low range, the hard ones wit
 | Cycle crawler / driver views   | C, or the View button                                 | Hold LB + click right stick                          |
 | Crawl gauges: auto / on / off  | I                                                     | Shown in low range                                   |
 | Horn                           | H                                                     | Left stick click                                     |
+| Headlights: off / low / high   | N                                                     | Hold LB → headlights                                 |
 | Map                            | M                                                     | View / Select                                        |
 | Pause                          | Esc                                                   | Start / Options                                      |
 
@@ -149,6 +155,7 @@ On a touch screen the game shows on-screen controls. They work held sideways (la
 | Camera distance                       | Pinch with two fingers on the view                                                                     |
 | Cycle views / recenter camera         | View and Reset view, top right                                                                         |
 | Map / pause                           | MAP and II, top left (tap outside the map to close it); ⛶ goes full screen where the browser allows it |
+| Headlights                            | LIGHTS, top left: off, low beam, high beam                                                             |
 
 The controls appear on phones and tablets, and whenever the screen is touched; pressing a key or using a gamepad hides them. A phone or tablet with no saved settings starts on the Low graphics preset. Add `?touch` to the address to show the touch controls on a desktop browser.
 
@@ -225,6 +232,7 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] **Handbrake:** press Space; the red P and dash lamp come on and stay on. Try to drive off (the car drags and a prompt appears), then press Space again.
 - [ ] **Driver's seat panels:** C → Driver in both vehicles; the windscreen and mirrors should be clear.
 - [ ] **Crawler Creek:** choose it on the welcome screen. From the Trailhead, drive the gates in number order all the way round. Check the hairpins on the Switchbacks (can you make each one in one go?), that both bridges' boards feel solid and the tyres sound like timber on them, that slipping a wheel off the Skinny Bridge drops it into the bog, and that the Rock Garden stops you with open diffs. Open the paper map to see the gates.
+- [ ] **Night and headlights:** choose Night on the welcome screen. The headlights should be on (green lamp in the status strip) as you arrive. Press N for high beam (blue lamp; the beam reaches the trees) and again for off; with them off you should only just make out the track by moonlight. In the driver's seat (C) the needles glow and the blue lamp lights on high beam. In the Camel Trophy 4WD the four roof lamps light with high beam. Listen for crickets instead of birds.
 - [ ] **Signs and messages:** every sign should read straight from both sides, with no second board crossing it (Crawler Creek's section signs show it best). Messages, "Discovered" cards and run results should appear in the top right corner, not over the track ahead; on a phone, below the View and Reset view buttons.
 - [ ] **Camel Trophy 4WD:** pause menu → Vehicle → Camel Trophy 4WD. Check the yellow paint and decals, the roof lamps and the snorkel, and that it drives through deep water (the High Country's Deep Crossing) that stalls the plain short-wheelbase 4WD.
 - [ ] **Land Rover 110:** pause menu → Vehicle → Land Rover 110 Perentie. Check the look against the _Bush Tucker Man_ vehicle, the diesel clatter at idle and its starter (no turbo-like whistle as it speeds up), the driver's view (C → Driver), and the Granite Spur loop. Reload the page and it should still be the Land Rover.

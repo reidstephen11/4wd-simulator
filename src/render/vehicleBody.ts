@@ -158,13 +158,13 @@ function front(b: VehicleBuilder, livery: Livery): void {
     b.geometry(new THREE.CylinderGeometry(0.155, 0.155, 0.025, 32), rubber);
     b.pop();
     b.ring(x, 0.605, -1.948, 0.136, 0.015, steel, M.Metal, 'z', Z.Front);
-    b.slot = M.Lamp;
+    b.slot = M.Headlamp;
     b.push().translate(x, 0.605, -1.948).scale(1, 1, 0.23);
     b.geometry(new THREE.SphereGeometry(0.123, 24, 12), new THREE.Color('#E3E4CD'));
     b.pop();
     for (let i = -3; i <= 3; i++) {
       const width = Math.sqrt(0.116 ** 2 - (i * 0.027) ** 2) * 2;
-      b.block(x, 0.605 + i * 0.027, -1.978, width, 0.004, 0.003, lens, M.Lamp, Z.Front);
+      b.block(x, 0.605 + i * 0.027, -1.978, width, 0.004, 0.003, lens, M.Headlamp, Z.Front);
     }
   }
 }

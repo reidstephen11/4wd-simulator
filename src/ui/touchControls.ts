@@ -19,6 +19,8 @@ export interface TouchControlsState {
   frontLocked: boolean;
   rearLocked: boolean;
   precision: boolean;
+  /** The headlights are on (low or high beam). */
+  lightsOn: boolean;
   winchAttached: boolean;
   jackAvailable: boolean;
 }
@@ -52,6 +54,7 @@ export class TouchControls {
       <div class="touch-top">
         <button type="button" class="touch-btn" data-tap="pause" aria-label="Pause">II</button>
         <button type="button" class="touch-btn" data-tap="map">MAP</button>
+        <button type="button" class="touch-btn" data-tap="lights" data-state="lightsOn" title="Headlights: off, low beam, high beam">LIGHTS</button>
         <button type="button" class="touch-btn touch-fullscreen" aria-label="Full screen" hidden>⛶</button>
       </div>
       <div class="touch-stick" aria-label="Steering"><div class="touch-stick-base"><div class="touch-stick-knob"></div></div></div>

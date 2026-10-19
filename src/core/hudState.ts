@@ -166,6 +166,7 @@ export function buildHudState(i: HudInputs): HudState {
     rearLocked: v.differentials.rear,
     precisionCrawl: v.precisionCrawl,
     parkBrake: v.parkBrake,
+    lights: v.lights,
     courseHint,
     planksCarried: t.planks.carried,
     planksTotal: 2,

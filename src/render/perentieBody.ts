@@ -176,7 +176,7 @@ function frontEnd(b: VehicleBuilder): void {
     b.geometry(new THREE.CylinderGeometry(0.115, 0.115, 0.03, 28), black);
     b.pop();
     b.ring(side * 0.625, 0.39, F - 0.022, 0.093, 0.012, steel, M.Metal, 'z', Z.Front);
-    b.slot = M.Lamp;
+    b.slot = M.Headlamp;
     b.push()
       .translate(side * 0.625, 0.39, F - 0.022)
       .scale(1, 1, 0.3);
@@ -184,7 +184,7 @@ function frontEnd(b: VehicleBuilder): void {
     b.pop();
     b.block(side * 0.625, 0.18, F - 0.005, 0.2, 0.075, 0.03, black, M.Rubber, Z.Front, 0.008);
     b.block(side * 0.675, 0.18, F - 0.024, 0.085, 0.052, 0.012, amber, M.Amber, Z.Front, 0.005);
-    b.block(side * 0.575, 0.18, F - 0.024, 0.085, 0.052, 0.012, lens, M.Lamp, Z.Front, 0.005);
+    b.block(side * 0.575, 0.18, F - 0.024, 0.085, 0.052, 0.012, lens, M.Headlamp, Z.Front, 0.005);
     // Air intake grille on the left wing; the right wing is plain.
     if (side < 0) {
       b.block(-SIDE - 0.004, 0.45, -1.02, 0.012, 0.13, 0.26, black, M.Rubber, Z.Front, 0.006);

@@ -58,11 +58,16 @@ test('crawl controls work from keyboard, HUD and gamepad; course hints explain t
     });
     await expect(page.locator('.tool-menu')).toHaveClass(/hidden/);
   };
-  await chooseWithPad('Lock front diff', 0.866, -0.5);
+  // Stick direction of the i-th of the menu's seven options, clockwise from the top.
+  const toward = (i: number): [number, number] => {
+    const a = -Math.PI / 2 + (i / 7) * Math.PI * 2;
+    return [Math.cos(a), Math.sin(a)];
+  };
+  await chooseWithPad('Lock front diff', ...toward(1));
   await expect(front).toHaveAttribute('aria-pressed', 'true');
-  await chooseWithPad('Unlock rear diff', 0, 1);
+  await chooseWithPad('Unlock rear diff', ...toward(3));
   await expect(rear).toHaveAttribute('aria-pressed', 'false');
-  await chooseWithPad('Disable precision crawl', -0.866, -0.5);
+  await chooseWithPad('Disable precision crawl', ...toward(5));
   await expect(crawl).toHaveAttribute('aria-pressed', 'false');
   await crawl.click();
   await expect(crawl).toHaveAttribute('aria-pressed', 'true');

@@ -217,6 +217,18 @@ export function ratchet(ctx: BaseAudioContext, out: AudioNode, noise: NoiseBank,
   thud(ctx, out, at + (on ? 0.24 : 0.04), on ? 110 : 85, L * 0.5, 0.07);
 }
 
+/** The headlight switch: a pull-knob's click, a little lower for the high-beam stalk. */
+export function switchClick(ctx: BaseAudioContext, out: AudioNode, noise: NoiseBank, high: boolean): void {
+  const at = ctx.currentTime;
+  const L = audioTuning.clunk.lightSwitch;
+  const click = burst(ctx, noise.white, at, 0.012);
+  const f = filter(ctx, 'bandpass', high ? 1900 : 3200, 2.5);
+  const g = gain(ctx, out);
+  click.connect(f).connect(g);
+  pluck(g.gain, at, L, 0.001, 0.008);
+  thud(ctx, out, at + 0.005, high ? 160 : 210, L * 0.35, 0.03);
+}
+
 /** Drivetrain clunks: transfer-case range change, an air locker, selecting drive or reverse. */
 export function clunk(
   ctx: BaseAudioContext,

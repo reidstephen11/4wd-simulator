@@ -13,6 +13,10 @@ export const VehicleMaterial = {
   Red: 5,
   Amber: 6,
   Fabric: 7,
+  /** Headlamp and side-lamp lenses: they glow when the headlights are on. */
+  Headlamp: 8,
+  /** Driving lamps that come on with high beam (the Camel Trophy roof lamps). */
+  DrivingLamp: 9,
 } as const;
 export type VehicleMaterialId = (typeof VehicleMaterial)[keyof typeof VehicleMaterial];
 

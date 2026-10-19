@@ -11,6 +11,8 @@ import { vehicleLooks } from './vehicleLooks';
 import { vehicles } from '../data/vehicles';
 import { VehicleSuspension } from './vehicleSuspension';
 import { VehicleInstruments } from './vehicleInstruments';
+import { HeadlightBeams } from './headlights';
+import { headlightTuning } from '../data/headlights';
 export { BodyZone } from './vehicleGeometry';
 
 /** A detailed vehicle (its look picked by the tuning's id), driven by the simulation. */
@@ -24,6 +26,12 @@ export class VehicleModel {
   readonly suspension: VehicleSuspension;
   readonly instruments: VehicleInstruments;
   private readonly rearLampMaterial: THREE.MeshStandardMaterial;
+  private readonly headLampMaterial: THREE.MeshStandardMaterial;
+  /** Needles, plates and small lenses: they light up with the headlights. */
+  private readonly panelMaterial: THREE.MeshStandardMaterial;
+  private readonly roofLampMaterial: THREE.MeshStandardMaterial;
+  /** The lamps' light on the ground, at dusk and night only. */
+  readonly beams: HeadlightBeams | null;
   private readonly glass: THREE.MeshPhysicalMaterial;
   private readonly tmpQ = { x: 0, y: 0, z: 0, w: 1 };
   private readonly wheelGeo: THREE.BufferGeometry;
@@ -36,7 +44,11 @@ export class VehicleModel {
   private lastDentKey = '';
   private readonly spinExtra = [0, 0, 0, 0];
 
-  constructor(private readonly tuning: VehicleTuning) {
+  /** `beams`: it's dark enough for the headlights to light the ground (dusk and night). */
+  constructor(
+    private readonly tuning: VehicleTuning,
+    beams = false,
+  ) {
     const look = vehicleLooks[tuning.id];
     this.root.name = look.name;
     this.bodyMaterial = patchFog(new THREE.MeshPhysicalMaterial({ vertexColors: true, ...look.paint }));
@@ -62,20 +74,25 @@ export class VehicleModel {
         emissiveIntensity: 0.13,
       }),
     );
-    const materials: THREE.Material[] = [
-      this.bodyMaterial,
-      patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.36, metalness: 0.72 })),
-      glass,
-      patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.98 })),
+    const lampLens = () =>
       patchFog(
         new THREE.MeshStandardMaterial({
           vertexColors: true,
           roughness: 0.2,
           metalness: 0.08,
           emissive: '#D9CE9F',
-          emissiveIntensity: 0.14,
+          emissiveIntensity: headlightTuning.lensGlow.off,
         }),
-      ),
+      );
+    this.headLampMaterial = lampLens();
+    this.roofLampMaterial = lampLens();
+    this.panelMaterial = lampLens();
+    const materials: THREE.Material[] = [
+      this.bodyMaterial,
+      patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.36, metalness: 0.72 })),
+      glass,
+      patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.98 })),
+      this.panelMaterial,
       this.rearLampMaterial,
       patchFog(
         new THREE.MeshStandardMaterial({
@@ -86,6 +103,8 @@ export class VehicleModel {
         }),
       ),
       patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })),
+      this.headLampMaterial,
+      this.roofLampMaterial,
     ];
     this.wheelGeo = look.wheel(tuning);
     const geometry = look.body(tuning, this.wheelGeo);
@@ -96,6 +115,9 @@ export class VehicleModel {
     this.body.receiveShadow = true;
     this.bodyGroup.add(this.body);
     this.root.add(this.bodyGroup);
+    geometry.computeBoundingBox();
+    this.beams = beams ? new HeadlightBeams(look.lamps, geometry.boundingBox!.min.z) : null;
+    if (this.beams) this.bodyGroup.add(this.beams.group);
     this.basePos = Float32Array.from(geometry.getAttribute('position').array);
     this.baseCol = Float32Array.from(geometry.getAttribute('color').array);
     this.baseNormals = Float32Array.from(geometry.getAttribute('normal').array);
@@ -258,6 +280,19 @@ export class VehicleModel {
     }
     this.suspension.update(this.wheels.map((w) => w.pivot.position.y));
     this.instruments.update(v, dt);
-    this.rearLampMaterial.emissiveIntensity = v.brake > 0.1 ? 0.9 : 0.13;
+    const H = headlightTuning;
+    const lit = v.lights !== 'off';
+    const braking = v.brake > 0.1;
+    this.rearLampMaterial.emissiveIntensity = braking
+      ? lit
+        ? H.tailGlow.brakeWithLights
+        : H.tailGlow.brake
+      : lit
+        ? H.tailGlow.on
+        : H.tailGlow.off;
+    this.headLampMaterial.emissiveIntensity = H.lensGlow[v.lights];
+    this.panelMaterial.emissiveIntensity = lit ? H.panelGlow.on : H.panelGlow.off;
+    this.roofLampMaterial.emissiveIntensity = v.lights === 'high' ? H.roofLensGlow.on : H.roofLensGlow.off;
+    this.beams?.set(v.lights);
   }
 }
