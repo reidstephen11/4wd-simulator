@@ -27,6 +27,16 @@ export interface GaugeState {
 
 export type GaugeMode = 'auto' | 'on' | 'off';
 
+/**
+ * Canvas rotation (radians) for a gauge's vehicle outline. Canvas y points down, so a
+ * positive rotation turns clockwise on screen: it lifts the side view's front (drawn on
+ * the left) when the nose is up, and drops the rear view's right side when that side
+ * is down. Both views use the angle as it comes.
+ */
+export function outlineRotation(angleDeg: number): number {
+  return (angleDeg * Math.PI) / 180;
+}
+
 const W = 318;
 const H = 150;
 /** Angles where the dial turns red: tipping risk. */
@@ -166,8 +176,7 @@ export class CrawlGauges {
     c.setLineDash([]);
     // Vehicle outline, tilted.
     c.translate(cx, cy + 6);
-    // Nose up shows the side view's front (left) rising.
-    c.rotate(((view === 'side' ? -angle : angle) * Math.PI) / 180);
+    c.rotate(outlineRotation(angle));
     c.fillStyle = danger ? this.warn : this.ink;
     c.strokeStyle = c.fillStyle;
     c.lineWidth = 1.5;
