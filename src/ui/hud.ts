@@ -41,7 +41,8 @@ export interface HudState {
 
 /**
  * In-game HUD (SPEC §9): compass strip (top centre), status cluster (bottom left),
- * context prompts (bottom centre) and toasts. Plain DOM; mostly-clear screen.
+ * context prompts (bottom centre), and messages and discovery cards in the top right
+ * corner, out of the view of the track ahead. Plain DOM; mostly-clear screen.
  */
 export class Hud {
   readonly el: HTMLElement;
@@ -97,8 +98,7 @@ export class Hud {
         <button type="button" class="camera-reset" title="Return behind the vehicle">Reset view <kbd>V</kbd></button>
       </div>
       <div class="crawl-run paper hidden"><strong></strong><span class="crawl-run-time"></span><span class="crawl-run-points"></span></div>
-      <div class="toasts"></div>
-      <div class="discovery"></div>`;
+      <div class="notices"><div class="discovery"></div><div class="toasts"></div></div>`;
     root.appendChild(this.el);
     this.gauges = new CrawlGauges(this.el);
     this.runEl = this.el.querySelector('.crawl-run') as HTMLElement;
@@ -303,11 +303,11 @@ export class Hud {
     (el.querySelector('.run-detail') as HTMLElement).textContent = detail;
     this.discovery.innerHTML = '';
     this.discovery.appendChild(el);
-    setTimeout(() => el.classList.add('out'), 6500);
-    setTimeout(() => el.remove(), 7200);
+    setTimeout(() => el.classList.add('out'), 5000);
+    setTimeout(() => el.remove(), 5700);
   }
 
-  /** "Discovered: …" paper card that unfolds near the top of the screen. */
+  /** "Discovered: …" paper card that unfolds in the top right corner. */
   discovered(name: string, kind: PoiIcon): void {
     const el = document.createElement('div');
     el.className = 'discovery-card paper';
@@ -315,8 +315,8 @@ export class Hud {
     (el.querySelector('.discovery-name') as HTMLElement).textContent = name;
     this.discovery.innerHTML = '';
     this.discovery.appendChild(el);
-    setTimeout(() => el.classList.add('out'), 3800);
-    setTimeout(() => el.remove(), 4500);
+    setTimeout(() => el.classList.add('out'), 3200);
+    setTimeout(() => el.remove(), 3900);
   }
 }
 

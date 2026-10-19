@@ -43,7 +43,7 @@ On wet ground hard braking takes longer and can lock the wheels: a locked tyre s
 
 The engine starts as you arrive: the starter cranks for about a second (a little longer for the diesel) and the car stays put until the engine catches. The same happens after swapping vehicles and when restarting a flooded engine.
 
-The version number (for example v0.11) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
+The version number (for example v0.13) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
 
 ## Vehicles
 
@@ -225,6 +225,7 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] **Handbrake:** press Space; the red P and dash lamp come on and stay on. Try to drive off (the car drags and a prompt appears), then press Space again.
 - [ ] **Driver's seat panels:** C → Driver in both vehicles; the windscreen and mirrors should be clear.
 - [ ] **Crawler Creek:** choose it on the welcome screen. From the Trailhead, drive the gates in number order all the way round. Check the hairpins on the Switchbacks (can you make each one in one go?), that both bridges' boards feel solid and the tyres sound like timber on them, that slipping a wheel off the Skinny Bridge drops it into the bog, and that the Rock Garden stops you with open diffs. Open the paper map to see the gates.
+- [ ] **Signs and messages:** every sign should read straight from both sides, with no second board crossing it (Crawler Creek's section signs show it best). Messages, "Discovered" cards and run results should appear in the top right corner, not over the track ahead; on a phone, below the View and Reset view buttons.
 - [ ] **Camel Trophy 4WD:** pause menu → Vehicle → Camel Trophy 4WD. Check the yellow paint and decals, the roof lamps and the snorkel, and that it drives through deep water (the High Country's Deep Crossing) that stalls the plain short-wheelbase 4WD.
 - [ ] **Land Rover 110:** pause menu → Vehicle → Land Rover 110 Perentie. Check the look against the _Bush Tucker Man_ vehicle, the diesel clatter at idle and its starter (no turbo-like whistle as it speeds up), the driver's view (C → Driver), and the Granite Spur loop. Reload the page and it should still be the Land Rover.
 
