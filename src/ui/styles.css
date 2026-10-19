@@ -745,6 +745,16 @@ body {
   color: var(--paper);
 }
 
+.pause-card button.on small {
+  color: var(--paper);
+}
+
+.menu-note {
+  margin: 2px 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
 .setting-row {
   display: flex;
   align-items: center;

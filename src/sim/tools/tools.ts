@@ -1,7 +1,7 @@
 import { plankTuning, winchTuning } from '../../data/tools';
 import type { VehicleInput } from '../input/vehicleInput';
 import type { Vehicle } from '../vehicle/vehicle';
-import { rotate, v3 } from '../vehicle/math';
+import { rotate } from '../vehicle/math';
 import type { Anchor } from './anchors';
 import { Jack } from './jack';
 import { PlankKit } from './planks';
@@ -68,6 +68,4 @@ export class VehicleTools {
   }
 }
 
-/** Default rear tow point for vehicle-to-vehicle anchors (future co-op). */
-export const TOW_POINT = v3(0, 0.05, 1.95);
 export const PLANK_REACH = plankTuning.pickupRange;

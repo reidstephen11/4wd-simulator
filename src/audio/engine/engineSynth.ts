@@ -1,4 +1,4 @@
-import { engineSynthTuning as T } from '../../data/audio';
+import { engineSynthTuning, type EngineSynthTuning } from '../../data/audio';
 import { Biquad, DcBlock, Noise, OnePole, Pipe, clamp01 } from './dsp';
 
 /** What the engine is doing, read once per audio block. */
@@ -49,8 +49,9 @@ function softClip(x: number): number {
 }
 
 /**
- * Inline-six petrol engine synthesiser (SPEC §13), modelled on the 4.2 L six of a 1970s
- * 40 Series. Each cylinder sends an exhaust pressure pulse down its manifold runner
+ * Engine synthesiser (SPEC §13): by default the 4.2 L petrol six of a 1970s 40 Series,
+ * or any other engine its tuning describes (the Perentie's four-cylinder diesel adds a
+ * combustion knock). Each cylinder sends an exhaust pressure pulse down its manifold runner
  * once per two crank turns; the pulses run through a head pipe, muffler and tailpipe
  * whose resonances stay fixed in frequency while the firing rate sweeps through them.
  * Intake roar, valve-train tick, fan noise, the starter motor and transfer-case gear
@@ -58,26 +59,31 @@ function softClip(x: number): number {
  */
 export class EngineSynth {
   private readonly sr: number;
+  private readonly T: EngineSynthTuning;
+  private readonly cylinders: number;
+  /** Crank degrees between firings, and between valve closings. */
+  private readonly spacing: number;
+  private readonly tickDeg: number;
   private readonly noise: Noise;
   private mode: Mode = 'run';
   private modeTime = 0;
   /** Crank angle (degrees) within the 720° four-stroke cycle. */
   private theta = 0;
-  private rpmNow: number = T.idleRpm;
+  private rpmNow: number;
   private readonly rpmSmooth: OnePole;
   private readonly crankSpin: OnePole;
   private readonly manifold: OnePole;
   private readonly lope: OnePole;
   private lopeTarget = 0;
   private readonly falling: OnePole;
-  private lastRpm: number = T.idleRpm;
+  private lastRpm: number;
 
   // Per firing slot (index in firing order).
-  private readonly age = new Float64Array(6);
-  private readonly amp = new Float64Array(6);
-  private readonly rise = new Float64Array(6);
-  private readonly decay = new Float64Array(6);
-  private readonly offset = new Float64Array(6);
+  private readonly age: Float64Array;
+  private readonly amp: Float64Array;
+  private readonly rise: Float64Array;
+  private readonly decay: Float64Array;
+  private readonly offset: Float64Array;
 
   private readonly pulseDc: DcBlock;
   private readonly headPipe: Pipe;
@@ -102,9 +108,23 @@ export class EngineSynth {
   private readonly whineShaft: OnePole;
   private whinePhase = 0;
   private readonly whineWobble: OnePole;
+  private readonly knockA: Biquad;
+  private readonly knockB: Biquad;
+  /** Knock impulse from a firing this sample (diesel only). */
+  private knock = 0;
 
-  constructor(sampleRate: number, seed = 0x2f40) {
+  constructor(sampleRate: number, seed = 0x2f40, tuning: EngineSynthTuning = engineSynthTuning) {
     const sr = (this.sr = sampleRate);
+    const T = (this.T = tuning);
+    const n = (this.cylinders = T.firingOrder.length);
+    this.spacing = 720 / n;
+    this.tickDeg = 720 / (2 * n);
+    this.rpmNow = this.lastRpm = T.idleRpm;
+    this.age = new Float64Array(n);
+    this.amp = new Float64Array(n);
+    this.rise = new Float64Array(n);
+    this.decay = new Float64Array(n);
+    this.offset = new Float64Array(n);
     this.noise = new Noise(seed);
     this.rpmSmooth = new OnePole(sr, 1).timeConstant(0.03);
     this.rpmSmooth.y = T.idleRpm;
@@ -112,7 +132,7 @@ export class EngineSynth {
     this.manifold = new OnePole(sr, 1).timeConstant(T.manifoldSeconds);
     this.lope = new OnePole(sr, 1).timeConstant(0.12);
     this.falling = new OnePole(sr, 1).timeConstant(0.25);
-    for (let k = 0; k < 6; k++) this.age[k] = (720 - 120 * k) % 720;
+    for (let k = 0; k < n; k++) this.age[k] = (720 - this.spacing * k) % 720;
 
     const X = T.exhaust;
     this.pulseDc = new DcBlock(sr, 15);
@@ -147,6 +167,9 @@ export class EngineSynth {
     this.whineLevel = new OnePole(sr, 1).timeConstant(0.08);
     this.whineShaft = new OnePole(sr, 1).timeConstant(0.05);
     this.whineWobble = new OnePole(sr, 30);
+    const K = T.knock ?? { hz: [1500, 2900], q: 5 };
+    this.knockA = new Biquad(sr).bandpass(K.hz[0], K.q);
+    this.knockB = new Biquad(sr).bandpass(K.hz[1], K.q);
   }
 
   /** Engine speed the synthesiser is producing right now (follows the starter sequence). */
@@ -168,9 +191,11 @@ export class EngineSynth {
   /** Fill `out[from..to)` with engine sound for these inputs. */
   process(out: Float32Array, inp: EngineInputs, from = 0, to = out.length): void {
     const sr = this.sr;
+    const T = this.T;
     const dt = 1 / sr;
     const n = this.noise;
     const S = T.starter;
+    const spacing = this.spacing;
     const pressureGoal = Math.max(clamp01(inp.throttle), clamp01(inp.load) * 0.85);
     const whineGoal = clamp01(inp.whine);
     for (let i = from; i < to; i++) {
@@ -187,8 +212,8 @@ export class EngineSynth {
       let manifold = this.manifold.process(pressureGoal);
       if (this.mode === 'crank') {
         const spin = this.crankSpin.process(S.rpm);
-        // Each compression stroke slows the crank (three per turn on a six).
-        const c = 0.5 + 0.5 * Math.cos((2 * Math.PI * (this.theta % 120)) / 120);
+        // Each compression stroke slows the crank (three per turn on a six, two on a four).
+        const c = 0.5 + 0.5 * Math.cos((2 * Math.PI * (this.theta % spacing)) / spacing);
         rpm = spin * (1 - S.compressionDip * c * c);
         combustion = false;
       } else if (this.mode === 'catch') {
@@ -201,7 +226,7 @@ export class EngineSynth {
         rpm = target;
         // A dying engine shudders through its last compressions.
         if (!inp.running && rpm < 420) {
-          const c = 0.5 + 0.5 * Math.cos((2 * Math.PI * (this.theta % 120)) / 120);
+          const c = 0.5 + 0.5 * Math.cos((2 * Math.PI * (this.theta % spacing)) / spacing);
           rpm *= 1 - 0.35 * c * c;
         }
       }
@@ -222,7 +247,7 @@ export class EngineSynth {
       // Exhaust pulses and intake suction per cylinder.
       let pulses = 0;
       let suction = 0;
-      for (let k = 0; k < 6; k++) {
+      for (let k = 0; k < this.cylinders; k++) {
         let a = this.age[k] + dTheta;
         if (a >= 720) {
           a -= 720;
@@ -243,11 +268,11 @@ export class EngineSynth {
       const exhaust = this.radiate.process(this.tailPipe.process(muffled));
       const body = this.block.process(p);
 
-      // Valve train: a light tick every 60° of crank (twelve valves closing per cycle).
+      // Valve train: a light tick each time a valve closes (twelve per cycle on the six).
       this.tickAge += dTheta;
       let impulse = 0;
-      if (this.tickAge >= 60) {
-        this.tickAge -= 60;
+      if (this.tickAge >= this.tickDeg) {
+        this.tickAge -= this.tickDeg;
         if (rpm > 60) impulse = (0.55 + 0.45 * n.unit()) * (0.35 + 0.65 * clamp01(rpm / 4000));
       }
       const tick = this.tickA.process(impulse) + 0.7 * this.tickB.process(impulse);
@@ -292,8 +317,16 @@ export class EngineSynth {
         whine = mesh * (1 + G.shaftAm * Math.sin(w)) * wobble * whineOn * G.gain;
       }
 
+      // Diesel knock: the sharp pressure rise of each combustion rings the block.
+      let knock = 0;
+      if (T.knock) {
+        knock = (this.knockA.process(this.knock) + 0.6 * this.knockB.process(this.knock)) * T.knock.gain;
+        this.knock = 0;
+      }
+
       const mix =
         exhaust * T.exhaust.gain +
+        knock +
         body * T.block.gain +
         tick * T.valves.gain +
         intake +
@@ -318,6 +351,7 @@ export class EngineSynth {
     rpm: number,
   ): void {
     const n = this.noise;
+    const T = this.T;
     const cyl = T.firingOrder[k] - 1;
     const R = T.runners;
     let a: number;
@@ -329,7 +363,14 @@ export class EngineSynth {
     else if (overrun && n.unit() < T.overrun.popChance) {
       a = T.overrun.popGain;
       sharp = 0.55;
-    } else a = pressure;
+    } else {
+      a = pressure;
+      if (T.knock) {
+        const K = T.knock;
+        this.knock =
+          (K.idle * idleness + K.load * clamp01(pressure) * (1 - idleness)) * (0.75 + 0.5 * n.unit());
+      }
+    }
     const jitter = T.jitter.load + (T.jitter.idle - T.jitter.load) * idleness;
     this.amp[k] = Math.max(0, a * R.strength[cyl] * (1 + jitter * n.gauss()));
     // Blowdown is quicker at high pressure; its length is set in time, so in crank

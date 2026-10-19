@@ -6,6 +6,7 @@ import { poiApproach } from '../sim/world/poiApproach';
 import { headingOf } from '../sim/vehicle/math';
 import type { Game } from './game';
 import type { CameraPreset } from '../data/camera';
+import type { VehicleId } from '../data/vehicle';
 
 const LOCAL = 'player-1';
 
@@ -76,6 +77,9 @@ export interface GameHook {
   audio(): AudioInfo;
   /** Debug: play a bird call now. */
   bird(kind: 'kookaburra' | 'magpie'): void;
+  /** Swap to another vehicle where the current one stands (no fade). */
+  setVehicle(id: VehicleId): void;
+  vehicleId(): VehicleId;
 }
 
 declare global {
@@ -124,7 +128,9 @@ export function installHook(game: Game): void {
       const path = poiApproach(poi, g.world.features.tracks, back);
       const a = path[0];
       const b = path[Math.min(3, path.length - 1)];
-      g.vehicle.teleport(g.sim.poseAt(a[0], a[1], headingOf(b[0] - a[0], b[1] - a[1])));
+      g.vehicle.teleport(
+        g.sim.poseAt(a[0], a[1], headingOf(b[0] - a[0], b[1] - a[1]), g.vehicle.tuning.wheelRadius),
+      );
       g.chase.reset();
       g.view.snap();
       g.autopilot = new Autopilot(path, speed);
@@ -158,7 +164,7 @@ export function installHook(game: Game): void {
     heightAt: (x, z) => g.world.terrain.heightAt(x, z),
     teleport: (x, z, h) => {
       g.crawlRuns.cancel();
-      g.vehicle.teleport(g.sim.poseAt(x, z, h));
+      g.vehicle.teleport(g.sim.poseAt(x, z, h, g.vehicle.tuning.wheelRadius));
       g.chase.reset();
       g.view.snap();
     },
@@ -219,6 +225,8 @@ export function installHook(game: Game): void {
     simTime: () => g.sim.time,
     audio: () => g.audio.info(),
     bird: (kind) => g.audio.bird(kind),
+    setVehicle: (id) => g.swapVehicle(id),
+    vehicleId: () => g.vehicleId,
     vehicle: () => {
       const v = g.vehicle;
       const p = v.body.translation();

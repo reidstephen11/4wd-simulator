@@ -4,6 +4,7 @@ import { ChaseCamera, type ChaseTarget, type Blocker } from '../src/render/chase
 import { cameraTuning as C, cameraPresets, cockpit } from '../src/data/camera';
 import { InputManager } from '../src/sim/input/inputManager';
 import { Pad } from '../src/data/controls';
+import { vehicles } from '../src/data/vehicles';
 
 const target = (): ChaseTarget => ({
   position: new Vector3(),
@@ -66,9 +67,15 @@ describe('vehicle camera orbit', () => {
     t.rotation = new Quaternion();
     chase.selectPreset('cockpit');
     chase.update(1 / 60, t);
-    expect(camera.position.x).toBeCloseTo(10 + cockpit.eye.x, 5);
-    expect(camera.position.y).toBeCloseTo(2 + cockpit.eye.y, 5);
+    expect(camera.position.x).toBeCloseTo(10 + vehicles.shortie.cabin.eye.x, 5);
+    expect(camera.position.y).toBeCloseTo(2 + vehicles.shortie.cabin.eye.y, 5);
     expect(camera.near).toBe(cockpit.near);
+    // Each vehicle has its own seat.
+    chase.seat = vehicles.perentie.cabin;
+    chase.update(1 / 60, t);
+    expect(camera.position.z).toBeCloseTo(5 + vehicles.perentie.cabin.eye.z, 5);
+    chase.seat = vehicles.shortie.cabin;
+    chase.update(1 / 60, t);
     const dir = camera.getWorldDirection(new Vector3());
     expect(dir.z).toBeLessThan(-0.95);
     // Body rolled 20° to the right: the view rolls with it.

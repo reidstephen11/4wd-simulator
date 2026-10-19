@@ -1,13 +1,15 @@
 /**
  * Dev helper: render the engine synthesiser offline, print levels and the strongest
  * spectral peaks per scenario, and write WAV files to listen to.
- * Usage: npx vite-node scripts/engine-lab.ts [outDir]
+ * Usage: npx vite-node scripts/engine-lab.ts [outDir] [shortie|perentie]
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { EngineSynth, type EngineInputs } from '../src/audio/engine/engineSynth';
+import { engineSynthTunings } from '../src/data/audio';
 
 const SR = 48000;
 const outDir = process.argv[2] ?? 'test-results/engine-lab';
+const engine = engineSynthTunings[(process.argv[3] ?? 'shortie') as keyof typeof engineSynthTunings];
 mkdirSync(outDir, { recursive: true });
 
 const base: EngineInputs = {
@@ -23,7 +25,7 @@ const base: EngineInputs = {
 type Step = { seconds: number; inputs: Partial<EngineInputs> | ((t: number) => Partial<EngineInputs>) };
 
 function render(steps: Step[], start = false): Float32Array {
-  const synth = new EngineSynth(SR);
+  const synth = new EngineSynth(SR, undefined, engine);
   if (start) synth.start();
   const total = Math.round(steps.reduce((s, x) => s + x.seconds, 0) * SR);
   const out = new Float32Array(total);

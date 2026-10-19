@@ -288,6 +288,16 @@ export class Vehicle {
     this.snapshot();
   }
 
+  /**
+   * Stop simulating this vehicle: drop the wheel controller and disable the body. The
+   * caller removes the body after the next physics step; removing it straight away
+   * leaves a vehicle added in the same step frozen in place (Rapier 0.21).
+   */
+  retire(): void {
+    this.physics.world.removeVehicleController(this.controller);
+    this.body.setEnabled(false);
+  }
+
   /** Remember the pose before a physics step (for render interpolation). */
   snapshot(): void {
     const p = this.body.translation();

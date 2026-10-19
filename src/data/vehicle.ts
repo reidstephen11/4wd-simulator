@@ -11,6 +11,8 @@ export interface WheelLayout {
 }
 
 export interface VehicleTuning {
+  /** Key in the vehicle list (src/data/vehicles.ts); picks the model, cabin and engine sound. */
+  id: VehicleId;
   name: string;
   mass: number;
   /** Centre of mass (local). */
@@ -135,7 +137,11 @@ export interface VehicleTuning {
   intake: { x: number; y: number; z: number };
   /** Winch mount (front bumper, local). */
   winchMount: { x: number; y: number; z: number };
+  /** Rear recovery point another vehicle's winch can hook (local). */
+  towPoint: { x: number; y: number; z: number };
 }
+
+export type VehicleId = 'shortie' | 'perentie';
 
 const R = 0.38;
 const HALF_TRACK = 0.725;
@@ -144,6 +150,7 @@ const MOUNT_Y = 0.32;
 const SUSPENSION_LIFT = 0.12;
 
 export const vehicleTuning: VehicleTuning = {
+  id: 'shortie',
   name: 'Short-wheelbase 4WD',
   mass: 1600,
   // Retain the existing centre-of-mass height above ground with the taller suspension.
@@ -256,4 +263,5 @@ export const vehicleTuning: VehicleTuning = {
   intakeHeight: 0.9,
   intake: { x: 0.7, y: 0.9 - R - SUSPENSION_LIFT, z: -0.9 },
   winchMount: { x: 0, y: 0.28, z: -2.0 },
+  towPoint: { x: 0, y: 0.05, z: 1.95 },
 };

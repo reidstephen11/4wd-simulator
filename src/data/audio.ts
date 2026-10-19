@@ -133,11 +133,73 @@ export const audioTuning = {
 
 export type TyreLayer = keyof typeof audioTuning.tyres.layers;
 
+type Pair = readonly [number, number];
+
+/** Settings for the engine synthesiser (src/audio/engine/engineSynth.ts), one per engine. */
+export interface EngineSynthTuning {
+  idleRpm: number;
+  limiterRpm: number;
+  /** One entry per cylinder; its length sets the cylinder count. */
+  firingOrder: readonly number[];
+  runners: { delayMs: readonly number[]; strength: readonly number[] };
+  pulse: { riseMs: Pair; decayMs: Pair; minRiseDeg: number; minDecayDeg: number; maxDecayDeg: number };
+  turbulence: { idle: number; load: number };
+  pressure: { idle: number; compression: number };
+  manifoldSeconds: number;
+  jitter: { idle: number; load: number; timingDeg: number; lopeRpm: number };
+  exhaust: {
+    soundSpeed: number;
+    headPipe: { length: number; reflection: number; dampingHz: number };
+    muffler: { cutoffHz: number; q: number; boomHz: number; boomQ: number; boomDb: number; leak: number };
+    tailPipe: { length: number; reflection: number; dampingHz: number };
+    radiationHz: number;
+    gain: number;
+  };
+  block: { cutoffHz: number; gain: number };
+  valves: { hz: Pair; q: number; gain: number };
+  intake: {
+    openDeg: number;
+    riseDeg: number;
+    decayDeg: number;
+    noiseHz: number;
+    noiseGain: number;
+    honkHz: number;
+    honkQ: number;
+    honkGain: number;
+  };
+  fan: { hz: number; gain: number };
+  overrun: {
+    fromRpm: number;
+    misfire: number;
+    popChance: number;
+    popGain: number;
+    whistleHz: number;
+    whistleGain: number;
+  };
+  starter: {
+    seconds: number;
+    rpm: number;
+    compressionDip: number;
+    meshPerCrankTurn: number;
+    toneHz: number;
+    brushHz: number;
+    gain: number;
+  };
+  catch: { seconds: number; flareRpm: number; flareSeconds: number; settleSeconds: number };
+  whine: { teeth: Pair; second: number; harmonic: number; shaftAm: number; wobble: number; gain: number };
+  /**
+   * Diesel combustion knock: each firing rings two metallic resonances (Hz), hardest at
+   * idle and light load (idle) and less so under full load (load).
+   */
+  knock?: { hz: Pair; q: number; idle: number; load: number; gain: number };
+  outputGain: number;
+}
+
 /**
  * Inline-six engine synthesiser (src/audio/engine/engineSynth.ts), modelled on the
  * 4.2 L petrol six of a 1970s 40 Series. Pressures are relative (1 = full throttle).
  */
-export const engineSynthTuning = {
+export const engineSynthTuning: EngineSynthTuning = {
   idleRpm: 800,
   /** Above this the ignition cuts out every other firing (rev limiter). */
   limiterRpm: 4450,
@@ -219,4 +281,60 @@ export const engineSynthTuning = {
    */
   whine: { teeth: [43, 31], second: 0.5, harmonic: 0.25, shaftAm: 0.3, wobble: 0.15, gain: 0.05 },
   outputGain: 1,
-} as const;
+};
+
+/**
+ * The Perentie's 3.9 L Isuzu 4BD1 four-cylinder diesel: a slow, lumpy idle with a hard
+ * combustion knock, stronger compression pulses (no throttle plate), no overrun pops,
+ * a long exhaust under the 110's floor and plenty of LT95 gearbox whine.
+ */
+export const dieselSynthTuning: EngineSynthTuning = {
+  idleRpm: 700,
+  limiterRpm: 3650,
+  firingOrder: [1, 3, 4, 2],
+  runners: { delayMs: [0.3, 0.1, 0.1, 0.3], strength: [0.98, 1.02, 1.02, 0.97] },
+  pulse: { riseMs: [0.35, 0.18], decayMs: [1.9, 1.05], minRiseDeg: 2, minDecayDeg: 6, maxDecayDeg: 28 },
+  turbulence: { idle: 0.35, load: 0.65 },
+  pressure: { idle: 0.34, compression: 0.06 },
+  manifoldSeconds: 0.08,
+  jitter: { idle: 0.13, load: 0.04, timingDeg: 2.5, lopeRpm: 10 },
+  exhaust: {
+    soundSpeed: 500,
+    headPipe: { length: 1.5, reflection: -0.35, dampingHz: 2400 },
+    muffler: { cutoffHz: 800, q: 0.6, boomHz: 74, boomQ: 1.2, boomDb: 4.5, leak: 0.25 },
+    tailPipe: { length: 2.4, reflection: -0.3, dampingHz: 3200 },
+    radiationHz: 34,
+    gain: 1.05,
+  },
+  block: { cutoffHz: 190, gain: 0.5 },
+  valves: { hz: [2300, 3900], q: 8, gain: 1.6 },
+  intake: {
+    openDeg: 380,
+    riseDeg: 30,
+    decayDeg: 34,
+    noiseHz: 520,
+    noiseGain: 1.0,
+    honkHz: 110,
+    honkQ: 3,
+    honkGain: 0.25,
+  },
+  fan: { hz: 950, gain: 0.3 },
+  // Lifting off cuts the fuel: compression pulses only, no pops or throttle whistle.
+  overrun: { fromRpm: 1400, misfire: 0.85, popChance: 0, popGain: 1, whistleHz: 2900, whistleGain: 0 },
+  starter: {
+    seconds: 1.3,
+    rpm: 170,
+    compressionDip: 0.5,
+    meshPerCrankTurn: 120,
+    toneHz: 820,
+    brushHz: 2400,
+    gain: 0.28,
+  },
+  catch: { seconds: 1.8, flareRpm: 1150, flareSeconds: 0.35, settleSeconds: 0.6 },
+  whine: { teeth: [37, 29], second: 0.55, harmonic: 0.3, shaftAm: 0.3, wobble: 0.15, gain: 0.07 },
+  knock: { hz: [1500, 2900], q: 5, idle: 1, load: 0.55, gain: 3 },
+  outputGain: 1,
+};
+
+/** Engine sound for each vehicle. */
+export const engineSynthTunings = { shortie: engineSynthTuning, perentie: dieselSynthTuning } as const;

@@ -1,5 +1,6 @@
-import { audioTuning } from '../data/audio';
-import { vehicleTuning } from '../data/vehicle';
+import { audioTuning, engineSynthTunings } from '../data/audio';
+import { vehicleTuning, type VehicleId } from '../data/vehicle';
+import { vehicles } from '../data/vehicles';
 import { loop, type NoiseBank } from './buffers';
 import { ENGINE_PROCESSOR } from './engine/processorName';
 import workletUrl from './engine/engineWorklet?worker&url';
@@ -29,6 +30,8 @@ interface EngineVoice {
   update(e: EngineFrame): void;
   /** Starter motor, then the engine catches. */
   start(): void;
+  /** Sound like this vehicle's engine. */
+  setVehicle(id: VehicleId): void;
   readonly level: number;
 }
 
@@ -41,6 +44,7 @@ interface EngineVoice {
 export class EngineSound {
   private voice: EngineVoice | null = null;
   private startPending = false;
+  private vehicle: VehicleId = 'shortie';
   hz = 0;
 
   constructor(
@@ -59,13 +63,20 @@ export class EngineSound {
 
   private useVoice(v: EngineVoice): void {
     this.voice = v;
+    v.setVehicle(this.vehicle);
     if (this.startPending) v.start();
     this.startPending = false;
   }
 
   update(e: EngineFrame): void {
-    this.hz = Math.max(4, firingHz(e.rpm));
+    this.hz = Math.max(4, firingHz(e.rpm, engineSynthTunings[this.vehicle].firingOrder.length));
     this.voice?.update(e);
+  }
+
+  /** Switch to another vehicle's engine (the caller plays the start-up after a swap). */
+  setVehicle(id: VehicleId): void {
+    this.vehicle = id;
+    this.voice?.setVehicle(id);
   }
 
   stalled(): void {
@@ -138,6 +149,10 @@ class SynthEngine implements EngineVoice {
     this.node.port.postMessage({ type: 'start' });
   }
 
+  setVehicle(id: VehicleId): void {
+    this.node.port.postMessage({ type: 'vehicle', id });
+  }
+
   get level(): number {
     return this.out.gain.value;
   }
@@ -161,6 +176,8 @@ class OscillatorEngine implements EngineVoice {
   private readonly out: GainNode;
   /** Mute while the starter cranks after a restart. */
   private mutedUntil = 0;
+  private cylinders = 6;
+  private engine = vehicleTuning.engine;
 
   constructor(
     private readonly ctx: AudioContext,
@@ -230,7 +247,7 @@ class OscillatorEngine implements EngineVoice {
   update(e: EngineFrame): void {
     const E = audioTuning.engine;
     const t = this.ctx.currentTime;
-    const hz = Math.max(4, firingHz(e.rpm));
+    const hz = Math.max(4, firingHz(e.rpm, this.cylinders));
     this.osc.frequency.setTargetAtTime(hz, t, SMOOTH);
     this.sub.frequency.setTargetAtTime(hz / 2, t, SMOOTH);
     this.pulse.frequency.setTargetAtTime(hz, t, SMOOTH);
@@ -244,13 +261,18 @@ class OscillatorEngine implements EngineVoice {
     this.clean.gain.setTargetAtTime(1 - E.grit * e.load, t, 0.08);
     this.dirty.gain.setTargetAtTime(0.1 + E.grit * e.load, t, 0.08);
 
-    const eng = vehicleTuning.engine;
+    const eng = this.engine;
     let level = engineGain(e.rpm, e.load, e.throttle, eng.idleRpm, eng.redlineRpm);
     // Stalling: the pitch follows the rpm down and the level fades with it.
     if (!e.running) level *= Math.min(1, e.rpm / 600);
     if (e.powerCut) level *= E.sputterGain;
     if (t < this.mutedUntil) level = 0;
     this.out.gain.setTargetAtTime(level, t, e.powerCut ? 0.015 : 0.05);
+  }
+
+  setVehicle(id: VehicleId): void {
+    this.cylinders = engineSynthTunings[id].firingOrder.length;
+    this.engine = vehicles[id].tuning.engine;
   }
 
   start(): void {

@@ -50,8 +50,8 @@ export class SteeringSmoother {
   value = 0;
 
   constructor(
-    private riseRate: number,
-    private returnRate: number,
+    public riseRate: number,
+    public returnRate: number,
   ) {}
 
   update(target: number, dt: number): number {
