@@ -98,7 +98,8 @@ export const ironbarkParkMap: MapDef = {
         [0, 190],
         [0, 165],
       ],
-      routeHint: 'Park HQ. The loop is just ahead: west for stations 1, 2 and 5, east for 3, 4 and 8.',
+      routeHint:
+        'Park HQ. The loop is just ahead: west for stations 1, 2 and 5, east for 3, 4 and 9. The hill stations start from the north side and the hilltop.',
     },
     ...parkTracks,
   ],

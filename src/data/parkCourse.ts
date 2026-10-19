@@ -82,7 +82,7 @@ export const parkLoop: TrackDef[] = [
       [-236, -138],
       [-240, -60],
     ],
-    'Park loop, north side. Station 6 crosses the creek on the right.',
+    'Park loop, north side. Station 6 crosses the creek on the right; 7’s easier line climbs the hill on the left.',
   ),
   loopLeg(
     'loop-west',
@@ -103,7 +103,7 @@ export const parkLoop: TrackDef[] = [
       [-150, 165],
       [0, 165],
     ],
-    'Park loop. Stations 1 and 2 are on the left, 5 on the right; Park HQ is just ahead.',
+    'Park loop, heading east. Stations 2 and 1 are on the right, 5 on the left; Park HQ is just ahead.',
   ),
 ];
 
@@ -542,7 +542,7 @@ function hillClimb(): Station {
       grade: 'hard',
       section: 'Straight up',
       oneWay: 'up',
-      hint: 'Straight up a 30° face with rocky steps. Low range, both lockers, and keep the wheels straight. If it stalls, brake, select reverse and back down straight.',
+      hint: 'Straight up a 30° face. Low range, both lockers, and keep the wheels straight. If it stalls, brake, select reverse and back down straight.',
       points: [
         onLoop('loop-north-east', 14, -172),
         [14, -140],
@@ -551,7 +551,6 @@ function hillClimb(): Station {
         [14, -60],
         ringAt(-75),
       ],
-      track: { rockySteps: [] },
     },
   };
 }
