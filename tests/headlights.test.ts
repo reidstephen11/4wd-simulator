@@ -137,8 +137,14 @@ describe('headlights', () => {
     expect(high[1]).toBe(headlightTuning.lensGlow.high);
     expect(low[2]).toBe(off[2]);
     expect(high[2]).toBeGreaterThan(off[2]);
-    // The dash needles light up with the headlights.
+    // The dash lights up with the headlights: the needles, and every dial's markings.
     expect(materials[4].emissiveIntensity).toBe(headlightTuning.panelGlow.on);
+    expect(materials[10].emissiveIntensity).toBe(headlightTuning.dialGlow.on);
+    const marks = model.body.geometry.groups.find((g) => g.materialIndex === 10);
+    expect(marks?.count ?? 0).toBeGreaterThan(1000);
+    s.vehicle.lights = 'off';
+    model.update(s.vehicle, 1, 1 / 60);
+    expect(materials[10].emissiveIntensity).toBe(0);
     let lights = 0;
     model.root.traverse((o) => (lights += o instanceof THREE.Light ? 1 : 0));
     expect(lights).toBe(0);
