@@ -97,6 +97,10 @@ export interface GameHook {
   setParkBrake(on: boolean): void;
   /** Set the headlights directly (the key cycles them). */
   setLights(mode: HeadlightMode): void;
+  /** Damage the vehicle directly: engine, tyres and suspension health (1 = as new). */
+  setHealth(h: { engine?: number; tyres?: number[]; suspension?: number[] }): void;
+  /** The vehicle's health, and whether a roadside repair is under way. */
+  health(): { engine: number; tyres: number[]; suspension: number[]; spare: boolean; repairing: boolean };
   /** How strongly the beams light the ground now (0 in daylight, where there are none). */
   beams(): { head: number; roof: number };
   /**
@@ -261,6 +265,22 @@ export function installHook(game: Game): void {
     },
     setLights: (mode) => {
       g.vehicle.lights = mode;
+    },
+    setHealth: (h) => {
+      const c = g.vehicle.condition;
+      if (h.engine !== undefined) c.engine = h.engine;
+      h.tyres?.forEach((t, i) => (c.tyres[i] = c.tyreTarget[i] = t));
+      h.suspension?.forEach((t, i) => (c.suspension[i] = t));
+    },
+    health: () => {
+      const c = g.vehicle.condition;
+      return {
+        engine: c.engine,
+        tyres: [...c.tyres],
+        suspension: [...c.suspension],
+        spare: c.spare,
+        repairing: g.sim.toolsOf(LOCAL).repair !== null,
+      };
     },
     beams: () => g.model.beams?.strengths ?? { head: 0, roof: 0 },
     brightness: (x0, y0, x1, y1) => {

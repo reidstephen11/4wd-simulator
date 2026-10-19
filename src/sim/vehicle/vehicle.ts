@@ -2,6 +2,7 @@ import type RAPIER from '@dimforge/rapier3d-compat';
 import { SurfaceId, surfaceGrip, surfaces, tyreLock, waterDrag } from '../../data/surfaces';
 import type { VehicleTuning } from '../../data/vehicle';
 import { nextHeadlightMode, type HeadlightMode } from '../../data/headlights';
+import { damageTuning } from '../../data/damage';
 import { Groups, groups, type Physics } from '../physics';
 import type { VehicleInput } from '../input/vehicleInput';
 import {
@@ -118,6 +119,14 @@ export class Vehicle {
   readonly bodyContact = { force: 0, slide: 0, surface: SurfaceId.Rock as SurfaceId, knock: 0 };
   /** Compression speed of each wheel that hit hard this step (0 = no hit). */
   readonly wheelImpacts = [0, 0, 0, 0];
+  /**
+   * How fast each corner of the body was moving down (m/s) as its wheel landed or
+   * bottomed this step, 0 otherwise. Unlike the compression speed it ignores a rock step
+   * rising under a slowly rolling wheel: only a corner that was falling counts.
+   */
+  readonly wheelLandings = [0, 0, 0, 0];
+  /** Each corner's downward speed after the last step. */
+  private readonly cornerFall = [0, 0, 0, 0];
   private readonly impactCooldown = [0.5, 0.5, 0.5, 0.5];
   /** World position of the air intake (updated each step). */
   readonly intakePos = v3();
@@ -303,6 +312,7 @@ export class Vehicle {
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     for (const w of this.wheels) w.sink = 0;
+    this.cornerFall.fill(0);
     // Settling onto the ground after a teleport isn't a hit.
     this.impactCooldown.fill(0.5);
     this.drivetrain.gear = 0;
@@ -403,7 +413,8 @@ export class Vehicle {
       // It catches straight to idle.
       if (this.crank === 0) this.drivetrain.rpm = t.engine.idleRpm;
     }
-    this.drivetrain.engineRunning = !this.condition.flood.stalled && !cranking;
+    // A wrecked engine (realistic damage) turns over on the starter but never runs.
+    this.drivetrain.engineRunning = !this.condition.flood.stalled && !cranking && this.condition.engine > 0;
     if (this.rand() < dt * 6) this.sputterRand = this.rand();
     this.enginePower =
       enginePowerMultiplier(this.condition) * floodPower(this.condition.flood, this.sputterRand);
@@ -513,10 +524,16 @@ export class Vehicle {
         Math.PI) /
       180;
     // A locked front axle resists the different wheel speeds needed for a tight turn.
+    // A bent front corner knocks its wheel out of line, pulling the car towards that side.
+    const susp = this.condition.suspension;
+    const toe =
+      ((damageTuning.suspension.toeDeg * Math.PI) / 180) *
+      (frontHealth(t, susp, -1) - frontHealth(t, susp, 1));
     const angle =
       Math.max(-1, Math.min(1, input.steer)) *
-      maxA *
-      (this.differentials.front ? t.crawling.frontLockSteering : 1);
+        maxA *
+        (this.differentials.front ? t.crawling.frontLockSteering : 1) +
+      toe;
     const wb = Math.abs(t.wheels[0].z - t.wheels[2].z);
     const halfTrack = Math.abs(t.wheels[0].x);
     for (let i = 0; i < 4; i++) {
@@ -576,6 +593,8 @@ export class Vehicle {
       );
       c.setWheelSuspensionRestLength(i, t.suspensionRestLength + extraDroop + w.sink + this.preload[i]);
       c.setWheelSuspensionStiffness(i, stiffness * suspensionStiffnessMultiplier(this.condition, i));
+      // A tyre going down rolls on a smaller radius, dropping that corner.
+      c.setWheelRadius(i, t.wheelRadius - damageTuning.tyre.flatDrop * (1 - this.condition.tyres[i]));
     }
 
     this.wheelContacts.update(this.body, c, WHEEL_FILTER);
@@ -585,11 +604,20 @@ export class Vehicle {
 
     // Rolling resistance, aero drag and water drag.
     let rr = 0;
+    const sv = Math.max(-1, Math.min(1, this.speed / 0.6));
     for (let i = 0; i < 4; i++) {
       const w = this.wheels[i];
-      if (w.contact) rr += surfaces[w.surface].rollingResistance * w.load;
+      if (!w.contact) continue;
+      rr += surfaces[w.surface].rollingResistance * w.load;
+      // A soft or flat tyre drags at its own corner, which also pulls the car that way.
+      const drag = damageTuning.tyre.flatDrag * (1 - this.condition.tyres[i]) * w.load * sv * dt;
+      if (drag !== 0)
+        this.body.applyImpulseAtPoint(
+          { x: -fwd.x * drag, y: -fwd.y * drag, z: -fwd.z * drag },
+          w.contactPoint,
+          true,
+        );
     }
-    const sv = Math.max(-1, Math.min(1, this.speed / 0.6));
     let fx = -fwd.x * rr * sv;
     let fy = -fwd.y * rr * sv;
     let fz = -fwd.z * rr * sv;
@@ -746,9 +774,13 @@ export class Vehicle {
     const vel = this.body.linvel();
     const ang = this.body.angvel();
     const com = this.body.worldCom();
-    const right = rotate(this.body.rotation(), 1, 0, 0, this.tmpRight);
+    const q = this.body.rotation();
+    const right = rotate(q, 1, 0, 0, this.tmpRight);
+    const up = rotate(q, 0, 1, 0, this.tmpUp);
+    const pos = this.body.translation();
     for (let i = 0; i < 4; i++) {
       const w = this.wheels[i];
+      const wasContact = w.contact;
       w.contact = c.wheelIsInContact(i);
       const susp = c.wheelSuspensionLength(i) ?? w.suspension;
       w.compression = (w.suspension - susp) / dt;
@@ -759,6 +791,19 @@ export class Vehicle {
         this.wheelImpacts[i] = w.compression;
         this.impactCooldown[i] = 0.12;
       }
+      const hit = w.contact && (!wasContact || w.compression > this.tuning.wheelImpactSpeed);
+      this.wheelLandings[i] = hit ? Math.max(0, this.cornerFall[i]) : 0;
+      // The corner's velocity now (body velocity plus spin about the centre of mass).
+      const hp = this.tuning.wheels[i];
+      const k = rotate(q, hp.x, hp.y, hp.z);
+      const kx = pos.x + k.x - com.x,
+        ky = pos.y + k.y - com.y,
+        kz = pos.z + k.z - com.z;
+      this.cornerFall[i] = -(
+        (vel.x + ang.y * kz - ang.z * ky) * up.x +
+        (vel.y + ang.z * kx - ang.x * kz) * up.y +
+        (vel.z + ang.x * ky - ang.y * kx) * up.z
+      );
       const rotation = c.wheelRotation(i) ?? this.rawWheelRotation[i];
       this.wheelRotationDelta[i] = rotation - this.rawWheelRotation[i];
       this.rawWheelRotation[i] = rotation;
@@ -821,4 +866,10 @@ export class Vehicle {
     this.lastVel.y = vel.y;
     this.lastVel.z = vel.z;
   }
+}
+
+/** Health of the front suspension corner on one side (+1 right, -1 left). */
+function frontHealth(t: VehicleTuning, suspension: readonly number[], side: 1 | -1): number {
+  const i = t.wheels.findIndex((w) => w.front && Math.sign(w.x) === side);
+  return i < 0 ? 1 : suspension[i];
 }

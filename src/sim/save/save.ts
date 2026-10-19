@@ -5,6 +5,7 @@ import type { VehicleId } from '../../data/vehicle';
 import { isVehicleId } from '../../data/vehicles';
 import { isMapId, type MapId } from '../../data/maps';
 import { defaultConditions, isTimeOfDay, isWeather, type Conditions } from '../../data/environment';
+import { isDamageMode, type DamageMode } from '../../data/damage';
 
 export interface Settings {
   quality: 'low' | 'medium' | 'high';
@@ -12,6 +13,8 @@ export interface Settings {
   engineVolume: number;
   ambienceVolume: number;
   units: 'kmh' | 'mph';
+  /** Mechanical damage: off, mild or realistic (added later; older saves get mild). */
+  damage: DamageMode;
 }
 
 export interface SaveData {
@@ -37,6 +40,7 @@ export const defaultSettings: Settings = {
   engineVolume: 0.8,
   ambienceVolume: 0.7,
   units: 'kmh',
+  damage: 'mild',
 };
 
 /** Minimal storage interface so tests can pass a fake. */
@@ -78,6 +82,7 @@ export function loadSave(s: KeyValueStore | null = store()): SaveData | null {
         engineVolume: clamp01(st.engineVolume, defaultSettings.engineVolume),
         ambienceVolume: clamp01(st.ambienceVolume, defaultSettings.ambienceVolume),
         units: st.units === 'mph' ? 'mph' : 'kmh',
+        damage: isDamageMode(st.damage) ? st.damage : defaultSettings.damage,
       },
       crawlBests: readBests(data.crawlBests),
       vehicle: isVehicleId(data.vehicle) ? data.vehicle : 'shortie',

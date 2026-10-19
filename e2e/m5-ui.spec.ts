@@ -85,8 +85,8 @@ test('M5: driving into a POI shows the toast, adds it to the map, and survives a
   await page.keyboard.down('KeyQ');
   await expect.poll(() => page.evaluate(() => window.__game!.ui().toolMenu)).toBe(true);
   await page.mouse.move(640, 360);
-  await page.mouse.move(560, 420, { steps: 4 });
-  await page.waitForTimeout(500);
+  await page.locator('.tool-option', { hasText: 'Place planks' }).hover();
+  await expect(page.locator('.tool-option.selected')).toHaveText('Place planks');
   await shot(page, 'M5', 'tool-menu');
   await page.keyboard.up('KeyQ');
   await expect.poll(() => page.evaluate(() => window.__game!.ui().mode)).toBe('plankPlace');

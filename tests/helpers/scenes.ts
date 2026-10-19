@@ -10,6 +10,8 @@ export interface Scene {
   vehicle: Vehicle;
   run(seconds: number, input: Partial<VehicleInput> | ((t: number) => Partial<VehicleInput>)): void;
   time: number;
+  /** Called after every physics step (e.g. to apply damage, as the simulation does). */
+  afterStep?: (dt: number) => void;
 }
 
 /** A static box as ground: `pitchDeg` tilts it so -z goes uphill, `rollDeg` tilts it sideways (+x goes down). */
@@ -71,6 +73,7 @@ export async function makeScene(opts: {
         vehicle.step(inp, PHYSICS_DT);
         physics.step();
         vehicle.postStep(PHYSICS_DT);
+        scene.afterStep?.(PHYSICS_DT);
         scene.time += PHYSICS_DT;
       }
     },

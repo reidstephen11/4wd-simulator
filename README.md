@@ -44,11 +44,30 @@ On wet ground hard braking takes longer and can lock the wheels: a locked tyre s
 
 The engine starts as you arrive: the starter cranks for about a second (a little longer for the diesel) and the car stays put until the engine catches. The same happens after swapping vehicles and when restarting a flooded engine.
 
-The version number (for example v0.14) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
+The version number (for example v0.15) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
 
 ## Headlights
 
 **N** switches the headlights: off, low beam, high beam, then off again (gamepad: tool menu → Headlights; touch: LIGHTS, top left). At dusk and night they come on, on low beam, as you arrive. Low beam lights the ground for about 20 m ahead and spreads wide, which suits slow work among rocks and trees; high beam reaches the trees about 40 m away, in a narrower beam. The Camel Trophy 4WD's four roof lamps come on with high beam. In daylight the lamps glow but light nothing, as in the real world. A green lamp in the status strip shows the headlights are on, blue for high beam; in the driver's seat the dial needles light up and the dash has a blue high-beam lamp.
+
+## Damage
+
+**Pause menu → Settings → Damage** chooses how much harm hard driving does: Off, Mild (the default) or Realistic. The body dents and gets dirty whatever you choose.
+
+What does damage, with Mild or Realistic:
+
+- **A tyre** is cut when it lands hard on rock: a drop of about a metre or more, or a jump. It goes soft (Mild) or flat (Realistic): less grip, that corner sits lower and the car pulls towards it.
+- **A suspension corner** bends on a heavy landing, about a 1.6 m drop. It sags, and a bent front corner pulls the steering towards its side.
+- **The engine** is hurt by a crash on the nose (from about 25 km/h into something solid), a heavy knock underneath (a drop onto the belly, not the scrapes of crawling) or running upside down. It loses power and, badly hurt, smokes from under the bonnet. With Mild it keeps at least 70% of its power; with Realistic it can be wrecked, after which it cranks but won't run, and water drawn in through the air intake damages it too.
+
+Crawling up, over and down the trails' rocks does no damage: every trail and park line has been driven with Realistic damage on without a scratch.
+
+| Setting   | Repairs                                                                                                                |
+| --------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Mild      | Tool menu → **Field repair**: stopped, about 6 s, and everything is put right                                          |
+| Realistic | Tool menu → **Fit the spare**: stopped, about 8 s, for one tyre; there's one spare. Everything else is fixed at a camp |
+
+Driving into any campsite, or **pause menu → Return to last campsite**, repairs everything and puts the spare back. A small car outline in the status strip shows what's damaged, amber then red, and a prompt tells you when a repair can be done. Changing the setting to Off puts everything right.
 
 ## Vehicles
 
@@ -233,6 +252,7 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] **Driver's seat panels:** C → Driver in both vehicles; the windscreen and mirrors should be clear.
 - [ ] **Crawler Creek:** choose it on the welcome screen. From the Trailhead, drive the gates in number order all the way round. Check the hairpins on the Switchbacks (can you make each one in one go?), that both bridges' boards feel solid and the tyres sound like timber on them, that slipping a wheel off the Skinny Bridge drops it into the bog, and that the Rock Garden stops you with open diffs. Open the paper map to see the gates.
 - [ ] **Night and headlights:** choose Night on the welcome screen. The headlights should be on (green lamp in the status strip) as you arrive. Press N for high beam (blue lamp; the beam reaches the trees) and again for off; with them off you should only just make out the track by moonlight. In the driver's seat (C) the needles glow and the blue lamp lights on high beam. In the Camel Trophy 4WD the four roof lamps light with high beam. Listen for crickets instead of birds.
+- [ ] **Damage:** pause menu → Settings → Damage → Realistic. Drive off a ledge of a metre or more onto rock, or into a tree at 30 km/h; check the message, the car outline in the status strip, the sagging corner or flat tyre, the pull to one side and the smoke. Fit the spare from the tool menu (stopped), then drive into a campsite and check everything is put right. Then drive a trail carefully with Realistic on and check nothing breaks. Try Mild too: nothing should stop you.
 - [ ] **Signs and messages:** every sign should read straight from both sides, with no second board crossing it (Crawler Creek's section signs show it best). Messages, "Discovered" cards and run results should appear in the top right corner, not over the track ahead; on a phone, below the View and Reset view buttons.
 - [ ] **Camel Trophy 4WD:** pause menu → Vehicle → Camel Trophy 4WD. Check the yellow paint and decals, the roof lamps and the snorkel, and that it drives through deep water (the High Country's Deep Crossing) that stalls the plain short-wheelbase 4WD.
 - [ ] **Land Rover 110:** pause menu → Vehicle → Land Rover 110 Perentie. Check the look against the _Bush Tucker Man_ vehicle, the diesel clatter at idle and its starter (no turbo-like whistle as it speeds up), the driver's view (C → Driver), and the Granite Spur loop. Reload the page and it should still be the Land Rover.

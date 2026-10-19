@@ -150,8 +150,12 @@ describe('Crawler Creek gate trail', () => {
     expect(plank.tilt).toBeLessThan(8);
   }, 120_000);
 
-  it('the Camel Trophy car drives the whole loop from the Trailhead without help', async () => {
+  it('the Camel Trophy car drives the whole loop from the Trailhead without help, or damage', async () => {
     const s = await scene(gateTrailSections[0].id, false, 'both', camelTuning);
+    // Careful driving does no harm, even with realistic damage.
+    s.sim.setDamage('realistic');
+    const damage: string[] = [];
+    s.sim.events.on('damage', (e) => damage.push(`${e.part} ${e.wheel} ${e.cause}`));
     try {
       for (const section of gateTrailSections) {
         const r = await driveLeg(s, trackOf(section.id), false, 300);
@@ -159,6 +163,7 @@ describe('Crawler Creek gate trail', () => {
       }
       const home = world.pois.find((p) => p.id === 'trailhead')!;
       expect(Math.hypot(s.v.position.x - home.x, s.v.position.z - home.z)).toBeLessThan(home.radius);
+      expect(damage).toEqual([]);
     } finally {
       s.sim.physics.free();
     }

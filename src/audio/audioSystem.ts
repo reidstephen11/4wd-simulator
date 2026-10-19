@@ -7,7 +7,7 @@ import { createNoiseBank, type NoiseBank } from './buffers';
 import { EngineSound, HornSound } from './engineSound';
 import type { AudioFrame } from './frame';
 import { knockLevel, thumpLevel } from './mix';
-import { clunk, dentCrunch, knock, ratchet, switchClick, thump } from './oneShots';
+import { clunk, dentCrunch, knock, puncture, ratchet, stallClunk, switchClick, thump } from './oneShots';
 import { TyreSound } from './tyreSound';
 import { UiSounds } from './uiSounds';
 import { WinchSound } from './winchSound';
@@ -276,6 +276,16 @@ export class AudioSystem {
   lightSwitch(high: boolean): void {
     const g = this.live();
     if (g) switchClick(g.ctx, g.fxBus, g.noise, high);
+  }
+
+  /** Mechanical damage: a tyre cut, a suspension corner bent, the engine hurt or wrecked. */
+  damage(part: 'tyre' | 'suspension' | 'engine', wrecked = false): void {
+    const g = this.live();
+    if (!g) return;
+    if (part === 'tyre') puncture(g.ctx, g.fxBus, g.noise);
+    else if (part === 'suspension') dentCrunch(g.ctx, g.fxBus, g.noise, 0.9);
+    else if (wrecked) stallClunk(g.ctx, g.fxBus, g.noise);
+    else knock(g.ctx, g.fxBus, g.noise, 0.8);
   }
 
   /** The body was dented (impact speed, m/s). */

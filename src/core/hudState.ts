@@ -12,6 +12,7 @@ import type { GaugeState } from '../ui/crawlGauges';
 import { penaltyPoints, type CrawlRun } from '../sim/crawlRuns';
 import { rotate } from '../sim/vehicle/math';
 import type { ToolMode } from './toolController';
+import { isDamaged } from '../sim/vehicle/damage';
 
 export interface HudInputs {
   vehicle: Vehicle;
@@ -28,6 +29,8 @@ export interface HudInputs {
   anchorInReach: boolean;
   /** Scored crawl run in progress, if any. */
   run?: CrawlRun | null;
+  /** What a roadside repair could do now (null when nothing needs one or damage is off). */
+  repair?: { kind: 'field' | 'spare'; possible: boolean } | null;
 }
 
 /** Build what the HUD shows this frame, including context prompts (SPEC §9). */
@@ -40,6 +43,8 @@ export function buildHudState(i: HudInputs): HudState {
   const p = v.body.translation();
   const prompts: Prompt[] = [];
   const flood = v.condition.flood;
+  const cond = v.condition;
+  const wrecked = cond.engine <= 0;
 
   if (i.mode === 'plankPlace') {
     prompts.push(
@@ -60,7 +65,19 @@ export function buildHudState(i: HudInputs): HudState {
       prompts.push({ keys: g.handbrake ?? 'Space', text: 'Release the handbrake' });
     if (t.jack.state === 'available')
       prompts.push({ keys: `Hold ${g.jack}`, text: 'Right vehicle', progress: t.jack.holdProgress });
-    if (flood.stalled) {
+    if (t.repair)
+      prompts.push({
+        keys: '…',
+        text: t.repair.kind === 'field' ? 'Field repair' : 'Fitting the spare',
+        progress: 1 - t.repair.remaining / t.repair.total,
+      });
+    else if (i.repair?.possible && Math.abs(v.speed) < 0.5)
+      prompts.push({
+        keys: g.toolMenu ?? 'Q',
+        text: i.repair.kind === 'field' ? 'Field repair (tool menu)' : 'Fit the spare (tool menu)',
+      });
+    if (wrecked) prompts.push({ keys: '!', text: 'Engine wrecked — Pause menu → Return to last campsite' });
+    else if (flood.stalled) {
       const wait = Math.ceil(floodTuning.restartDryTime - flood.dryTime);
       if (flood.submerged)
         prompts.push({ keys: '!', text: 'Engine flooded — get the air intake out of the water' });
@@ -171,7 +188,17 @@ export function buildHudState(i: HudInputs): HudState {
     planksCarried: t.planks.carried,
     planksTotal: 2,
     winchAttached: t.winch.attached,
-    engine: flood.stalled ? 2 : flood.timer > 0 ? 1 : 0,
+    engine: flood.stalled || wrecked ? 2 : flood.timer > 0 ? 1 : 0,
+    damage: isDamaged(cond)
+      ? {
+          engine: cond.engine,
+          corners: v.tuning.wheels.map((w, k) => ({
+            health: Math.min(cond.tyres[k], cond.tyreTarget[k] < 1 ? 0.9 : 1, cond.suspension[k]),
+            front: w.front,
+            left: w.x < 0,
+          })),
+        }
+      : null,
     prompts,
   };
 }

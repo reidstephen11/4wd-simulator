@@ -58,9 +58,9 @@ test('crawl controls work from keyboard, HUD and gamepad; course hints explain t
     });
     await expect(page.locator('.tool-menu')).toHaveClass(/hidden/);
   };
-  // Stick direction of the i-th of the menu's seven options, clockwise from the top.
+  // Stick direction of the i-th of the menu's eight options, clockwise from the top.
   const toward = (i: number): [number, number] => {
-    const a = -Math.PI / 2 + (i / 7) * Math.PI * 2;
+    const a = -Math.PI / 2 + (i / 8) * Math.PI * 2;
     return [Math.cos(a), Math.sin(a)];
   };
   await chooseWithPad('Lock front diff', ...toward(1));

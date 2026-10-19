@@ -1,6 +1,7 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { EnvironmentConfig } from '../data/environment';
 import type { HeadlightMode } from '../data/headlights';
+import { damageTuning, type DamageMode } from '../data/damage';
 import { SurfaceId } from '../data/surfaces';
 import { vehicleTuning, type VehicleTuning } from '../data/vehicle';
 import { Emitter } from '../core/events';
@@ -17,6 +18,8 @@ import { winchTuning } from '../data/tools';
 import { VehicleTools, type ToolEvent } from './tools/tools';
 import type { Anchor } from './tools/anchors';
 import { updateWear } from './vehicle/wear';
+import { limitDamage, repairAll, updateDamage, worstTyre, type DamageEvent } from './vehicle/damage';
+import { emptyInput } from './input/vehicleInput';
 import { headingOf, rotate, v3 } from './vehicle/math';
 
 /** Branch stubs on the Fallen Tree: [position along the trunk (−1..1), offset x, offset z]. */
@@ -56,6 +59,10 @@ export interface SimEvents extends Record<string, unknown> {
   /** Flooding stalled or restarted the engine, or it is being started (start-up, a vehicle swap). */
   engine: { id: string; event: 'stalled' | 'restarted' | 'starting' };
   dent: { id: string; impact: number };
+  /** Mechanical damage: a tyre cut, a suspension corner bent or the engine hurt. */
+  damage: { id: string } & DamageEvent;
+  /** Repaired: at the roadside (a field repair or the spare fitted) or back at camp. */
+  repaired: { id: string; kind: 'field' | 'spare' | 'camp' };
   /** A wheel hit something hard (suspension compressing fast). */
   wheelImpact: { id: string; wheel: number; speed: number };
   /** The chassis knocked into the ground or a rock (impulse, N·s). */
@@ -84,6 +91,7 @@ export interface SimState {
     flood: { timer: number; stalled: boolean; dryTime: number };
     dirt: { front: number; sides: number; rear: number; wheels: number };
     dents: number;
+    health: { engine: number; tyres: number[]; suspension: number[]; spare: boolean };
     winch: { anchor: string | null; length: number };
     planks: { carried: number; placed: { x: number; y: number; z: number }[] };
     jack: string;
@@ -104,6 +112,8 @@ export class Simulation {
   /** Bodies of swapped-out vehicles, disabled until the next step removes them. */
   private readonly retired: RAPIER.RigidBody[] = [];
   time = 0;
+  /** How harsh mechanical damage is (the settings choice; off unless the game sets it). */
+  damage: DamageMode = 'off';
 
   constructor(
     readonly R: Rapier,
@@ -311,9 +321,15 @@ export class Simulation {
 
   step(inputs: ReadonlyMap<string, VehicleInput>, dt: number): void {
     for (const [id, v] of this.vehicles) {
-      const input = inputs.get(id);
+      let input = inputs.get(id);
       if (!input) continue;
       const tools = this.toolsOf(id);
+      // Working on the car: it stays parked until the job is done.
+      if (tools.repair) {
+        input = { ...emptyInput(), handbrake: true, cycleLights: input.cycleLights };
+        tools.repair.remaining -= dt;
+        if (tools.repair.remaining <= 0) this.finishRepair(id);
+      }
       if (tools.jack.state === 'righting') {
         v.snapshot();
         tools.jack.step(v, input.jack, dt, this.R, (x, z) => this.world.terrain.heightAt(x, z));
@@ -360,6 +376,7 @@ export class Simulation {
           this.events.emit('wheelImpact', { id, wheel: i, speed: v.wheelImpacts[i] });
       if (v.bodyContact.knock > 0) this.events.emit('bodyKnock', { id, impulse: v.bodyContact.knock });
       if (updateWear(v, dt)) this.events.emit('dent', { id, impact: v.lastImpact });
+      for (const e of updateDamage(v, this.damage, dt)) this.events.emit('damage', { id, ...e });
     }
     this.time += dt;
   }
@@ -500,9 +517,86 @@ export class Simulation {
     this.toolEvent(id, { type: 'planksRecalled' });
   }
 
+  // --- Damage and repairs -----------------------------------------------
+
+  /** Change how harsh damage is; damage beyond what the new setting allows is put right. */
+  setDamage(mode: DamageMode): void {
+    this.damage = mode;
+    for (const v of this.vehicles.values()) limitDamage(v.condition, mode);
+  }
+
+  /**
+   * What a roadside repair could do now: a field repair puts everything right with mild
+   * damage; with realistic damage only a cut tyre can be swapped for the spare.
+   */
+  repairOption(id: string): { kind: 'field' | 'spare'; possible: boolean; reason?: string } | null {
+    const v = this.vehicleOf(id);
+    const c = v.condition;
+    if (this.damage === 'off') return null;
+    const kind = this.damage === 'mild' ? 'field' : 'spare';
+    const needed =
+      kind === 'field'
+        ? c.engine < 1 || c.tyreTarget.some((h) => h < 1) || c.suspension.some((h) => h < 1)
+        : worstTyre(c) >= 0;
+    if (!needed) return null;
+    if (kind === 'spare' && !c.spare) return { kind, possible: false, reason: 'The spare is already on' };
+    if (Math.abs(v.speed) > 0.5) return { kind, possible: false, reason: 'Stop first' };
+    if (v.tiltDeg() > 30) return { kind, possible: false, reason: 'Too steep to work on it here' };
+    return { kind, possible: true };
+  }
+
+  /** Start a roadside repair (tool menu). False if there's nothing it can do here. */
+  startRepair(id: string): boolean {
+    const option = this.repairOption(id);
+    const tools = this.toolsOf(id);
+    if (!option?.possible || tools.repair) return false;
+    const R = damageTuning.repair;
+    const total = option.kind === 'field' ? R.fieldSeconds : R.spareSeconds;
+    tools.repair = { kind: option.kind, remaining: total, total };
+    return true;
+  }
+
+  private finishRepair(id: string): void {
+    const tools = this.toolsOf(id);
+    const job = tools.repair;
+    tools.repair = null;
+    if (!job) return;
+    const c = this.vehicleOf(id).condition;
+    if (job.kind === 'field') {
+      const spare = c.spare;
+      repairAll(c);
+      c.spare = spare;
+    } else {
+      const i = worstTyre(c);
+      if (i >= 0 && c.spare) {
+        c.tyres[i] = 1;
+        c.tyreTarget[i] = 1;
+        c.spare = false;
+      }
+    }
+    this.events.emit('repaired', { id, kind: job.kind });
+  }
+
+  /** Put everything right (a campsite's workshop, or being brought back to camp). */
+  repairAtCamp(id: string): void {
+    const v = this.vehicleOf(id);
+    const c = v.condition;
+    const was =
+      c.engine < 1 ||
+      c.tyres.some((h) => h < 1) ||
+      c.tyreTarget.some((h) => h < 1) ||
+      c.suspension.some((h) => h < 1) ||
+      !c.spare;
+    repairAll(c);
+    if (was) this.events.emit('repaired', { id, kind: 'camp' });
+  }
+
   // --- Campsites ---------------------------------------------------------
 
-  /** Pause-menu backup (SPEC §7.4): back to a campsite, flooding cleared, planks returned. */
+  /**
+   * Pause-menu backup (SPEC §7.4): back to a campsite, flooding cleared, planks returned
+   * and any damage repaired.
+   */
   returnToCampsite(id: string, campsiteId: string): void {
     const v = this.vehicleOf(id);
     const tools = this.toolsOf(id);
@@ -510,6 +604,8 @@ export class Simulation {
     tools.planks.recall(this.physics);
     tools.jack.state = 'idle';
     tools.jack.waitTime = 0;
+    tools.repair = null;
+    this.repairAtCamp(id);
     v.teleport(this.campsitePose(campsiteId, v.tuning.wheelRadius));
     const f = v.condition.flood;
     f.timer = 0;
@@ -566,6 +662,12 @@ export class Simulation {
           },
           dirt: { ...v.condition.dirt },
           dents: v.condition.dents.length,
+          health: {
+            engine: v.condition.engine,
+            tyres: [...v.condition.tyres],
+            suspension: [...v.condition.suspension],
+            spare: v.condition.spare,
+          },
           winch: { anchor: tools.winch.anchor?.id ?? null, length: tools.winch.length },
           jack: tools.jack.state,
           planks: {

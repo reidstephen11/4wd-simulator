@@ -39,6 +39,12 @@ export interface HudState {
   winchAttached: boolean;
   /** 0 = fine, 1 = flooding (warning), 2 = stalled. */
   engine: 0 | 1 | 2;
+  /**
+   * Mechanical damage, when anything is damaged: engine health and each corner's (the
+   * worse of its tyre and suspension), 1 = as new. Wheels in the vehicle's order, with
+   * which are front and which are on the left.
+   */
+  damage: { engine: number; corners: { health: number; front: boolean; left: boolean }[] } | null;
   prompts: Prompt[];
 }
 
@@ -57,6 +63,8 @@ export class Hud {
   private readonly rangeEl: HTMLElement;
   private readonly parkEl: HTMLElement;
   private readonly lightsEl: HTMLElement;
+  private readonly damageEl: HTMLElement;
+  private lastDamageKey = '';
   private readonly driveButtons: HTMLButtonElement[];
   private readonly courseHint: HTMLElement;
   private readonly planksEl: HTMLElement;
@@ -91,6 +99,7 @@ export class Hud {
         <button type="button" class="status-drive" data-drive="precision" aria-label="Precision crawl" aria-pressed="false" title="Precision crawl: P / LB menu. Hold throttle for walking pace.">CRAWL</button>
         <div class="status-park" title="Handbrake on: Space / X">P</div>
         <div class="status-item status-lights" title="Headlights: N / LB menu">${icons.headlight}</div>
+        <div class="status-item status-damage" title="Damage"></div>
         <div class="status-item status-planks" title="Planks">${icons.planks}<span>2/2</span></div>
         <div class="status-item status-winch" title="Winch attached">${icons.winch}</div>
         <div class="status-item status-engine" title="Engine flooding">${icons.engine}</div>
@@ -113,6 +122,7 @@ export class Hud {
     this.rangeEl = this.el.querySelector('.status-range') as HTMLElement;
     this.parkEl = this.el.querySelector('.status-park') as HTMLElement;
     this.lightsEl = this.el.querySelector('.status-lights') as HTMLElement;
+    this.damageEl = this.el.querySelector('.status-damage') as HTMLElement;
     this.driveButtons = [...this.el.querySelectorAll<HTMLButtonElement>('[data-drive]')];
     this.courseHint = this.el.querySelector('.course-hint') as HTMLElement;
     for (const button of this.driveButtons)
@@ -196,6 +206,7 @@ export class Hud {
     this.parkEl.classList.toggle('shown', s.parkBrake);
     this.lightsEl.classList.toggle('shown', s.lights !== 'off');
     this.lightsEl.classList.toggle('high', s.lights === 'high');
+    this.drawDamage(s.damage);
     const active = [s.frontLocked, s.rearLocked, s.precisionCrawl];
     this.driveButtons.forEach((button, index) => {
       button.setAttribute('aria-pressed', String(active[index]));
@@ -227,6 +238,35 @@ export class Hud {
         this.promptsEl.appendChild(el);
       }
     }
+  }
+
+  /** A small car seen from above: each corner and the engine coloured by its health. */
+  private drawDamage(d: HudState['damage']): void {
+    const key = d ? `${d.engine.toFixed(2)}|${d.corners.map((c) => c.health.toFixed(2)).join(',')}` : '';
+    if (key === this.lastDamageKey) return;
+    this.lastDamageKey = key;
+    this.damageEl.classList.toggle('shown', d !== null);
+    if (!d) {
+      this.damageEl.innerHTML = '';
+      return;
+    }
+    const colour = (h: number) => (h > 0.97 ? 'currentColor' : h > 0.45 ? '#b8741a' : '#a3311f');
+    const wheels = d.corners
+      .map(
+        (c) =>
+          `<rect x="${c.left ? 3 : 17}" y="${c.front ? 3 : 15}" width="4" height="7" rx="1" fill="${colour(c.health)}"/>`,
+      )
+      .join('');
+    this.damageEl.innerHTML = `<svg viewBox="0 0 24 24"><rect x="7.5" y="2" width="9" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="9.5" y="4" width="5" height="5" rx="1" fill="${colour(d.engine)}"/>${wheels}</svg>`;
+    const parts = [
+      d.engine < 0.97 ? `engine ${Math.round(d.engine * 100)}%` : '',
+      ...d.corners.map((c) =>
+        c.health < 0.97
+          ? `${c.front ? 'front' : 'rear'} ${c.left ? 'left' : 'right'} ${Math.round(c.health * 100)}%`
+          : '',
+      ),
+    ].filter(Boolean);
+    this.damageEl.title = `Damage: ${parts.join(', ')}`;
   }
 
   private drawCompass(s: HudState): void {

@@ -273,6 +273,9 @@ export class VehicleModel {
       const ww = this.wheels[i];
       ww.pivot.position.y = t.wheels[i].y - w.suspension + w.sink * 0.0;
       ww.pivot.rotation.y = -w.steer;
+      // A tyre going down squashes: lower and longer, bulging at the sides.
+      const flat = 1 - v.condition.tyres[i];
+      ww.pivot.scale.set(1 + 0.06 * flat, 1 - 0.12 * flat, 1 + 0.05 * flat);
       // Extra spin when the wheel is spinning beyond grip.
       this.spinExtra[i] +=
         w.spin * dt * 25 * Math.sign(v.throttle > 0 ? (v.drivetrain.gear < 0 ? -1 : 1) : 0);
