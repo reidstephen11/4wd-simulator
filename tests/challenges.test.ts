@@ -8,7 +8,8 @@ import {
   challengeTrails,
 } from '../src/data/challenges';
 import { lateAfternoon } from '../src/data/environment';
-import { vehicleTuning } from '../src/data/vehicle';
+import { perentieTuning } from '../src/data/perentie';
+import { vehicleTuning, type VehicleTuning } from '../src/data/vehicle';
 import { Autopilot } from '../src/sim/input/autopilot';
 import { emptyInput, type VehicleInput } from '../src/sim/input/vehicleInput';
 import { flatDirt, loadRapier, Physics } from '../src/sim/physics';
@@ -99,11 +100,17 @@ async function driveLeg(s: Scene, track: TrackInfo, back = false, limit = 110) {
 const world = testWorld();
 const trackOf = (id: string) => world.features.tracks.find((t) => t.def.id === id)!;
 
-async function scene(trackId: string, back = false, lockers: Lockers = 'both') {
+async function scene(
+  trackId: string,
+  back = false,
+  lockers: Lockers = 'both',
+  tuning: VehicleTuning = vehicleTuning,
+) {
   const sim = new Simulation(await loadRapier(), world, lateAfternoon);
   const track = trackOf(trackId);
   const p = trailPoint(track, back ? track.poly.length : 0);
-  const v = sim.addVehicle('p', sim.poseAt(p.x, p.z, p.headingDeg + (back ? 180 : 0)));
+  const pose = sim.poseAt(p.x, p.z, p.headingDeg + (back ? 180 : 0), tuning.wheelRadius);
+  const v = sim.addVehicle('p', pose, tuning);
   const inputs = new Map([['p', { ...emptyInput(), brake: 1, handbrake: true }]]);
   for (let i = 0; i < 90; i++) sim.step(inputs, DT);
   if (lockers !== 'high') {
@@ -260,19 +267,34 @@ describe('Granite Spur', () => {
     }
   }, 300_000);
 
-  for (const route of challengeEasyRoutes)
-    it(`drives the fire trail from ${route[0][0]} to ${route[route.length - 1][0]} without lockers`, async () => {
-      const [first, firstBack] = route[0];
-      const s = await scene(first, firstBack, 'open');
-      try {
-        for (const [id, back] of route) {
-          const r = await driveLeg(s, trackOf(id), back);
-          expect(r.tilt, id).toBeLessThan(25);
-        }
-      } finally {
-        s.sim.physics.free();
+  // The Chute's walls change height every 2.3 m, the short-wheelbase 4WD's wheelbase; the
+  // 110 climbs it but grounds its chassis on a wall step coming down, so the loop is its test.
+  it('the long-wheelbase Land Rover 110 drives the whole loop, up The Chute', async () => {
+    const s = await scene(challengeLoopRoute[0], false, 'both', perentieTuning);
+    try {
+      for (const id of challengeLoopRoute) {
+        const r = await driveLeg(s, trackOf(id));
+        expect(r.tilt, id).toBeLessThan(maxTilt[trail(id)?.difficulty ?? 'easy']);
       }
-    }, 300_000);
+    } finally {
+      s.sim.physics.free();
+    }
+  }, 300_000);
+
+  for (const route of challengeEasyRoutes)
+    for (const tuning of [vehicleTuning, perentieTuning])
+      it(`drives the fire trail from ${route[0][0]} to ${route[route.length - 1][0]} without lockers (${tuning.name})`, async () => {
+        const [first, firstBack] = route[0];
+        const s = await scene(first, firstBack, 'open', tuning);
+        try {
+          for (const [id, back] of route) {
+            const r = await driveLeg(s, trackOf(id), back);
+            expect(r.tilt, id).toBeLessThan(25);
+          }
+        } finally {
+          s.sim.physics.free();
+        }
+      }, 300_000);
 
   it('every trail stone is a closed convex hull that rests on the ground', () => {
     expect(world.features.rocks.length).toBeGreaterThan(80);

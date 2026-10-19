@@ -396,34 +396,20 @@ function rearBody(b: VehicleBuilder): void {
     );
   }
   plate(b, -0.38, 0.22, TAIL + 0.04, 1);
-  // Load floor and inward-facing bench seats, seen from the cab under the tilt.
-  b.block(0, 0.2, (B_PILLAR + TAIL) / 2, 1.6, 0.03, TAIL - B_PILLAR, black, M.Rubber, Z.Trim);
-  for (const side of [-1, 1]) {
-    b.block(
-      side * 0.62,
-      0.36,
-      1.0,
-      0.3,
-      0.06,
-      1.0,
-      paint.clone().multiplyScalar(0.75),
-      M.Paint,
-      Z.Trim,
-      0.01,
-    );
-    b.block(
-      side * 0.62,
-      0.56,
-      1.9,
-      0.3,
-      0.05,
-      0.5,
-      paint.clone().multiplyScalar(0.75),
-      M.Paint,
-      Z.Trim,
-      0.01,
-    );
-  }
+  // Load floor between the wheel boxes, full width ahead of and behind them, and
+  // inward-facing bench seats, seen from the cab under the tilt.
+  b.block(0, 0.2, (B_PILLAR + TAIL) / 2, 1.12, 0.03, TAIL - B_PILLAR, black, M.Rubber, Z.Trim);
+  const archFront = 1.397 - ARCH.radius,
+    archBack = 1.397 + ARCH.radius;
+  for (const side of [-1, 1])
+    for (const [z0, z1] of [
+      [B_PILLAR, archFront],
+      [archBack, TAIL],
+    ])
+      b.block(side * 0.68, 0.2, (z0 + z1) / 2, 0.24, 0.03, z1 - z0, black, M.Rubber, Z.Trim);
+  // The benches run along the tops of the wheel boxes.
+  const bench = paint.clone().multiplyScalar(0.75);
+  for (const side of [-1, 1]) b.block(side * 0.68, 0.54, 1.35, 0.3, 0.05, 1.8, bench, M.Paint, Z.Trim, 0.01);
   // A rolled swag and a tucker box.
   b.slot = M.Fabric;
   b.tag = Z.Trim;
@@ -670,7 +656,7 @@ export function buildPerentieWheel(tuning: VehicleTuning): THREE.BufferGeometry 
       b.push()
         .translate(side * w * 0.26, Math.cos(angle) * r * 0.965, Math.sin(angle) * r * 0.965)
         .rotate(angle, side * 0.18, 0);
-      b.box(w * 0.42, 0.05, 0.05, tyre);
+      b.box(w * 0.42, 0.04, 0.05, tyre);
       b.pop();
     }
     const angle = ((i + 0.25) / lugs) * Math.PI * 2;

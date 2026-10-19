@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import { collectErrors, shot, waitReady, waitSim } from './helpers';
 
 test('swaps to the Bush Tucker Man Land Rover from the pause menu and remembers it', async ({ page }) => {
+  // Loads the world twice on the software renderer.
+  test.setTimeout(600_000);
   const errors = collectErrors(page);
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());

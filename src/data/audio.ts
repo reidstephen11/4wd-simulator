@@ -332,7 +332,7 @@ export const dieselSynthTuning: EngineSynthTuning = {
   },
   catch: { seconds: 1.8, flareRpm: 1150, flareSeconds: 0.35, settleSeconds: 0.6 },
   whine: { teeth: [37, 29], second: 0.55, harmonic: 0.3, shaftAm: 0.3, wobble: 0.15, gain: 0.07 },
-  knock: { hz: [1500, 2900], q: 5, idle: 1, load: 0.55, gain: 3 },
+  knock: { hz: [1500, 2900], q: 5, idle: 1, load: 0.55, gain: 5 },
   outputGain: 1,
 };
 
