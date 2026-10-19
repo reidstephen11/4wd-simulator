@@ -397,6 +397,53 @@ body {
   display: none;
 }
 
+/*
+ * Driver's seat: the windscreen and mirrors need to stay clear, so the panels shrink,
+ * let the view show through and sit low in the corners over the doors and dash.
+ */
+.hud.cockpit .crawl-gauges {
+  right: 10px;
+  bottom: 46px;
+  transform: scale(0.68);
+  transform-origin: bottom right;
+  opacity: 0.78;
+}
+
+.hud.cockpit .camera-help {
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+  padding: 4px 6px;
+  opacity: 0.72;
+}
+
+.hud.cockpit .camera-help .camera-hint {
+  display: none;
+}
+
+.hud.cockpit .camera-help button {
+  margin: 0;
+  font-size: 11px;
+}
+
+.hud.cockpit .status,
+.hud.cockpit .course-hint {
+  transform: scale(0.82);
+  transform-origin: bottom left;
+  opacity: 0.8;
+}
+
+.hud.cockpit .status {
+  left: 10px;
+  bottom: 10px;
+}
+
+.hud.cockpit .course-hint {
+  left: 10px;
+  bottom: 58px;
+}
+
 .course-hint {
   position: absolute;
   left: 14px;

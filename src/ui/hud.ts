@@ -159,6 +159,7 @@ export class Hud {
   }
 
   update(s: HudState): void {
+    this.el.classList.toggle('cockpit', this.cockpitView);
     this.drawCompass(s);
     const showGauges =
       this.gaugeMode === 'on' ||
