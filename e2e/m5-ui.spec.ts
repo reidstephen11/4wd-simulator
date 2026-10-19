@@ -1,26 +1,60 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { collectErrors, shot, waitReady } from './helpers';
+
+declare global {
+  interface Window {
+    __discoveryCards?: string[];
+  }
+}
+
+/**
+ * Record the name on every "Discovered" card as it is added to the page. The card is removed
+ * 4.5 s of real time after it appears, which on a slow machine (software renderer) can be
+ * shorter than one frame, so waiting for it in the DOM can miss it.
+ */
+async function recordDiscoveryCards(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    window.__discoveryCards = seen;
+    new MutationObserver((records) => {
+      for (const r of records) {
+        for (const n of r.addedNodes) {
+          if (!(n instanceof HTMLElement) || n.classList.contains('run-card')) continue;
+          const name = n.querySelector('.discovery-name');
+          if (name) seen.push(name.textContent ?? '');
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+}
+
+function discoveryCards(page: Page): Promise<string[]> {
+  return page.evaluate(() => window.__discoveryCards ?? []);
+}
 
 test('M5: driving into a POI shows the toast, adds it to the map, and survives a reload', async ({
   page,
 }) => {
   test.setTimeout(600_000);
   const errors = collectErrors(page);
+  await recordDiscoveryCards(page);
   await page.goto('/');
   await waitReady(page);
   // Spawning at River Flat Camp discovers it.
-  await expect(page.locator('.discovery-name')).toHaveText('River Flat Camp', { timeout: 30_000 });
+  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('River Flat Camp');
   await shot(page, 'M5', 'hud-and-first-discovery');
 
   // Drive into the Gravel Ford's radius.
   await page.evaluate(() => window.__game!.teleport(-212, 228, 320));
   expect(await page.evaluate(() => window.__game!.discovered())).not.toContain('gravel-ford');
   await page.evaluate(() => window.__game!.setInput({ throttle: 0.7 }));
-  await expect(page.locator('.discovery-name')).toHaveText('Gravel Ford', { timeout: 120_000 });
+  await expect
+    .poll(() => page.evaluate(() => window.__game!.discovered()), { timeout: 300_000 })
+    .toContain('gravel-ford');
   await page.evaluate(() => window.__game!.setInput({ brake: 1 }));
+  expect(await discoveryCards(page)).toContain('Gravel Ford');
   await shot(page, 'M5', 'discovery-toast');
   await page.evaluate(() => window.__game!.setInput(null));
-  expect(await page.evaluate(() => window.__game!.discovered())).toContain('gravel-ford');
 
   // The map shows it (and nothing undiscovered).
   await page.keyboard.press('KeyM');
