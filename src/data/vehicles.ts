@@ -1,3 +1,4 @@
+import { camelTuning } from './camel';
 import { perentieTuning } from './perentie';
 import { vehicleTuning, type VehicleId, type VehicleTuning } from './vehicle';
 
@@ -50,38 +51,46 @@ export interface VehicleDef {
   cabin: CabinLayout;
 }
 
+/** The short-wheelbase 4WD's cab, shared by its Camel Trophy version. */
+const shortieCabin: CabinLayout = {
+  eye: { x: 0.38, y: 1.24, z: 0.3 },
+  // Looking down a little shows the bonnet and the ground ahead.
+  pitch: -0.12,
+  dialY: 0.88,
+  dialZ: -0.322,
+  dials: {
+    speed: { x: 0.36, radius: 0.068, max: 140, major: 20, minor: 10 },
+    rpm: { x: 0.215, radius: 0.039, max: 5000, major: 1000, minor: 500 },
+    oil: { x: 0.5, radius: 0.039, max: 1, major: 0.5, minor: 0.25 },
+  },
+  lamps: { xs: [0.19, 0.255, 0.32, 0.385, 0.45, 0.515], y: 0.795, z: -0.33 },
+  // A pull handle under the dash, left of the column.
+  handbrake: {
+    kind: 'pull',
+    base: { x: 0.17, y: 0.7, z: -0.36 },
+    tip: { x: 0.17, y: 0.69, z: -0.22 },
+    travel: 0.1,
+  },
+  steeringWheel: {
+    centre: { x: 0.38, y: 0.93, z: -0.08 },
+    columnBase: { x: 0.38, y: 0.68, z: -0.46 },
+    radius: 0.19,
+    // Full lock is about 1¼ turns.
+    ratio: 13,
+    spokes: 3,
+  },
+};
+
 export const vehicles: Record<VehicleId, VehicleDef> = {
   shortie: {
     tuning: vehicleTuning,
     blurb: '1970s-style short-wheelbase 4WD, 4.2 L petrol six, three-speed automatic.',
-    cabin: {
-      eye: { x: 0.38, y: 1.24, z: 0.3 },
-      // Looking down a little shows the bonnet and the ground ahead.
-      pitch: -0.12,
-      dialY: 0.88,
-      dialZ: -0.322,
-      dials: {
-        speed: { x: 0.36, radius: 0.068, max: 140, major: 20, minor: 10 },
-        rpm: { x: 0.215, radius: 0.039, max: 5000, major: 1000, minor: 500 },
-        oil: { x: 0.5, radius: 0.039, max: 1, major: 0.5, minor: 0.25 },
-      },
-      lamps: { xs: [0.19, 0.255, 0.32, 0.385, 0.45, 0.515], y: 0.795, z: -0.33 },
-      // A pull handle under the dash, left of the column.
-      handbrake: {
-        kind: 'pull',
-        base: { x: 0.17, y: 0.7, z: -0.36 },
-        tip: { x: 0.17, y: 0.69, z: -0.22 },
-        travel: 0.1,
-      },
-      steeringWheel: {
-        centre: { x: 0.38, y: 0.93, z: -0.08 },
-        columnBase: { x: 0.38, y: 0.68, z: -0.46 },
-        radius: 0.19,
-        // Full lock is about 1¼ turns.
-        ratio: 13,
-        spokes: 3,
-      },
-    },
+    cabin: shortieCabin,
+  },
+  camel: {
+    tuning: camelTuning,
+    blurb: 'The short-wheelbase 4WD in Camel Trophy yellow, with roof lamps and a snorkel.',
+    cabin: shortieCabin,
   },
   perentie: {
     tuning: perentieTuning,
@@ -117,7 +126,7 @@ export const vehicles: Record<VehicleId, VehicleDef> = {
   },
 };
 
-export const vehicleOrder: readonly VehicleId[] = ['shortie', 'perentie'];
+export const vehicleOrder: readonly VehicleId[] = ['shortie', 'camel', 'perentie'];
 
 export function isVehicleId(x: unknown): x is VehicleId {
   return typeof x === 'string' && x in vehicles;

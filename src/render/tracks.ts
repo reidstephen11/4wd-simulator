@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { World } from '../sim/world/world';
 import { hash2 } from '../sim/world/rng';
 import { pal, varyColor } from './colors';
+import { onBridge } from '../sim/world/bridges';
 import { patchFog } from './fog';
 
 const CELL = 256;
@@ -43,6 +44,7 @@ export class TrackRuts {
         const x1 = poly.xs[k + 1];
         const z1 = poly.zs[k + 1];
         if (t.waterDepthAt(x0, z0) > 0 || t.waterDepthAt(x1, z1) > 0) continue;
+        if (onBridge(def, poly.s[k]) || onBridge(def, poly.s[k + 1])) continue;
         const dx = x1 - x0;
         const dz = z1 - z0;
         const len = Math.hypot(dx, dz) || 1;

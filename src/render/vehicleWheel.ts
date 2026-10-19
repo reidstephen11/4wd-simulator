@@ -4,14 +4,16 @@ import { pal } from './colors';
 import { BodyZone, VehicleBuilder, VehicleMaterial as M } from './vehicleGeometry';
 
 /** Rounded all-terrain carcass, separated tread rows, rim recess, vents, valve and six studs. */
-export function buildVehicleWheel(tuning: VehicleTuning): THREE.BufferGeometry {
+export function buildVehicleWheel(
+  tuning: VehicleTuning,
+  rim = pal('vehicleRoof').clone().multiplyScalar(0.85),
+): THREE.BufferGeometry {
   const b = new VehicleBuilder();
   const r = tuning.wheelRadius,
     w = tuning.wheelWidth;
   const tyre = new THREE.Color('#242725'),
     steel = new THREE.Color('#91958F');
-  const rim = pal('vehicleRoof').clone().multiplyScalar(0.85),
-    dark = new THREE.Color('#303632');
+  const dark = new THREE.Color('#303632');
   b.slot = M.Rubber;
   b.tag = BodyZone.Trim;
   b.push().rotate(0, 0, -Math.PI / 2);

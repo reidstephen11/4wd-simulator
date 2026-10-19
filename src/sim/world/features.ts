@@ -60,12 +60,32 @@ export interface StaticRock {
   indices: Uint32Array;
 }
 
+/** A bridge timber; `deck` parts carry `top`, the four corners of their running surface. */
+export interface StaticTimber extends StaticRock {
+  part: 'deck' | 'kerb' | 'post' | 'beam';
+  /** Start-left, start-right, end-right, end-left, relative to (x, y, z). */
+  top?: [number, number, number][];
+}
+
+/** A gate's two flag posts (left and right of the way through) and its numbered heading. */
+export interface GateInfo {
+  n: number;
+  trackId: string;
+  /** Direction of travel through the gate (degrees, 0 = north). */
+  headingDeg: number;
+  left: { x: number; y: number; z: number };
+  right: { x: number; y: number; z: number };
+}
+
 export interface TerrainFeatures {
   tracks: TrackInfo[];
   creek: CreekInfo;
   boxes: StaticBox[];
   rocks: StaticRock[];
   logs: StaticLog[];
+  /** Bridge decks, kerbs, posts and beams. */
+  timbers: StaticTimber[];
+  gates: GateInfo[];
   gullies: GullyInfo[];
   /** Distance (m, clamped to 255) from each sample to the nearest track edge (0 = on a track). */
   trackDistance: Uint8Array;

@@ -10,6 +10,7 @@ import { MeshBuilder } from './lowpoly';
 import { coursePoint } from '../sim/world/crawlCourse';
 import { trailPoint, staticLogMesh } from '../sim/world/crawlTrail';
 import { rockShape } from '../sim/world/rockShape';
+import { onBridge } from '../sim/world/bridges';
 
 const timber = () => pal('barkPale').clone().lerp(pal('barkOchre'), 0.35).multiplyScalar(0.82);
 const rust = () => pal('dirtDark').clone().lerp(pal('mud'), 0.3);
@@ -400,6 +401,7 @@ export class WorldProps {
       const track = world.features.tracks.find((t) => t.def.id === id)!;
       const colour = new THREE.Color(hex);
       for (let at = 2; at < track.poly.length; at += 10) {
+        if (onBridge(track.def, at)) continue;
         const p = trailPoint(track, at, -(track.def.width / 2 + 0.7));
         const y = world.terrain.heightAt(p.x, p.z);
         b.push().translate(p.x, y + 0.25, p.z);
@@ -471,6 +473,34 @@ export class WorldProps {
           .clone()
           .lerp(up > 0.75 && rand() < 0.3 ? lichen : pal('rockDark'), up > 0.75 ? rand() * 0.25 : 0.2);
         b.tri(a, bb, cc, face);
+      }
+      b.pop();
+    }
+    // Bridge timbers: the collider is the convex hull of these vertices. Deck tops are
+    // drawn board by board across the track on the hull's own top face.
+    for (const t of world.features.timbers) {
+      const v = (i: number) => new THREE.Vector3().fromArray(t.vertices, i * 3);
+      const c = timber().multiplyScalar(t.part === 'deck' ? 1 : 0.8);
+      b.push().translate(t.x, t.y, t.z);
+      for (let i = t.top ? 6 : 0; i < t.indices.length; i += 3)
+        b.tri(v(t.indices[i]), v(t.indices[i + 1]), v(t.indices[i + 2]), c);
+      if (t.top) {
+        const [a, bb, cc, d] = t.top.map((p) => new THREE.Vector3(...p));
+        const boards = Math.max(1, Math.round(a.distanceTo(d) / 0.24));
+        for (let k = 0; k < boards; k++) {
+          const f0 = k / boards,
+            f1 = (k + 1) / boards;
+          const shade = timber()
+            .lerp(pal('barkOchre'), rand() * 0.25)
+            .multiplyScalar(0.84 + rand() * 0.2);
+          b.quad(
+            a.clone().lerp(d, f0),
+            bb.clone().lerp(cc, f0),
+            bb.clone().lerp(cc, f1),
+            a.clone().lerp(d, f1),
+            shade,
+          );
+        }
       }
       b.pop();
     }

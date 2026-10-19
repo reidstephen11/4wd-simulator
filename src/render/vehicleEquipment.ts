@@ -131,6 +131,8 @@ export function addVehicleEquipment(
   b: VehicleBuilder,
   tuning: VehicleTuning,
   wheel: THREE.BufferGeometry,
+  /** Which front wing carries the aerial: -1 left, +1 right. */
+  aerialSide: -1 | 1 = -1,
 ): void {
   recovery(b, tuning);
   roofGear(b);
@@ -167,8 +169,9 @@ export function addVehicleEquipment(
   b.geometry(new THREE.CylinderGeometry(0.025, 0.025, 0.018, 12), steel);
   b.pop();
   // Flexible whip aerial on the front wing (not an intake/snorkel).
-  b.block(-0.78, 0.82, -0.77, 0.06, 0.06, 0.06, black, M.Rubber, Z.Front);
-  b.rod({ x: -0.78, y: 0.85, z: -0.77 }, { x: -0.8, y: 1.65, z: -0.73 }, 0.005, trim);
+  const ax = aerialSide * 0.78;
+  b.block(ax, 0.82, -0.77, 0.06, 0.06, 0.06, black, M.Rubber, Z.Front);
+  b.rod({ x: ax, y: 0.85, z: -0.77 }, { x: aerialSide * 0.8, y: 1.65, z: -0.73 }, 0.005, trim);
 }
 
 export function buildRackPlank(index: number): THREE.BufferGeometry {
