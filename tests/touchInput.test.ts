@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { CameraDrag } from '../src/render/cameraDrag';
 import { InputManager } from '../src/sim/input/inputManager';
 import { TouchStick } from '../src/sim/input/touchStick';
 import { touchTuning } from '../src/data/touch';
+import { cameraTuning } from '../src/data/camera';
 
 const DT = 1 / 60;
 const R = touchTuning.joystickRadius;
@@ -93,5 +95,68 @@ describe('touch buttons in the input manager', () => {
     expect(input.activeDevice).toBe('touch');
     target.dispatchEvent(Object.assign(new Event('keydown'), { code: 'KeyW', repeat: false }));
     expect(input.activeDevice).toBe('keyboard');
+  });
+});
+
+describe('touch camera', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function view() {
+    vi.stubGlobal('window', new EventTarget());
+    const canvas = Object.assign(new EventTarget(), {
+      classList: { add: () => undefined, remove: () => undefined },
+      setPointerCapture: () => undefined,
+      releasePointerCapture: () => undefined,
+      hasPointerCapture: () => false,
+    });
+    const orbits: number[] = [];
+    let zoom = 0;
+    new CameraDrag(
+      canvas as unknown as HTMLCanvasElement,
+      () => true,
+      (yaw) => orbits.push(yaw),
+      (steps) => (zoom += steps),
+    );
+    const finger = (type: string, id: number, x: number, y = 0, pointerType = 'touch') =>
+      canvas.dispatchEvent(
+        Object.assign(new Event(type), {
+          pointerId: id,
+          pointerType,
+          isPrimary: id === 1,
+          button: 0,
+          clientX: x,
+          clientY: y,
+          preventDefault: () => undefined,
+        }),
+      );
+    return { finger, orbits, zoom: () => zoom };
+  }
+
+  it('one finger orbits; two fingers pinch to zoom without orbiting', () => {
+    const v = view();
+    v.finger('pointerdown', 1, 100);
+    v.finger('pointermove', 1, 150);
+    expect(v.orbits).toEqual([-50 * touchTuning.dragSensitivity]);
+    v.finger('pointerdown', 2, 300);
+    // Spreading the fingers 100 px apart moves the camera in.
+    v.finger('pointermove', 2, 400);
+    expect(v.zoom()).toBeCloseTo(-100 * touchTuning.pinchZoomPerPx);
+    // Pinching them back together moves it out again.
+    v.finger('pointermove', 1, 350);
+    expect(v.zoom()).toBeCloseTo(100 * touchTuning.pinchZoomPerPx);
+    expect(v.orbits).toHaveLength(1);
+    // Lifting one finger ends the pinch; the other no longer orbits or zooms.
+    v.finger('pointerup', 2, 400);
+    v.finger('pointermove', 1, 200);
+    expect(v.orbits).toHaveLength(1);
+    expect(v.zoom()).toBeCloseTo(100 * touchTuning.pinchZoomPerPx);
+  });
+
+  it('the mouse still orbits at its own speed and never zooms by dragging', () => {
+    const v = view();
+    v.finger('pointerdown', 1, 100, 0, 'mouse');
+    v.finger('pointermove', 1, 110, 0, 'mouse');
+    expect(v.orbits).toEqual([-10 * cameraTuning.dragSensitivity]);
+    expect(v.zoom()).toBe(0);
   });
 });

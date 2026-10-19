@@ -244,6 +244,10 @@ export class Game {
         this.input.usePointer(pointerType);
         this.chase.orbit(yaw, pitch);
       },
+      (steps) => {
+        this.input.usePointer('touch');
+        this.chase.zoom(steps);
+      },
     );
     // Touching the view brings the touch controls back after a key or gamepad hid them.
     view.renderer.domElement.addEventListener('pointerdown', (e) => {

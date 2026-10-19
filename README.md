@@ -122,6 +122,7 @@ On a touch screen the game shows on-screen controls. They work held sideways (la
 | Tool menu                             | TOOLS, then tap an option (tap the space around it to close)                                           |
 | Placing planks / choosing anchor      | Joystick, then USE to confirm or BACK to cancel                                                        |
 | Orbit camera                          | Drag a finger on the view                                                                              |
+| Camera distance                       | Pinch with two fingers on the view                                                                     |
 | Cycle views / recenter camera         | View and Reset view, top right                                                                         |
 | Map / pause                           | MAP and II, top left (tap outside the map to close it); ⛶ goes full screen where the browser allows it |
 

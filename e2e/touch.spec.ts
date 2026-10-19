@@ -113,6 +113,18 @@ test.describe('phone', () => {
     await f.tap('#game-canvas');
     await expect(controls).toBeVisible();
 
+    // Two fingers spread apart on the view bring the camera closer.
+    const far = (await page.evaluate(() => window.__game!.camera())).distance;
+    await f.press(3, '#game-canvas', -90, -50);
+    await f.press(4, '#game-canvas', 90, -50);
+    await f.move(4, '#game-canvas', 190, -50);
+    await f.move(3, '#game-canvas', -190, -50);
+    await f.lift(4);
+    await f.lift(3);
+    await expect
+      .poll(async () => (await page.evaluate(() => window.__game!.camera())).distance)
+      .toBeLessThan(far - 2);
+
     await page.setViewportSize({ width: 390, height: 844 });
     await waitSim(page, 0.3);
     await shot(page, 'touch', 'portrait');

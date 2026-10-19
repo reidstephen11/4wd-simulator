@@ -14,6 +14,8 @@ export const touchTuning = {
   menuRelease: 0.35,
   /** Camera orbit radians per CSS pixel dragged with a finger. */
   dragSensitivity: 0.008,
+  /** Camera zoom steps per CSS pixel the two fingers of a pinch move apart or together. */
+  pinchZoomPerPx: 0.03,
   /** Graphics preset on a phone or tablet with no saved settings. */
   defaultQuality: 'low' as QualityLevel,
 };
