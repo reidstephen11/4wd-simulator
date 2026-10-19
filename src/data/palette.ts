@@ -35,3 +35,6 @@ export const uiPalette = {
   accent: '#B5653A',
   water: '#5E8E98',
 } as const;
+
+/** Gate flags on a gate trail, as on an RC crawler course: red left of the way through, blue right. */
+export const gateColours = { left: '#C8412E', right: '#2F64A8' } as const;

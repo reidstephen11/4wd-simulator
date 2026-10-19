@@ -340,4 +340,8 @@ export const dieselSynthTuning: EngineSynthTuning = {
 };
 
 /** Engine sound for each vehicle. */
-export const engineSynthTunings = { shortie: engineSynthTuning, perentie: dieselSynthTuning } as const;
+export const engineSynthTunings = {
+  shortie: engineSynthTuning,
+  camel: engineSynthTuning,
+  perentie: dieselSynthTuning,
+} as const;

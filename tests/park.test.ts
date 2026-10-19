@@ -21,7 +21,7 @@ const rank: Record<TrailDifficulty, number> = { easy: 0, moderate: 1, hard: 2, e
 
 describe('Ironbark 4WD Park', () => {
   it('is a second map with eleven numbered stations, each an easier and a harder line', () => {
-    expect(mapOrder).toEqual(['high-country', 'ironbark-park']);
+    expect(mapOrder.slice(0, 2)).toEqual(['high-country', 'ironbark-park']);
     expect(isMapId('ironbark-park')).toBe(true);
     expect(isMapId('moon')).toBe(false);
     expect(world.map.name).toBe('Ironbark 4WD Park');

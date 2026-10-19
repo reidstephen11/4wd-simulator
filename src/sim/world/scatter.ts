@@ -129,7 +129,11 @@ export function generateScatter(map: MapDef, terrain: Terrain, features: Terrain
       return Math.abs(along) < g.length / 2 + 4 && lat < 6;
     }) ||
     features.boxes.some((b) => b.kind === 'ledge' && Math.hypot(b.x - x, b.z - z) < 6) ||
-    features.rocks.some((rock) => Math.hypot(rock.x - x, rock.z - z) < 6);
+    features.rocks.some((rock) => Math.hypot(rock.x - x, rock.z - z) < 6) ||
+    features.timbers.some((t) => Math.hypot(t.x - x, t.z - z) < 5) ||
+    features.gates.some(
+      (g) => Math.hypot(g.left.x - x, g.left.z - z) < 3 || Math.hypot(g.right.x - x, g.right.z - z) < 3,
+    );
   const blocked = (x: number, z: number, clearance: number) => {
     const i = nearIdx(x, z);
     if (features.trackDistance[i] < clearance) return true;

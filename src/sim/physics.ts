@@ -140,14 +140,15 @@ export class Physics {
     return c;
   }
 
-  addStaticRock(rock: StaticRock, friction = 0.9): RAPIER.Collider {
+  /** A convex hull of exactly the drawn vertices: trail granite, or bridge timber. */
+  addStaticRock(rock: StaticRock, friction = 0.9, surface: SurfaceId = SurfaceId.Rock): RAPIER.Collider {
     const c = this.world.createCollider(
       this.R.ColliderDesc.convexHull(rock.vertices)!
         .setTranslation(rock.x, rock.y, rock.z)
         .setFriction(friction)
         .setCollisionGroups(groups(Groups.STATIC, 0xffff)),
     );
-    this.colliderSurface.set(c.handle, SurfaceId.Rock);
+    this.colliderSurface.set(c.handle, surface);
     return c;
   }
 

@@ -11,6 +11,7 @@ import { WaterMesh } from './water';
 import { Vegetation } from './vegetation';
 import { WorldProps } from './worldProps';
 import { TrackRuts } from './tracks';
+import { GateMarkers } from './gates';
 import { Particles } from './particles';
 import { Rain } from './rain';
 import type { DynamicObject } from '../sim/sim';
@@ -27,6 +28,7 @@ export class GameRenderer {
   readonly vegetation: Vegetation;
   readonly props: WorldProps;
   readonly ruts: TrackRuts;
+  readonly gates: GateMarkers;
   readonly particles: Particles;
   /** Falling rain, when it is raining. */
   readonly rain: Rain | null;
@@ -80,6 +82,8 @@ export class GameRenderer {
     this.scene.add(this.props.group);
     this.ruts = new TrackRuts(world);
     this.scene.add(this.ruts.group);
+    this.gates = new GateMarkers(world);
+    this.scene.add(this.gates.group);
     this.particles = new Particles(world.terrain, quality, env.waterLevelOffset);
     this.particles.setWetness(env.wetness);
     groundUniforms.groundWetness.value = env.wetness;
