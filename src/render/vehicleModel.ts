@@ -7,14 +7,13 @@ import { hash2 } from '../sim/world/rng';
 import { pal } from './colors';
 import { patchFog } from './fog';
 import { BodyZone, groupVehicleMaterials } from './vehicleGeometry';
-import { buildVehicleBody } from './vehicleBody';
-import { buildVehicleWheel } from './vehicleWheel';
-import { buildRackPlank } from './vehicleEquipment';
+import { vehicleLooks } from './vehicleLooks';
+import { vehicles } from '../data/vehicles';
 import { VehicleSuspension } from './vehicleSuspension';
 import { VehicleInstruments } from './vehicleInstruments';
 export { BodyZone } from './vehicleGeometry';
 
-/** Detailed 40 Series-inspired short-wheelbase 4WD, driven by the existing simulation. */
+/** A detailed vehicle (its look picked by the tuning's id), driven by the simulation. */
 export class VehicleModel {
   readonly root = new THREE.Group();
   readonly bodyGroup = new THREE.Group();
@@ -38,16 +37,9 @@ export class VehicleModel {
   private readonly spinExtra = [0, 0, 0, 0];
 
   constructor(private readonly tuning: VehicleTuning) {
-    this.root.name = '40-series-4wd';
-    this.bodyMaterial = patchFog(
-      new THREE.MeshPhysicalMaterial({
-        vertexColors: true,
-        roughness: 0.39,
-        metalness: 0.14,
-        clearcoat: 0.7,
-        clearcoatRoughness: 0.24,
-      }),
-    );
+    const look = vehicleLooks[tuning.id];
+    this.root.name = look.name;
+    this.bodyMaterial = patchFog(new THREE.MeshPhysicalMaterial({ vertexColors: true, ...look.paint }));
     const glass = patchFog(
       new THREE.MeshPhysicalMaterial({
         vertexColors: true,
@@ -95,8 +87,8 @@ export class VehicleModel {
       ),
       patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })),
     ];
-    this.wheelGeo = buildVehicleWheel(tuning);
-    const geometry = buildVehicleBody(tuning, this.wheelGeo);
+    this.wheelGeo = look.wheel(tuning);
+    const geometry = look.body(tuning, this.wheelGeo);
     groupVehicleMaterials(geometry);
     this.body = new THREE.Mesh(geometry, materials);
     this.body.name = 'body-cabin-and-equipment';
@@ -114,14 +106,14 @@ export class VehicleModel {
       this.dirtWeight[i] = Math.min(1, Math.max(0.1, 1.15 - (y + 0.1) / 1.4) * (0.65 + 0.5 * patch));
     }
     for (let i = 0; i < 2; i++) {
-      const plank = buildRackPlank(i);
+      const plank = look.plank(i);
       groupVehicleMaterials(plank);
       const mesh = new THREE.Mesh(plank, materials);
       mesh.castShadow = true;
       this.rackPlanks.add(mesh);
     }
     this.bodyGroup.add(this.rackPlanks);
-    this.instruments = new VehicleInstruments(tuning, materials);
+    this.instruments = new VehicleInstruments(tuning, vehicles[tuning.id].cabin, materials);
     this.bodyGroup.add(this.instruments.group);
     groupVehicleMaterials(this.wheelGeo);
     this.wheelBaseCol = Float32Array.from(this.wheelGeo.getAttribute('color').array);
@@ -136,7 +128,7 @@ export class VehicleModel {
       this.root.add(pivot);
       this.wheels.push({ pivot, spin });
     }
-    this.suspension = new VehicleSuspension(tuning, materials);
+    this.suspension = new VehicleSuspension(tuning, materials, look.springs);
     this.suspension.update([0, 0, 0, 0]);
     this.root.add(this.suspension.group);
   }
@@ -217,6 +209,17 @@ export class VehicleModel {
       }
       normals.needsUpdate = true;
     }
+  }
+
+  /** Free the GPU buffers and materials (when swapping to another vehicle). */
+  dispose(): void {
+    const materials = new Set<THREE.Material>();
+    this.root.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      o.geometry.dispose();
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m);
+    });
+    for (const m of materials) m.dispose();
   }
 
   /** From the driver's seat the tinted glass would fill the view; leave the windows clear. */

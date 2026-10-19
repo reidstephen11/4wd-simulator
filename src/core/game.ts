@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { highCountryMap } from '../data/map';
 import { lateAfternoon } from '../data/environment';
 import { qualityPresets } from '../data/quality';
-import { vehicleTuning } from '../data/vehicle';
+import type { VehicleId } from '../data/vehicle';
+import { vehicles } from '../data/vehicles';
 import { cameraTuning } from '../data/camera';
 import { buildWorldSteps, type World } from '../sim/world/world';
 import { loadRapier } from '../sim/physics';
@@ -54,7 +55,9 @@ export class Game {
   private readonly cameraDrag: CameraDrag;
   readonly overlay: DebugOverlay | null;
   private readonly debugTools: DebugTools | null;
-  readonly model: VehicleModel;
+  model: VehicleModel;
+  /** Which vehicle the player drives (saved). */
+  vehicleId: VehicleId;
   readonly toolsView: ToolsView;
   readonly tool: ToolController;
   readonly exploration: Exploration;
@@ -93,17 +96,23 @@ export class Game {
     settings: Settings,
     exploration: Exploration,
     crawlBests: CrawlBests,
+    vehicleId: VehicleId,
   ) {
     this.debug = new URLSearchParams(location.search).has('debug');
     this.settings = settings;
     this.exploration = exploration;
+    this.vehicleId = vehicleId;
+    const tuning = vehicles[vehicleId].tuning;
     this.crawlRuns = new CrawlRuns(world.map.crawlTrails ?? [], world.features.tracks, crawlBests);
     this.input = new InputManager(window);
+    this.input.setSteering(tuning.steering);
     this.audio = new AudioSystem(settings);
+    this.audio.setVehicle(vehicleId);
     // Loading puts you at the last campsite (SPEC §14).
-    sim.addVehicle(LOCAL_VEHICLE, sim.campsitePose(exploration.lastCampsite || world.map.spawnCampsite));
+    const camp = exploration.lastCampsite || world.map.spawnCampsite;
+    sim.addVehicle(LOCAL_VEHICLE, sim.campsitePose(camp, tuning.wheelRadius), tuning);
 
-    this.model = new VehicleModel(vehicleTuning);
+    this.model = new VehicleModel(tuning);
     view.scene.add(this.model.root);
     this.toolsView = new ToolsView();
     view.scene.add(this.toolsView.group);
@@ -116,6 +125,7 @@ export class Game {
       (from, dir, max) => sim.castStatic(from.x, from.y, from.z, dir.x, dir.y, dir.z, max),
       (x, z) => world.terrain.heightAt(x, z),
     );
+    this.chase.seat = vehicles[vehicleId].cabin;
     this.freeCam = new FreeCamera(view.camera, view.renderer.domElement);
 
     this.hud = new Hud(uiRoot, (action) => this.input.requestDriveAction(action));
@@ -138,14 +148,19 @@ export class Game {
           void this.returnToLastCampsite();
         },
         changeSettings: (s) => this.changeSettings(s),
+        changeVehicle: (id) => {
+          this.closePause();
+          void this.changeVehicle(id);
+        },
       },
       settings,
     );
+    this.pause.setVehicle(vehicleId);
     this.fade = new Fade(uiRoot);
 
     this.overlay = this.debug ? new DebugOverlay(uiRoot) : null;
     this.debugTools = this.debug
-      ? new DebugTools(uiRoot, view.scene, sim, vehicleTuning, () => this.vehicle, world.pois, {
+      ? new DebugTools(uiRoot, view.scene, sim, tuning, () => this.vehicle, world.pois, {
           teleport: (p) => this.teleportToPoi(p),
           toggleFreeCam: () => this.toggleFreeCam(),
           bird: (kind) => this.audio.bird(kind),
@@ -230,7 +245,16 @@ export class Game {
       qualityPresets[settings.quality],
       sim.dynamics.values(),
     );
-    return new Game(world, sim, view, uiEl, settings, exploration, save?.crawlBests ?? {});
+    return new Game(
+      world,
+      sim,
+      view,
+      uiEl,
+      settings,
+      exploration,
+      save?.crawlBests ?? {},
+      save?.vehicle ?? 'shortie',
+    );
   }
 
   get vehicle(): Vehicle {
@@ -249,6 +273,7 @@ export class Game {
       exploration: this.exploration.state(),
       settings: this.settings,
       crawlBests: this.crawlRuns.bests,
+      vehicle: this.vehicleId,
     });
     if (!ok && this.storageOk) {
       this.storageOk = false;
@@ -311,10 +336,37 @@ export class Game {
     });
   }
 
+  /** Swap to another vehicle where the current one stands (pause menu). */
+  async changeVehicle(id: VehicleId): Promise<void> {
+    if (id === this.vehicleId) return;
+    await this.fade.run(() => this.swapVehicle(id));
+    this.hud.toast(vehicles[id].tuning.name, 1800);
+  }
+
+  /** Rebuild the simulated vehicle, its model, steering, seat and engine sound. */
+  swapVehicle(id: VehicleId): void {
+    const def = vehicles[id];
+    this.tool.cancel();
+    this.crawlRuns.cancel();
+    this.sim.replaceVehicle(LOCAL_VEHICLE, def.tuning);
+    this.view.scene.remove(this.model.root);
+    this.model.dispose();
+    this.model = new VehicleModel(def.tuning);
+    this.view.scene.add(this.model.root);
+    this.vehicleId = id;
+    this.input.setSteering(def.tuning.steering);
+    this.chase.seat = def.cabin;
+    this.chase.reset();
+    this.pause.setVehicle(id);
+    this.audio.setVehicle(id);
+    this.view.snap();
+    this.save();
+  }
+
   teleportToPoi(p: PoiDef): void {
     this.crawlRuns.cancel();
     const r = p.reset ?? { x: p.x, z: p.z + 12, headingDeg: 0 };
-    this.vehicle.teleport(this.sim.poseAt(r.x, r.z, r.headingDeg));
+    this.vehicle.teleport(this.sim.poseAt(r.x, r.z, r.headingDeg, this.vehicle.tuning.wheelRadius));
     this.chase.reset();
     this.view.snap();
   }
@@ -327,7 +379,14 @@ export class Game {
     const t = this.world.terrain;
     const park = path[Math.max(0, path.length - 14)];
     const next = path[Math.max(0, Math.min(path.length - 1, path.length - 10))];
-    this.vehicle.teleport(this.sim.poseAt(park[0], park[1], headingOf(next[0] - park[0], next[1] - park[1])));
+    this.vehicle.teleport(
+      this.sim.poseAt(
+        park[0],
+        park[1],
+        headingOf(next[0] - park[0], next[1] - park[1]),
+        this.vehicle.tuning.wheelRadius,
+      ),
+    );
     const from = path[0];
     const dx = from[0] - poi.x;
     const dz = from[1] - poi.z;
@@ -358,14 +417,14 @@ export class Game {
         id: 'frontDiff',
         label: v.differentials.front ? 'Unlock front diff' : 'Lock front diff',
         icon: 'feature',
-        enabled: v.differentials.front || Math.abs(v.speed) <= vehicleTuning.crawling.diffLockMaxKmh / 3.6,
+        enabled: v.differentials.front || Math.abs(v.speed) <= v.tuning.crawling.diffLockMaxKmh / 3.6,
       },
       { id: 'detach', label: 'Detach winch', icon: 'detach', enabled: t.winch.attached },
       {
         id: 'rearDiff',
         label: v.differentials.rear ? 'Unlock rear diff' : 'Lock rear diff',
         icon: 'feature',
-        enabled: v.differentials.rear || Math.abs(v.speed) <= vehicleTuning.crawling.diffLockMaxKmh / 3.6,
+        enabled: v.differentials.rear || Math.abs(v.speed) <= v.tuning.crawling.diffLockMaxKmh / 3.6,
       },
       planks,
       {

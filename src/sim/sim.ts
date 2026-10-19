@@ -1,7 +1,7 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { EnvironmentConfig } from '../data/environment';
 import { SurfaceId } from '../data/surfaces';
-import { vehicleTuning } from '../data/vehicle';
+import { vehicleTuning, type VehicleTuning } from '../data/vehicle';
 import { Emitter } from '../core/events';
 import { Groups, groups, Physics, type GroundQuery, type Rapier } from './physics';
 import type { VehicleInput } from './input/vehicleInput';
@@ -12,10 +12,10 @@ import { StaticMeshBatcher } from './world/staticMesh';
 import type { FallenTreeDef } from './world/mapTypes';
 import { scatterTuning } from '../data/vegetation';
 import { winchTuning } from '../data/tools';
-import { VehicleTools, TOW_POINT, type ToolEvent } from './tools/tools';
+import { VehicleTools, type ToolEvent } from './tools/tools';
 import type { Anchor } from './tools/anchors';
 import { updateWear } from './vehicle/wear';
-import { rotate, v3 } from './vehicle/math';
+import { headingOf, rotate, v3 } from './vehicle/math';
 
 /** Branch stubs on the Fallen Tree: [position along the trunk (−1..1), offset x, offset z]. */
 export const FALLEN_TREE_STUBS: ReadonlyArray<readonly [number, number, number]> = [
@@ -92,6 +92,8 @@ export class Simulation {
   readonly ground: GroundQuery;
   readonly dynamics = new Map<string, DynamicObject>();
   readonly tools = new Map<string, VehicleTools>();
+  /** Bodies of swapped-out vehicles, disabled until the next step removes them. */
+  private readonly retired: RAPIER.RigidBody[] = [];
   time = 0;
 
   constructor(
@@ -215,21 +217,21 @@ export class Simulation {
     this.dynamics.set(f.id, { id: f.id, kind: 'fallenTree', body, def: f });
   }
 
-  /** Spawn pose on the ground at (x, z). */
-  poseAt(x: number, z: number, headingDeg: number): SpawnPose {
-    return { x, y: this.world.terrain.heightAt(x, z) + vehicleTuning.wheelRadius + 0.12, z, headingDeg };
+  /** Spawn pose on the ground at (x, z) for wheels of this radius. */
+  poseAt(x: number, z: number, headingDeg: number, wheelRadius = vehicleTuning.wheelRadius): SpawnPose {
+    return { x, y: this.world.terrain.heightAt(x, z) + wheelRadius + 0.12, z, headingDeg };
   }
 
-  campsitePose(poiId: string): SpawnPose {
+  campsitePose(poiId: string, wheelRadius = vehicleTuning.wheelRadius): SpawnPose {
     const p = this.world.pois.find((q) => q.id === poiId);
     if (!p) throw new Error(`Unknown POI ${poiId}`);
     const r = p.reset ?? { x: p.x, z: p.z, headingDeg: 0 };
-    return this.poseAt(r.x, r.z, r.headingDeg);
+    return this.poseAt(r.x, r.z, r.headingDeg, wheelRadius);
   }
 
-  addVehicle(id: string, pose: SpawnPose): Vehicle {
+  addVehicle(id: string, pose: SpawnPose, tuning: VehicleTuning = vehicleTuning): Vehicle {
     const env = this.env;
-    const v = new Vehicle(id, this.physics, vehicleTuning, pose, {
+    const v = new Vehicle(id, this.physics, tuning, pose, {
       get wetness() {
         return env.wetness;
       },
@@ -241,6 +243,33 @@ export class Simulation {
     this.tools.set(id, new VehicleTools());
     this.events.emit('vehicleSpawned', { id });
     return v;
+  }
+
+  /**
+   * Swap a vehicle for another model where it stands, facing the same way: the winch
+   * lets go, placed planks come back and the new one starts clean.
+   */
+  replaceVehicle(id: string, tuning: VehicleTuning): Vehicle {
+    const old = this.vehicleOf(id);
+    const tools = this.toolsOf(id);
+    tools.winch.detach();
+    tools.planks.recall(this.physics);
+    const p = old.body.translation();
+    const f = old.forward();
+    const ground = this.world.terrain.heightAt(p.x, p.z);
+    // The tyres' lowest point, kept as high as before (on a rock, say), never below the ground.
+    const base = Math.max(p.y - 0.12 - old.tuning.wheelRadius, ground);
+    const pose: SpawnPose = {
+      x: p.x,
+      y: base + tuning.wheelRadius + 0.17,
+      z: p.z,
+      headingDeg: headingOf(f.x, f.z),
+    };
+    old.retire();
+    this.retired.push(old.body);
+    this.vehicles.delete(id);
+    this.tools.delete(id);
+    return this.addVehicle(id, pose, tuning);
   }
 
   toolsOf(id: string): VehicleTools {
@@ -298,6 +327,7 @@ export class Simulation {
       tools.jack.step(v, input.jack, dt, this.R, (x, z) => this.world.terrain.heightAt(x, z));
     }
     this.physics.step();
+    for (const body of this.retired.splice(0)) this.physics.world.removeRigidBody(body);
     for (const [id, v] of this.vehicles) {
       v.postStep(dt);
       for (let i = 0; i < v.wheelImpacts.length; i++)
@@ -369,7 +399,8 @@ export class Simulation {
     }
     for (const other of this.vehicles.values()) {
       if (other === v) continue;
-      const p = other.localToWorld(TOW_POINT.x, TOW_POINT.y, TOW_POINT.z);
+      const tow = other.tuning.towPoint;
+      const p = other.localToWorld(tow.x, tow.y, tow.z);
       if (!within(p.x, p.y, p.z)) continue;
       out.push({
         kind: 'vehicle',
@@ -377,7 +408,7 @@ export class Simulation {
         point: p,
         radius: 0.05,
         body: other.body,
-        local: { ...TOW_POINT },
+        local: { ...tow },
         label: 'Vehicle',
       });
     }
@@ -454,7 +485,7 @@ export class Simulation {
     tools.planks.recall(this.physics);
     tools.jack.state = 'idle';
     tools.jack.waitTime = 0;
-    v.teleport(this.campsitePose(campsiteId));
+    v.teleport(this.campsitePose(campsiteId, v.tuning.wheelRadius));
     const f = v.condition.flood;
     f.timer = 0;
     f.stalled = false;

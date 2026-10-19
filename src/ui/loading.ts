@@ -1,4 +1,4 @@
-import { BUILD_LABEL } from '../core/buildInfo';
+import { BUILD_LABEL, GAME_VERSION } from '../core/buildInfo';
 
 /** Loading screen (SPEC §9): title, progress bar, short controls reminder. */
 export class LoadingScreen {
@@ -20,7 +20,7 @@ export class LoadingScreen {
           <li><b>L</b> high / low range · <b>E</b> winch · <b>Q</b> tools</li>
           <li><b>M</b> map · <b>Esc</b> pause</li>
         </ul>
-        <p class="build-label">Version ${BUILD_LABEL}</p>
+        <p class="build-label" title="Build ${BUILD_LABEL}">Version ${GAME_VERSION}</p>
       </div>`;
     root.appendChild(this.el);
     this.bar = this.el.querySelector('.progress-fill') as HTMLElement;

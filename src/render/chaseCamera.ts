@@ -6,6 +6,7 @@ import {
   cockpit,
   type CameraPreset,
 } from '../data/camera';
+import { vehicles, type CabinLayout } from '../data/vehicles';
 
 export interface ChaseTarget {
   position: THREE.Vector3;
@@ -32,6 +33,8 @@ export class ChaseCamera {
   private followDistance = C.distance;
   /** Look down at the ground ahead (plank placement, picking an anchor). */
   toolView = false;
+  /** Driver's eye in the vehicle frame and its resting downward look (from the vehicle's cabin). */
+  seat: Pick<CabinLayout, 'eye' | 'pitch'> = vehicles.shortie.cabin;
   private toolBlend = 0;
   private yaw = 0;
   private orbitYaw = 0;
@@ -68,9 +71,10 @@ export class ChaseCamera {
     this.viewYaw += (this.orbitYaw - this.viewYaw) * k;
     this.viewPitch += (this.orbitPitch - this.viewPitch) * k;
     const q = t.rotation as THREE.Quaternion;
-    this.tmp.set(cockpit.eye.x, cockpit.eye.y, cockpit.eye.z).applyQuaternion(q).add(t.position);
+    const eye = this.seat.eye;
+    this.tmp.set(eye.x, eye.y, eye.z).applyQuaternion(q).add(t.position);
     this.camera.position.copy(this.tmp);
-    this.euler.set(cockpit.pitch + this.viewPitch, -this.viewYaw, 0);
+    this.euler.set(this.seat.pitch + this.viewPitch, -this.viewYaw, 0);
     this.lookQ.setFromEuler(this.euler);
     this.headQ.copy(q).multiply(this.lookQ);
     this.camera.quaternion.copy(this.headQ);

@@ -62,11 +62,8 @@ export const cameraPresets = {
   cockpit: { label: 'Driver', yaw: 0, distance: 0, height: 0, targetHeight: 0, lookAhead: 0 },
 } as const;
 
-/** Driver's-seat view: eye position in the vehicle frame (right-hand drive), look limits, near plane. */
+/** Driver's-seat view: look limits and near plane (each vehicle's cabin sets the eye). */
 export const cockpit = {
-  eye: { x: 0.38, y: 1.24, z: 0.3 },
-  /** Looking down a little shows the bonnet and the ground ahead. */
-  pitch: -0.12,
   maxYaw: 2.4,
   maxPitch: 1.0,
   near: 0.05,

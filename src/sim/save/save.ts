@@ -1,6 +1,8 @@
 import { SAVE_KEY } from '../../core/config';
 import type { ExplorationState } from '../exploration';
 import type { CrawlBests } from '../crawlRuns';
+import type { VehicleId } from '../../data/vehicle';
+import { isVehicleId } from '../../data/vehicles';
 
 export interface Settings {
   quality: 'low' | 'medium' | 'high';
@@ -16,6 +18,8 @@ export interface SaveData {
   settings: Settings;
   /** Best scored run per crawl trail (added later; older saves have none). */
   crawlBests?: CrawlBests;
+  /** The vehicle last driven (added later; older saves mean the short-wheelbase 4WD). */
+  vehicle?: VehicleId;
 }
 
 export const defaultSettings: Settings = {
@@ -70,6 +74,7 @@ export function loadSave(s: KeyValueStore | null = store()): SaveData | null {
         units: st.units === 'mph' ? 'mph' : 'kmh',
       },
       crawlBests: readBests(data.crawlBests),
+      vehicle: isVehicleId(data.vehicle) ? data.vehicle : 'shortie',
     };
   } catch {
     return null;

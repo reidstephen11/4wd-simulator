@@ -1,9 +1,10 @@
 /**
  * AudioWorklet processor that runs the engine synthesiser on the audio thread. The
- * main thread drives it with k-rate AudioParams and posts `{ type: 'start' }` to play
- * the starter sequence. Loaded with `audioWorklet.addModule` (see engineSound.ts).
+ * main thread drives it with k-rate AudioParams, posts `{ type: 'start' }` to play
+ * the starter sequence and `{ type: 'vehicle', id }` to switch to another engine. Loaded with `audioWorklet.addModule` (see engineSound.ts).
  */
 import { EngineSynth, type EngineInputs } from './engineSynth';
+import { engineSynthTunings } from '../../data/audio';
 import { ENGINE_PROCESSOR } from './processorName';
 
 declare const sampleRate: number;
@@ -32,7 +33,7 @@ class EngineProcessor extends AudioWorkletProcessor {
     ];
   }
 
-  private readonly synth = new EngineSynth(sampleRate);
+  private synth = new EngineSynth(sampleRate);
   private readonly inputs: EngineInputs = {
     rpm: 800,
     load: 0,
@@ -45,8 +46,15 @@ class EngineProcessor extends AudioWorkletProcessor {
 
   constructor() {
     super();
-    this.port.onmessage = (e: MessageEvent<{ type: string }>) => {
+    this.port.onmessage = (e: MessageEvent<{ type: string; id?: string }>) => {
       if (e.data?.type === 'start') this.synth.start();
+      const id = e.data?.id;
+      if (e.data?.type === 'vehicle' && id && id in engineSynthTunings)
+        this.synth = new EngineSynth(
+          sampleRate,
+          undefined,
+          engineSynthTunings[id as keyof typeof engineSynthTunings],
+        );
     };
   }
 

@@ -1,5 +1,5 @@
 import { keyBindings, padBindings, padTuning, Pad, type Action } from '../../data/controls';
-import { vehicleTuning } from '../../data/vehicle';
+import { vehicleTuning, type VehicleTuning } from '../../data/vehicle';
 import { emptyInput, SteeringSmoother, type VehicleInput } from './vehicleInput';
 
 export type Device = 'keyboard' | 'gamepad';
@@ -22,6 +22,7 @@ export class InputManager {
   private padAxes: number[] = [0, 0, 0, 0];
   private padTriggers = { lt: 0, rt: 0 };
   private wheelDelta = 0;
+  private steeringRates: VehicleTuning['steering'] = vehicleTuning.steering;
   private readonly steering = new SteeringSmoother(
     vehicleTuning.steering.keyboardRiseRate,
     vehicleTuning.steering.keyboardReturnRate,
@@ -50,6 +51,12 @@ export class InputManager {
       },
       { passive: true },
     );
+  }
+  /** Use a vehicle's keyboard and gamepad steering rates. */
+  setSteering(rates: VehicleTuning['steering']): void {
+    this.steeringRates = rates;
+    this.steering.riseRate = rates.keyboardRiseRate;
+    this.steering.returnRate = rates.keyboardReturnRate;
   }
 
   onDeviceChange(fn: (d: Device) => void): void {
@@ -145,7 +152,7 @@ export class InputManager {
     const keySteer = (this.keyDown('steerRight') ? 1 : 0) - (this.keyDown('steerLeft') ? 1 : 0);
     const kb = this.steering.update(keySteer, dt);
     const padTarget = this.padAxes[0];
-    const rate = vehicleTuning.steering.padRate * dt;
+    const rate = this.steeringRates.padRate * dt;
     this.padSteer += Math.max(-rate, Math.min(rate, padTarget - this.padSteer));
     inp.steer = Math.max(-1, Math.min(1, Math.abs(this.padSteer) > Math.abs(kb) ? this.padSteer : kb));
     inp.handbrake = this.held('handbrake');

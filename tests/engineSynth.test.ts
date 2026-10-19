@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EngineSynth, type EngineInputs } from '../src/audio/engine/engineSynth';
 import { firingHz } from '../src/audio/mix';
+import { dieselSynthTuning } from '../src/data/audio';
 
 const SR = 48000;
 const base: EngineInputs = {
@@ -111,5 +112,35 @@ describe('engine synthesiser', () => {
     const a = render(0.5, { rpm: 1200, throttle: 0.4, load: 0.4 }, new EngineSynth(SR, 7));
     const b = render(0.5, { rpm: 1200, throttle: 0.4, load: 0.4 }, new EngineSynth(SR, 7));
     expect(a).toEqual(b);
+  });
+
+  it("the Perentie's four-cylinder diesel fires twice per crank turn and clatters at idle", () => {
+    const diesel = () => new EngineSynth(SR, 3, dieselSynthTuning);
+    for (const inp of [
+      { rpm: 700 },
+      { rpm: 1900, throttle: 1, load: 1 },
+      { rpm: 3650, throttle: 1, load: 1 },
+    ]) {
+      let peak = 0;
+      for (const v of render(1, inp, diesel()))
+        peak = Number.isFinite(v) ? Math.max(peak, Math.abs(v)) : Infinity;
+      expect(peak).toBeLessThanOrEqual(1);
+    }
+    for (const rpm of [900, 1800]) {
+      const f = firingHz(rpm, 4);
+      const x = render(1.5, { rpm, throttle: 0.6, load: 0.6 }, diesel());
+      expect(power(x, f)).toBeGreaterThan(power(x, f * 1.27) * 4);
+    }
+    // Combustion knock rings at 1.5 to 3 kHz: far more there, against the exhaust's low
+    // end, than from the petrol six at the same revs.
+    const band = (x: Float32Array, from: number, to: number) => {
+      let sum = 0;
+      for (let f = from; f <= to; f += 11) sum += power(x, f);
+      return sum;
+    };
+    const clatter = (x: Float32Array) => band(x, 1300, 3200) / band(x, 40, 400);
+    expect(clatter(render(1.5, { rpm: 750 }, diesel()))).toBeGreaterThan(
+      3 * clatter(render(1.5, { rpm: 750 })),
+    );
   });
 });

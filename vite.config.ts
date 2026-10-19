@@ -1,8 +1,8 @@
 import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 
-// Short commit and UTC build time, shown on the loading screen and pause menu
-// so a tester can tell which version GitHub Pages is serving.
+// Short commit and UTC build time, shown when hovering the version number
+// so a tester can tell exactly which build GitHub Pages is serving.
 function buildLabel(): string {
   let commit = process.env.GITHUB_SHA?.slice(0, 7);
   if (!commit) {

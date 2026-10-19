@@ -1,5 +1,6 @@
 import { audioTuning, type TyreLayer } from '../data/audio';
 import type { Settings } from '../sim/save/save';
+import type { VehicleId } from '../data/vehicle';
 import { Ambience } from './ambience';
 import { CrawlSounds } from './crawlSounds';
 import { createNoiseBank, type NoiseBank } from './buffers';
@@ -68,6 +69,7 @@ export class AudioSystem {
   private settings: Settings;
   private failed = false;
   private lastGear = 0;
+  private vehicle: VehicleId = 'shortie';
   private readonly buf = new Float32Array(1024);
 
   constructor(
@@ -176,9 +178,18 @@ export class AudioSystem {
       ui: new UiSounds(ctx, uiBus, noise),
     };
     this.applyVolumes(g, true);
+    g.engine.setVehicle(this.vehicle);
     // The engine starts up when sound first comes on.
     g.engine.restarted();
     return g;
+  }
+
+  /** Play this vehicle's engine; after a swap its engine starts up. */
+  setVehicle(id: VehicleId): void {
+    if (id === this.vehicle) return;
+    this.vehicle = id;
+    this.g?.engine.setVehicle(id);
+    if (this.live()) this.g?.engine.restarted();
   }
 
   setSettings(s: Settings): void {

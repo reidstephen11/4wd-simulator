@@ -1,4 +1,3 @@
-import { vehicleTuning } from '../../data/vehicle';
 import type { Vehicle } from '../vehicle/vehicle';
 import { emptyInput, type VehicleInput } from './vehicleInput';
 
@@ -61,7 +60,7 @@ export class Autopilot {
       -((fz / fl) * (tx / tl) - (fx / fl) * (tz / tl)),
       (fx / fl) * (tx / tl) + (fz / fl) * (tz / tl),
     );
-    const maxA = (vehicleTuning.steering.maxAngleDeg * Math.PI) / 180;
+    const maxA = (v.tuning.steering.maxAngleDeg * Math.PI) / 180;
     inp.steer = Math.max(-1, Math.min(1, (angle / maxA) * 1.4));
 
     // Slow down for sharp turns and near the end.
