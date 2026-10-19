@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import { patchFog } from './fog';
 
+/** Shared by every ground material: 0 = dry, 1 = soaked (darker, with a damp sheen). */
+export const groundUniforms = { groundWetness: { value: 0 } };
+
 /** World-space detail stays aligned across terrain chunks and every LOD. */
 export function createGroundMaterial(): THREE.MeshStandardMaterial {
   const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.93 });
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.groundWetness = groundUniforms.groundWetness;
     shader.vertexShader =
       `attribute vec2 ground; varying vec2 vGround; varying vec3 vGroundPosition;\n${shader.vertexShader}`.replace(
         '#include <begin_vertex>',
@@ -13,6 +17,7 @@ export function createGroundMaterial(): THREE.MeshStandardMaterial {
     shader.fragmentShader = /* glsl */ `
       varying vec2 vGround;
       varying vec3 vGroundPosition;
+      uniform float groundWetness;
       float groundHash(vec2 p) {
         return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
       }
@@ -34,6 +39,9 @@ export function createGroundMaterial(): THREE.MeshStandardMaterial {
         float fleck = smoothstep(0.69, 0.82, grain) * detailFade;
         diffuseColor.rgb *= 0.94 + broad * 0.12 + (grain - 0.5) * 0.08 * detailFade;
         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.45, fleck * (0.12 + vGround.x * 0.18));
+        // Wet ground is darker and a little richer in colour.
+        float wetLuma = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+        diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(wetLuma), diffuseColor.rgb, 1.15) * 0.66, groundWetness);
       `,
       )
       .replace(
@@ -41,6 +49,7 @@ export function createGroundMaterial(): THREE.MeshStandardMaterial {
         /* glsl */ `
         #include <roughnessmap_fragment>
         roughnessFactor = mix(0.95, 0.38, vGround.y) - fleck * 0.08;
+        roughnessFactor = mix(roughnessFactor, 0.5, groundWetness * 0.7);
       `,
       )
       .replace(
@@ -56,5 +65,5 @@ export function createGroundMaterial(): THREE.MeshStandardMaterial {
       `,
       );
   };
-  return patchFog(material, 'ground-detail-v1');
+  return patchFog(material, 'ground-detail-v2');
 }

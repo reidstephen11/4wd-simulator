@@ -10,9 +10,13 @@ export interface AmbienceFrame {
   creekDistance: number;
   /** Distance (m) to the falls. */
   fallsDistance: number;
+  /** 0..1 how hard it is raining. */
+  rain: number;
+  /** Heard from the driver's seat: the rain drums on the roof. */
+  interior: boolean;
 }
 
-/** Wind by altitude, creek water near the creek, the falls, and bird calls. */
+/** Wind by altitude, creek water near the creek, the falls, rain, and bird calls. */
 export class Ambience {
   private readonly windGains: GainNode[] = [];
   private readonly windBands: BiquadFilterNode[] = [];
@@ -22,6 +26,11 @@ export class Ambience {
   private readonly babble: GainNode;
   private readonly babbleBand: BiquadFilterNode;
   private readonly falls: GainNode;
+  private readonly rainHiss: GainNode;
+  private readonly rainPatter: GainNode;
+  private readonly rainRoof: GainNode;
+  private readonly roofBand: BiquadFilterNode;
+  private nextDrum = 0;
   private gust = 0.5;
   private gustTarget = 0.5;
   private gustTimer = 0;
@@ -87,6 +96,34 @@ export class Ambience {
     this.falls.gain.value = 0;
     fs.connect(flp).connect(this.falls).connect(bus);
 
+    // Rain: a broad hiss of drops on the bush, a lower patter close by, and drumming on
+    // the roof heard from inside.
+    const band = (type: BiquadFilterType, hz: number, q: number) => {
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = hz;
+      f.Q.value = q;
+      return f;
+    };
+    const quiet = () => {
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      return g;
+    };
+    this.rainHiss = quiet();
+    loop(ctx, noise.white)
+      .connect(band('bandpass', 3800, 0.35))
+      .connect(this.rainHiss)
+      .connect(bus);
+    this.rainPatter = quiet();
+    loop(ctx, noise.white)
+      .connect(band('bandpass', 1100, 0.9))
+      .connect(this.rainPatter)
+      .connect(bus);
+    this.rainRoof = quiet();
+    this.roofBand = band('bandpass', 700, 1.4);
+    loop(ctx, noise.brown).connect(this.roofBand).connect(this.rainRoof).connect(bus);
+
     const B = audioTuning.ambience.birds;
     this.nextBird = ctx.currentTime + B.minInterval * 0.5;
   }
@@ -129,7 +166,24 @@ export class Ambience {
       }
     }
 
+    // Rain: outside it hisses and patters; inside the roof drums and muffles the hiss.
+    const R = A.rain;
+    const rain = Math.min(1, Math.max(0, f.rain));
+    this.rainHiss.gain.setTargetAtTime(rain * R.hiss * (f.interior ? 0.35 : 1), t, 0.3);
+    this.rainPatter.gain.setTargetAtTime(rain * R.patter * (f.interior ? 0.5 : 1), t, 0.3);
+    if (rain > 0 && f.interior) {
+      // Drops land in uneven bursts: jitter the drum's level and pitch a little ahead.
+      if (this.nextDrum < t) this.nextDrum = t;
+      while (this.nextDrum < t + 0.25) {
+        this.rainRoof.gain.setTargetAtTime(rain * R.roof * (0.6 + 0.8 * Math.random()), this.nextDrum, 0.015);
+        this.roofBand.frequency.setTargetAtTime(500 + Math.random() * 700, this.nextDrum, 0.02);
+        this.nextDrum += 0.03 + Math.random() * 0.05;
+      }
+    } else this.rainRoof.gain.setTargetAtTime(0, t, 0.2);
+
     // Birds at random intervals, quieter and rarer up high.
+    // In rain they keep quiet.
+    if (rain > 0.5) this.nextBird = Math.max(this.nextBird, t + 5);
     if (t >= this.nextBird) {
       const B = A.birds;
       const kooka = Math.random() < B.kookaburraChance;

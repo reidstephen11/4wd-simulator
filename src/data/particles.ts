@@ -60,3 +60,20 @@ export const particleTuning = {
 
   gravity: 9.81,
 } as const;
+
+/** Falling rain (src/render/rain.ts): streaks in a box that follows the camera. */
+export const rainTuning = {
+  /** Streaks at High quality; the quality preset's particle multiplier scales them. */
+  drops: 7000,
+  /** Width and depth of the box of rain around the camera, and its height (m). */
+  box: 40,
+  height: 24,
+  /** Fall speed (m/s), streak length (m) and the wind's sideways drift (m/s, x and z). */
+  speed: 9,
+  length: 0.6,
+  wind: [0.9, 0.3] as const,
+  color: '#D3DCE2',
+  opacity: 0.34,
+  /** The vehicle shelters the rain inside this box (local frame: centre and half extents, m). */
+  shelter: { centre: [0, 0.55, 0.05] as const, half: [1.0, 1.0, 2.5] as const },
+};

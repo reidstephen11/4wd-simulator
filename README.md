@@ -25,13 +25,27 @@ Other scripts:
 | `npm test`         | Unit and headless physics tests (Vitest)                                                           |
 | `npm run test:e2e` | Browser tests (Playwright; builds first). Set `SCREENSHOTS=M1,M2,…` to refresh `docs/screenshots/` |
 
-Sound starts after your first click or key press (browser rule).
+The game opens on a **welcome screen**: choose the world, the vehicle, the time of day and the weather, then press **Drive** (or Enter; arrow keys or the d-pad move between choices). It starts on whatever you chose last time. Sound starts with that Drive press (browsers only allow sound after a click or key press). **Pause menu → Main menu** comes back to it.
 
-The version number (for example v0.08) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
+## Time of day and weather
+
+| Choice         | What it does                                                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Morning        | Low, cool-gold sun from the east-north-east                                                                                                                                           |
+| Midday         | High sun from the north, short shadows                                                                                                                                                |
+| Late afternoon | Warm low sun from the west-north-west (the original lighting)                                                                                                                         |
+| Dusk           | Sun on the horizon, pink and orange sky, long shadows                                                                                                                                 |
+| Clear          | Dry ground and sunshine                                                                                                                                                               |
+| After rain     | Overcast, soft shadows, dark damp ground; tyres grip less (on dirt about three quarters as well), no dust, the creeks up 5 cm                                                         |
+| Raining        | Rain falling (not inside the cab), heavier haze, wetter ground with less grip still (on dirt about two thirds), the creeks up 12 cm; rain hisses outside and drums on the roof inside |
+
+The engine starts as you arrive: the starter cranks for about a second (a little longer for the diesel) and the car stays put until the engine catches. The same happens after swapping vehicles and when restarting a flooded engine.
+
+The version number (for example v0.09) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
 
 ## Vehicles
 
-Pick one from **pause menu → Vehicle**. The new vehicle appears where you are, with the winch and planks back on board, and the game remembers your choice.
+Pick one on the welcome screen, or from **pause menu → Vehicle** while driving. The new vehicle appears where you are, with the winch and planks back on board, and the game remembers your choice.
 
 | Vehicle                 | Based on                                                                  | Engine and gearbox                                                | Notes                                                                                                  |
 | ----------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -42,7 +56,7 @@ The Perentie shifts its own gears like the other vehicle (the game has no clutch
 
 ## Maps
 
-Pick one from **pause menu → Location**. The game reloads into the new map at its last campsite, in the vehicle you're driving, and each map keeps its own progress.
+Pick one on the welcome screen, or from **pause menu → Location** while driving. The game reloads into the new map at its last campsite, in the vehicle you're driving, and each map keeps its own progress.
 
 **High Country** is the original open map: creeks, an escarpment, the high plain and Granite Spur's eight obstacles, described below.
 
@@ -111,7 +125,7 @@ The **handbrake** stays on once pulled (Space or X/Square), until you press it a
 
 **Scored runs (optional):** drive into either end of a crawl trail's technical line (Granite Link or any Granite Spur obstacle) and a clock starts under the compass. Each time the car backs up costs 1 point, each time the chassis knocks a rock 1 point, and hooking up the winch 5 points. Reach the far end to see your time and points; your best per trail (fewest points, then quickest) is saved. Leaving the line or rolling ends the run; drifting past an entrance just cancels it.
 
-**Sound** follows what the car is doing: the inline six's burble changes with revs and load, low range adds transfer-case whine, tyres chirp when they spin on rock, the springs squeak as the axles flex, and the chassis grinds and knocks when it touches rock. Range changes clunk, the air lockers click and hiss, and selecting drive or reverse clunks.
+**Sound** follows what the car is doing: the inline six's burble changes with revs and load, low range adds transfer-case whine, tyres chirp when they spin on rock, the springs squeak as the axles flex, and the chassis grinds and knocks when it touches rock. Range changes clunk, the air lockers click and hiss, and selecting drive or reverse clunks. In rain there is a broad hiss and a closer patter outside, and the rain drums on the roof in the driver's seat.
 
 The **Granite Link** starts just east of the camp course. Follow the amber markers through about 70 m of split rocks, an off-camber shelf and granite ledges. Marked boulders beside the trail provide winch anchors. The wider, green-marked gravel bypass connects the same entrance and exit, making a loop back to camp. Both routes work in either direction; section hints explain the obstacle nearby. The rocks' chamfered surfaces use the same vertices for rendering and collision.
 
@@ -157,6 +171,9 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] Driving feel: in low range with precision crawl off, a light steady throttle should settle at a steady crawl; releasing W creeps rather than stopping (brake with S); a 20–25° climb from a standstill pulls away without rolling back; coasting down a steep slope in low range holds the speed back.
 - [ ] Crawl gauges and driver view: pitch/roll and lifted tyres match what you see (try C → Driver on the Off-camber Slab); I cycles the gauges.
 - [ ] Scored runs: complete a Granite Spur obstacle, then try to beat your points or time; back up once and check it costs a point.
+- [ ] **Welcome screen:** on launch, choose each world, vehicle, time of day and weather in turn; check the light and weather look right, rain stays out of the cab (C → Driver), the ground looks wet and the tyres slip more. Pause menu → Main menu should come back to the welcome screen with your choices kept.
+- [ ] **Engine start:** hold W from the moment the game loads; the car should stay put until the starter has finished cranking and the engine has caught.
+- [ ] **Pitch gauge:** drive up a slope in low range (I shows the gauges); the side-view outline's nose should point up.
 - [ ] **Ironbark 4WD Park:** pause menu → Location → Ironbark 4WD Park. Drive the loop from Park HQ, then try the easier and harder line at each station. The harder Axle Twisters and Rock Garden should stop you with open diffs; Side Slope should lean about 15° and 25°. Change back to the High Country and check your progress there is kept.
 - [ ] **Handbrake:** press Space; the red P and dash lamp come on and stay on. Try to drive off (the car drags and a prompt appears), then press Space again.
 - [ ] **Driver's seat panels:** C → Driver in both vehicles; the windscreen and mirrors should be clear.

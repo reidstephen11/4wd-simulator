@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { collectErrors, shot, waitReady, waitSim } from './helpers';
+import { collectErrors, shot, waitEngine, waitReady, waitSim } from './helpers';
 
 test('swaps to the Bush Tucker Man Land Rover from the pause menu and remembers it', async ({ page }) => {
   // Loads the world twice on the software renderer.
@@ -17,7 +17,7 @@ test('swaps to the Bush Tucker Man Land Rover from the pause menu and remembers 
   await expect(page.getByRole('button', { name: /Land Rover 110 Perentie/ })).toBeVisible();
   await page.getByRole('button', { name: /Land Rover 110 Perentie/ }).click();
   await expect.poll(() => page.evaluate(() => window.__game!.vehicleId())).toBe('perentie');
-  await waitSim(page, 1);
+  await waitEngine(page);
   const after = await page.evaluate(() => window.__game!.vehicle());
   expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeLessThan(1.5);
   expect(after.tilt).toBeLessThan(15);

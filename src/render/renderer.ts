@@ -3,6 +3,7 @@ import type { EnvironmentConfig } from '../data/environment';
 import type { QualityPreset } from '../data/quality';
 import type { World } from '../sim/world/world';
 import { applyFogEnvironment } from './fog';
+import { groundUniforms } from './groundMaterial';
 import { Lighting } from './lighting';
 import { Sky, createBackdrop } from './sky';
 import { TerrainMesh } from './terrainMesh';
@@ -11,6 +12,7 @@ import { Vegetation } from './vegetation';
 import { WorldProps } from './worldProps';
 import { TrackRuts } from './tracks';
 import { Particles } from './particles';
+import { Rain } from './rain';
 import type { DynamicObject } from '../sim/sim';
 
 /** Owns the Three.js renderer, scene and camera, and the static world meshes. */
@@ -26,6 +28,10 @@ export class GameRenderer {
   readonly props: WorldProps;
   readonly ruts: TrackRuts;
   readonly particles: Particles;
+  /** Falling rain, when it is raining. */
+  readonly rain: Rain | null;
+  /** The vehicle's world matrix: it shelters the rain. */
+  readonly shelter = new THREE.Matrix4();
   private quality: QualityPreset;
   private lastFrame = performance.now();
   private firstFrame = true;
@@ -76,7 +82,10 @@ export class GameRenderer {
     this.scene.add(this.ruts.group);
     this.particles = new Particles(world.terrain, quality, env.waterLevelOffset);
     this.particles.setWetness(env.wetness);
+    groundUniforms.groundWetness.value = env.wetness;
     this.scene.add(this.particles.group);
+    this.rain = env.rain > 0 ? new Rain(env.rain, quality.particles) : null;
+    if (this.rain) this.scene.add(this.rain.mesh);
 
     this.setQuality(quality);
     this.resize();
@@ -122,6 +131,7 @@ export class GameRenderer {
       env.toneMapping === 'agx' ? THREE.AgXToneMapping : THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = env.exposure;
     this.particles.setWetness(env.wetness);
+    groundUniforms.groundWetness.value = env.wetness;
     applyFogEnvironment(this.scene, env, this.quality.drawDistance);
   }
 
@@ -153,6 +163,7 @@ export class GameRenderer {
     this.lighting.follow(this.focus);
     this.sky.update(this.camera);
     this.water.update(dt);
+    this.rain?.update(this.camera.position, this.shelter, dt);
     this.renderer.render(this.scene, this.camera);
   }
 }

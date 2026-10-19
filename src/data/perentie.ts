@@ -61,6 +61,8 @@ export const perentieTuning: VehicleTuning = {
   engine: {
     // 3.9 L four-cylinder diesel: idles slowly, peak torque low down, governed at 3600.
     idleRpm: 700,
+    crankSeconds: 1.3,
+    crankRpm: 170,
     redlineRpm: 3600,
     torqueCurve: [
       [600, 150],

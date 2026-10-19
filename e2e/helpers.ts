@@ -15,8 +15,29 @@ export function collectErrors(page: Page): string[] {
   return errors;
 }
 
+/**
+ * Press Drive on the welcome screen (it starts on the saved choices), then wait until the
+ * world is loaded and the engine has started (it cranks for about a second). After a map
+ * change from the pause menu the game loads without the welcome screen.
+ */
 export async function waitReady(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => window.__game?.ready === true || document.querySelector('[data-welcome-drive]') !== null,
+    null,
+    { timeout: 120_000 },
+  );
+  const drive = page.locator('[data-welcome-drive]');
+  if (await drive.count()) await drive.click();
   await page.waitForFunction(() => window.__game?.ready === true, null, { timeout: 120_000 });
+  await waitEngine(page);
+}
+
+/** Wait until the engine has caught after starting (on arrival or after a vehicle swap). */
+export async function waitEngine(page: Page): Promise<void> {
+  await page.waitForFunction(() => window.__game!.vehicle().engineRunning, null, {
+    timeout: 300_000,
+    polling: 100,
+  });
 }
 
 /**

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { maps, type MapId } from '../data/maps';
-import { lateAfternoon } from '../data/environment';
+import { environmentFor, type Conditions } from '../data/environment';
 import { qualityPresets } from '../data/quality';
 import type { VehicleId } from '../data/vehicle';
 import { vehicles } from '../data/vehicles';
@@ -38,10 +38,18 @@ import { GameLoop } from './loop';
 import { ToolController } from './toolController';
 import { buildHudState } from './hudState';
 import { installHook } from './testHook';
+import { requestAutostart } from './launch';
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
 export const LOCAL_VEHICLE = 'player-1';
+
+/** What the welcome screen chose: where to drive, in what, and in what weather. */
+export interface LaunchChoice {
+  map: MapId;
+  vehicle: VehicleId;
+  conditions: Conditions;
+}
 
 /**
  * Orchestrates the simulation, rendering, UI and input for the local player.
@@ -103,6 +111,8 @@ export class Game {
     vehicleId: VehicleId,
     mapId: MapId,
     mapProgress: Partial<Record<MapId, ExplorationState>>,
+    readonly launchConditions: Conditions,
+    audioContext?: AudioContext,
   ) {
     this.debug = new URLSearchParams(location.search).has('debug');
     this.settings = settings;
@@ -114,7 +124,7 @@ export class Game {
     this.crawlRuns = new CrawlRuns(world.map.crawlTrails ?? [], world.features.tracks, crawlBests);
     this.input = new InputManager(window);
     this.input.setSteering(tuning.steering);
-    this.audio = new AudioSystem(settings);
+    this.audio = new AudioSystem(settings, window, audioContext);
     this.audio.setVehicle(vehicleId);
     // Loading puts you at the last campsite (SPEC §14).
     const camp = exploration.lastCampsite || world.map.spawnCampsite;
@@ -164,6 +174,10 @@ export class Game {
           this.closePause();
           void this.changeMap(id);
         },
+        mainMenu: () => {
+          this.closePause();
+          void this.toMainMenu();
+        },
       },
       settings,
     );
@@ -188,8 +202,10 @@ export class Game {
       this.hud.toast(range === 'low' ? 'Low range' : 'High range', 1400);
       this.audio.drivetrainClunk('range');
     });
-    sim.events.on('engine', ({ event }) => {
-      this.hud.toast(event === 'stalled' ? 'Engine stalled — flooded' : 'Engine restarted');
+    sim.events.on('engine', ({ id, event }) => {
+      if (id !== LOCAL_VEHICLE) return;
+      if (event !== 'starting')
+        this.hud.toast(event === 'stalled' ? 'Engine stalled — flooded' : 'Engine restarted');
       this.audio.engineEvent(event);
     });
     sim.events.on('diffChanged', ({ axle, locked }) => {
@@ -229,16 +245,21 @@ export class Game {
     setTimeout(() => void this.map.prepare(), 2500);
   }
 
+  /**
+   * Load the chosen world and start. `audioContext` is created by the click that chose
+   * it, so sound can start with the engine (browsers only allow that from a gesture).
+   */
   static async create(
     appEl: HTMLElement,
     uiEl: HTMLElement,
+    choice: LaunchChoice,
     progress: (p: number, label: string) => void,
-    onMap?: (name: string) => void,
+    audioContext?: AudioContext,
   ): Promise<Game> {
     const save = loadSave();
     const settings = save?.settings ?? { ...defaultSettings };
-    const mapId = save?.map ?? 'high-country';
-    onMap?.(maps[mapId].def.name);
+    const mapId = choice.map;
+    const env = environmentFor(choice.conditions);
     const rapier = loadRapier();
     const gen = buildWorldSteps(maps[mapId].def);
     let r = gen.next();
@@ -254,18 +275,12 @@ export class Game {
     );
     progress(0.86, 'Starting physics');
     await nextFrame();
-    const sim = new Simulation(await rapier, world, lateAfternoon);
+    const sim = new Simulation(await rapier, world, env);
     progress(0.92, 'Building meshes');
     await nextFrame();
     // Sign lettering uses the web font; wait for it (but never block on a slow network).
     await Promise.race([document.fonts?.ready, new Promise((res) => setTimeout(res, 1500))]);
-    const view = new GameRenderer(
-      appEl,
-      world,
-      lateAfternoon,
-      qualityPresets[settings.quality],
-      sim.dynamics.values(),
-    );
+    const view = new GameRenderer(appEl, world, env, qualityPresets[settings.quality], sim.dynamics.values());
     return new Game(
       world,
       sim,
@@ -274,9 +289,11 @@ export class Game {
       settings,
       exploration,
       save?.crawlBests ?? {},
-      save?.vehicle ?? 'shortie',
+      choice.vehicle,
       mapId,
       save?.maps ?? {},
+      choice.conditions,
+      audioContext,
     );
   }
 
@@ -286,6 +303,8 @@ export class Game {
 
   start(): void {
     this.loop.start();
+    // The engine starts as you arrive; the car drives once it has caught.
+    this.sim.startEngine(LOCAL_VEHICLE);
   }
 
   // --- Saving ---------------------------------------------------------------
@@ -300,6 +319,7 @@ export class Game {
       vehicle: this.vehicleId,
       map,
       maps: progress,
+      conditions: this.launchConditions,
     });
     if (!ok && this.storageOk) {
       this.storageOk = false;
@@ -374,6 +394,16 @@ export class Game {
       this.hud.toast('Can’t change map: this browser isn’t letting the game save', 3200);
       return;
     }
+    requestAutostart();
+    await this.fade.run(() => {
+      this.loop.paused = true;
+      location.reload();
+    });
+  }
+
+  /** Back to the welcome screen (pause menu): save and reload without starting. */
+  async toMainMenu(): Promise<void> {
+    this.save();
     await this.fade.run(() => {
       this.loop.paused = true;
       location.reload();
@@ -393,6 +423,7 @@ export class Game {
     this.tool.cancel();
     this.crawlRuns.cancel();
     this.sim.replaceVehicle(LOCAL_VEHICLE, def.tuning);
+    this.sim.startEngine(LOCAL_VEHICLE);
     this.view.scene.remove(this.model.root);
     this.model.dispose();
     this.model = new VehicleModel(def.tuning);
@@ -701,11 +732,20 @@ export class Game {
       });
     }
     this.view.focus.copy(this.model.root.position);
+    this.view.shelter.copy(this.model.root.matrixWorld);
     const t0 = performance.now();
     this.view.render();
     this.sceneMs += (performance.now() - t0 - this.sceneMs) * 0.1;
     this.audio.update(
-      buildAudioFrame(v, tools.winch, this.world, this.loop.paused, frameDt, this.hud.cockpitView),
+      buildAudioFrame(
+        v,
+        tools.winch,
+        this.world,
+        this.loop.paused,
+        frameDt,
+        this.hud.cockpitView,
+        this.sim.env.rain,
+      ),
     );
     this.hud.update(
       buildHudState({
