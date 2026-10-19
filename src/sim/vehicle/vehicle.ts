@@ -98,6 +98,11 @@ export class Vehicle {
   externalLoad = 0;
   /** Set when flooding stalls or restarts the engine this step. */
   floodEvent: FloodEvent = null;
+  /**
+   * Seconds of cranking left: the starter turns the engine over and nothing drives
+   * until it catches. Starting up, after a vehicle swap and after a flooded stall.
+   */
+  crank = 0;
   /** Engine power multiplier applied this step (dips while flooding sputters). */
   enginePower = 1;
   /**
@@ -259,6 +264,15 @@ export class Vehicle {
     return out;
   }
 
+  /** Turn the engine over on the starter; it drives once it catches. False if it's already starting. */
+  startEngine(): boolean {
+    if (this.crank > 0) return false;
+    this.crank = this.tuning.engine.crankSeconds;
+    this.drivetrain.engineRunning = false;
+    this.drivetrain.rpm = this.tuning.engine.crankRpm;
+    return true;
+  }
+
   toggleRange(): boolean {
     if (Math.abs(this.speed) > 20 / 3.6) return false;
     this.drivetrain.range = this.drivetrain.range === 'high' ? 'low' : 'high';
@@ -374,7 +388,15 @@ export class Vehicle {
     const ws = this.physics.ground.waterSurfaceAt(this.intakePos.x, this.intakePos.z);
     const submerged = ws !== null && this.intakePos.y < ws + this.env.waterLevelOffset;
     this.floodEvent = updateFlood(this.condition.flood, submerged, f, dt);
-    this.drivetrain.engineRunning = !this.condition.flood.stalled;
+    // A flooded engine that's dried out restarts on the starter like any other.
+    if (this.floodEvent === 'restarted') this.crank = t.engine.crankSeconds;
+    const cranking = this.crank > 0;
+    if (cranking) {
+      this.crank = Math.max(0, this.crank - dt);
+      // It catches straight to idle.
+      if (this.crank === 0) this.drivetrain.rpm = t.engine.idleRpm;
+    }
+    this.drivetrain.engineRunning = !this.condition.flood.stalled && !cranking;
     if (this.rand() < dt * 6) this.sputterRand = this.rand();
     this.enginePower =
       enginePowerMultiplier(this.condition) * floodPower(this.condition.flood, this.sputterRand);
@@ -388,6 +410,7 @@ export class Vehicle {
     // Off the throttle while the winch pulls, the gearbox sits in neutral so the car
     // neither creeps on the cable nor drags against it.
     if (this.freeRoll && throttle === 0) drive = 0;
+    if (cranking) this.drivetrain.rpm = t.engine.crankRpm;
 
     // Grip available at each wheel.
     for (let i = 0; i < 4; i++) {
@@ -433,7 +456,9 @@ export class Vehicle {
     // Brakes.
     const stopped = Math.abs(this.speed) < 0.5;
     const engineBrake = throttle === 0 && brake === 0 && !stopped ? engineBrakeForce(t, this.drivetrain) : 0;
-    let hold = throttle === 0 && brake === 0 && stopped && !this.freeRoll ? t.holdBrakeForce : 0;
+    // The brakes also hold the car while the engine is being started.
+    let hold =
+      (throttle === 0 || cranking) && brake === 0 && stopped && !this.freeRoll ? t.holdBrakeForce : 0;
     // Hill-start assist: pulling away on a slope, the brakes stay on while the engine
     // and converter build up enough drive to hold the car (for at most a moment).
     const pull = 9.81 * t.mass * fwd.y * (reverse ? -1 : 1);

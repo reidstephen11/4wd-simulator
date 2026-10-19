@@ -15,8 +15,18 @@ export function collectErrors(page: Page): string[] {
   return errors;
 }
 
+/** Wait until the world is loaded and the engine has started (it cranks for about a second). */
 export async function waitReady(page: Page): Promise<void> {
   await page.waitForFunction(() => window.__game?.ready === true, null, { timeout: 120_000 });
+  await waitEngine(page);
+}
+
+/** Wait until the engine has caught after starting (on arrival or after a vehicle swap). */
+export async function waitEngine(page: Page): Promise<void> {
+  await page.waitForFunction(() => window.__game!.vehicle().engineRunning, null, {
+    timeout: 300_000,
+    polling: 100,
+  });
 }
 
 /**

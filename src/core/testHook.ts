@@ -50,6 +50,8 @@ export interface GameHook {
     precisionCrawl: boolean;
     throttle: number;
     brake: number;
+    /** False while the engine is stalled or still cranking. */
+    engineRunning: boolean;
   };
   /** Park the vehicle on the approach to a POI and frame it with the free camera. */
   showPoi(id: string): void;
@@ -255,6 +257,7 @@ export function installHook(game: Game): void {
         precisionCrawl: v.precisionCrawl,
         throttle: v.throttle,
         brake: v.brake,
+        engineRunning: v.drivetrain.engineRunning,
       };
     },
   };

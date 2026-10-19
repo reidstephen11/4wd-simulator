@@ -188,8 +188,10 @@ export class Game {
       this.hud.toast(range === 'low' ? 'Low range' : 'High range', 1400);
       this.audio.drivetrainClunk('range');
     });
-    sim.events.on('engine', ({ event }) => {
-      this.hud.toast(event === 'stalled' ? 'Engine stalled — flooded' : 'Engine restarted');
+    sim.events.on('engine', ({ id, event }) => {
+      if (id !== LOCAL_VEHICLE) return;
+      if (event !== 'starting')
+        this.hud.toast(event === 'stalled' ? 'Engine stalled — flooded' : 'Engine restarted');
       this.audio.engineEvent(event);
     });
     sim.events.on('diffChanged', ({ axle, locked }) => {
@@ -286,6 +288,8 @@ export class Game {
 
   start(): void {
     this.loop.start();
+    // The engine starts as you arrive; the car drives once it has caught.
+    this.sim.startEngine(LOCAL_VEHICLE);
   }
 
   // --- Saving ---------------------------------------------------------------
@@ -393,6 +397,7 @@ export class Game {
     this.tool.cancel();
     this.crawlRuns.cancel();
     this.sim.replaceVehicle(LOCAL_VEHICLE, def.tuning);
+    this.sim.startEngine(LOCAL_VEHICLE);
     this.view.scene.remove(this.model.root);
     this.model.dispose();
     this.model = new VehicleModel(def.tuning);

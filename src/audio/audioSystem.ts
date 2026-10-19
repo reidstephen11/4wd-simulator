@@ -179,17 +179,14 @@ export class AudioSystem {
     };
     this.applyVolumes(g, true);
     g.engine.setVehicle(this.vehicle);
-    // The engine starts up when sound first comes on.
-    g.engine.restarted();
     return g;
   }
 
-  /** Play this vehicle's engine; after a swap its engine starts up. */
+  /** Play this vehicle's engine (the start-up comes from the sim's 'starting' event). */
   setVehicle(id: VehicleId): void {
     if (id === this.vehicle) return;
     this.vehicle = id;
     this.g?.engine.setVehicle(id);
-    if (this.live()) this.g?.engine.restarted();
   }
 
   setSettings(s: Settings): void {
@@ -236,7 +233,8 @@ export class AudioSystem {
 
   // --- One-off events ---------------------------------------------------------
 
-  engineEvent(e: 'stalled' | 'restarted'): void {
+  /** A stall clunks; starting up or restarting plays the starter and the engine catching. */
+  engineEvent(e: 'stalled' | 'restarted' | 'starting'): void {
     if (!this.live()) return;
     if (e === 'stalled') this.g?.engine.stalled();
     else this.g?.engine.restarted();

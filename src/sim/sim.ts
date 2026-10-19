@@ -50,7 +50,8 @@ export interface SimEvents extends Record<string, unknown> {
   precisionChanged: { id: string; enabled: boolean };
   parkBrakeChanged: { id: string; on: boolean };
   tool: { id: string; event: ToolEvent };
-  engine: { id: string; event: 'stalled' | 'restarted' };
+  /** Flooding stalled or restarted the engine, or it is being started (start-up, a vehicle swap). */
+  engine: { id: string; event: 'stalled' | 'restarted' | 'starting' };
   dent: { id: string; impact: number };
   /** A wheel hit something hard (suspension compressing fast). */
   wheelImpact: { id: string; wheel: number; speed: number };
@@ -74,6 +75,8 @@ export interface SimState {
     precisionCrawl: boolean;
     parkBrake: boolean;
     engineRunning: boolean;
+    /** Seconds of cranking left before the engine catches. */
+    crank: number;
     flood: { timer: number; stalled: boolean; dryTime: number };
     dirt: { front: number; sides: number; rear: number; wheels: number };
     dents: number;
@@ -251,6 +254,11 @@ export class Simulation {
    * Swap a vehicle for another model where it stands, facing the same way: the winch
    * lets go, placed planks come back and the new one starts clean.
    */
+  /** Crank a vehicle's engine: it drives once the engine catches. */
+  startEngine(id: string): void {
+    if (this.vehicleOf(id).startEngine()) this.events.emit('engine', { id, event: 'starting' });
+  }
+
   replaceVehicle(id: string, tuning: VehicleTuning): Vehicle {
     const old = this.vehicleOf(id);
     const tools = this.toolsOf(id);
@@ -536,6 +544,7 @@ export class Simulation {
           precisionCrawl: v.precisionCrawl,
           parkBrake: v.parkBrake,
           engineRunning: v.drivetrain.engineRunning,
+          crank: v.crank,
           flood: {
             timer: v.condition.flood.timer,
             stalled: v.condition.flood.stalled,

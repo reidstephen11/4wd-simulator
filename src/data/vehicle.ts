@@ -44,6 +44,13 @@ export interface VehicleTuning {
   engine: {
     idleRpm: number;
     redlineRpm: number;
+    /**
+     * How long the starter cranks before the engine catches and can drive (s). Matches
+     * the starter sound (engineSynthTunings[id].starter.seconds).
+     */
+    crankSeconds: number;
+    /** Crankshaft speed on the starter (rpm), for the tachometer. */
+    crankRpm: number;
     /** Full-throttle torque at the flywheel (after friction): [rpm, Nm] pairs. */
     torqueCurve: ReadonlyArray<readonly [number, number]>;
     /**
@@ -193,6 +200,8 @@ export const vehicleTuning: VehicleTuning = {
 
   engine: {
     idleRpm: 800,
+    crankSeconds: 0.95,
+    crankRpm: 190,
     redlineRpm: 4300,
     torqueCurve: [
       [600, 150],
