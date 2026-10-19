@@ -285,8 +285,9 @@ export const engineSynthTuning: EngineSynthTuning = {
 
 /**
  * The Perentie's 3.9 L Isuzu 4BD1 four-cylinder diesel: a slow, lumpy idle with a hard
- * combustion knock, stronger compression pulses (no throttle plate), no overrun pops,
- * a long exhaust under the 110's floor and plenty of LT95 gearbox whine.
+ * combustion knock, stronger compression pulses (no throttle plate), no overrun pops and
+ * a long exhaust under the 110's floor. The 4BD1 has no turbo, so nothing here whistles:
+ * the knock and valve clatter ring low (1 to 3 kHz) and the gearbox whine is faint.
  */
 export const dieselSynthTuning: EngineSynthTuning = {
   idleRpm: 700,
@@ -307,7 +308,7 @@ export const dieselSynthTuning: EngineSynthTuning = {
     gain: 1.05,
   },
   block: { cutoffHz: 190, gain: 0.5 },
-  valves: { hz: [2300, 3900], q: 8, gain: 1.6 },
+  valves: { hz: [1700, 2900], q: 4, gain: 0.8 },
   intake: {
     openDeg: 380,
     riseDeg: 30,
@@ -318,7 +319,7 @@ export const dieselSynthTuning: EngineSynthTuning = {
     honkQ: 3,
     honkGain: 0.25,
   },
-  fan: { hz: 950, gain: 0.3 },
+  fan: { hz: 650, gain: 0.1 },
   // Lifting off cuts the fuel: compression pulses only, no pops or throttle whistle.
   overrun: { fromRpm: 1400, misfire: 0.85, popChance: 0, popGain: 1, whistleHz: 2900, whistleGain: 0 },
   starter: {
@@ -331,8 +332,8 @@ export const dieselSynthTuning: EngineSynthTuning = {
     gain: 0.28,
   },
   catch: { seconds: 1.8, flareRpm: 1150, flareSeconds: 0.35, settleSeconds: 0.6 },
-  whine: { teeth: [37, 29], second: 0.55, harmonic: 0.3, shaftAm: 0.3, wobble: 0.15, gain: 0.07 },
-  knock: { hz: [1500, 2900], q: 5, idle: 1, load: 0.55, gain: 5 },
+  whine: { teeth: [37, 29], second: 0.55, harmonic: 0.1, shaftAm: 0.3, wobble: 0.15, gain: 0.008 },
+  knock: { hz: [1050, 1900], q: 2.5, idle: 1, load: 0.3, gain: 4 },
   outputGain: 1,
 };
 

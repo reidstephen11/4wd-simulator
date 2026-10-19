@@ -131,7 +131,7 @@ describe('engine synthesiser', () => {
       const x = render(1.5, { rpm, throttle: 0.6, load: 0.6 }, diesel());
       expect(power(x, f)).toBeGreaterThan(power(x, f * 1.27) * 4);
     }
-    // Combustion knock rings at 1.5 to 3 kHz: far more there, against the exhaust's low
+    // Combustion knock rings at 1 to 2 kHz: far more there, against the exhaust's low
     // end, than from the petrol six at the same revs.
     const band = (x: Float32Array, from: number, to: number) => {
       let sum = 0;
@@ -142,5 +142,14 @@ describe('engine synthesiser', () => {
     expect(clatter(render(1.5, { rpm: 750 }, diesel()))).toBeGreaterThan(
       3 * clatter(render(1.5, { rpm: 750 })),
     );
+    // On the road it isn't shrill: less above 2.5 kHz than the petrol six, and the
+    // gearbox whine (37 teeth on the shaft) is a faint hum, not a turbo-like whistle.
+    const cruise = { rpm: 2600, throttle: 0.4, load: 0.4, shaftHz: 33, whine: 0.2 };
+    const hiss = (x: Float32Array) => band(x, 2500, 5000) / band(x, 40, 400);
+    const road = render(1.5, cruise, diesel());
+    expect(hiss(road)).toBeLessThan(0.5 * hiss(render(1.5, cruise)));
+    const whine = 37 * 33;
+    const near = band(road, whine - 80, whine - 30) / 5;
+    expect(power(road, whine)).toBeLessThan(10 * near);
   });
 });
