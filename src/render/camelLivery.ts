@@ -398,7 +398,7 @@ function roofLamps(b: VehicleBuilder): void {
     b.geometry(new THREE.CylinderGeometry(0.085, 0.07, 0.09, 24), black);
     b.pop();
     b.ring(x, 2.07, -0.527, 0.078, 0.009, steel, M.Metal, 'z', Z.Roof);
-    b.slot = M.Lamp;
+    b.slot = M.DrivingLamp;
     b.push().translate(x, 2.07, -0.53).scale(1, 1, 0.25);
     b.geometry(new THREE.SphereGeometry(0.07, 20, 10), lensColour);
     b.pop();

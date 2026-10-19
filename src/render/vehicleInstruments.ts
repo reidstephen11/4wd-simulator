@@ -137,6 +137,7 @@ export class VehicleInstruments {
     lamp(3, '#6FCB5A', (v) => v.precisionCrawl);
     lamp(4, '#E2402F', (v) => !v.drivetrain.engineRunning);
     lamp(5, '#E2402F', (v) => v.handbrake);
+    lamp(6, '#3C78E6', (v) => v.lights === 'high');
 
     const hb = cabin.handbrake;
     this.handbrake.position.set(hb.base.x, hb.base.y, hb.base.z);

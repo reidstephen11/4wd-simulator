@@ -38,6 +38,7 @@ export function buildAudioFrame(
   dt: number,
   interior = false,
   rain = 0,
+  night = false,
 ): AudioFrame {
   const p = v.body.translation();
   const d = v.drivetrain;
@@ -92,6 +93,7 @@ export function buildAudioFrame(
       fallsDistance: falls ? Math.hypot(falls.x - p.x, falls.z - p.z) : Infinity,
       rain,
       interior,
+      night,
     },
   };
 }

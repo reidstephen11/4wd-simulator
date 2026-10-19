@@ -1,6 +1,7 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
 import { SurfaceId, surfaceGrip, surfaces, tyreLock, waterDrag } from '../../data/surfaces';
 import type { VehicleTuning } from '../../data/vehicle';
+import { nextHeadlightMode, type HeadlightMode } from '../../data/headlights';
 import { Groups, groups, type Physics } from '../physics';
 import type { VehicleInput } from '../input/vehicleInput';
 import {
@@ -94,6 +95,8 @@ export class Vehicle {
   /** The latching park brake: on until the driver lets it off. */
   parkBrake = false;
   horn = false;
+  /** Headlights: off, low beam or high beam. */
+  lights: HeadlightMode = 'off';
   /** When true the hold brake stays off (e.g. while winching). */
   freeRoll = false;
   /** External pull this step (winch), for audio/UI. */
@@ -349,6 +352,7 @@ export class Vehicle {
     if (input.toggleFrontDiff) this.toggleDiff('front');
     if (input.toggleRearDiff) this.toggleDiff('rear');
     if (input.togglePrecision) this.precisionCrawl = !this.precisionCrawl;
+    if (input.cycleLights) this.lights = nextHeadlightMode(this.lights);
 
     // Throttle / brake / reverse, automatic-style. Accelerating against the way the
     // car is rolling brakes it, unless it is rolling back against the selected gear

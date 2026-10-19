@@ -8,6 +8,7 @@ import { headingOf } from '../sim/vehicle/math';
 import type { Game } from './game';
 import type { CameraPreset } from '../data/camera';
 import type { VehicleId } from '../data/vehicle';
+import type { HeadlightMode } from '../data/headlights';
 
 const LOCAL = 'player-1';
 
@@ -52,6 +53,7 @@ export interface GameHook {
     brake: number;
     /** False while the engine is stalled or still cranking. */
     engineRunning: boolean;
+    lights: HeadlightMode;
   };
   /** Park the vehicle on the approach to a POI and frame it with the free camera. */
   showPoi(id: string): void;
@@ -93,6 +95,15 @@ export interface GameHook {
   conditions(): { time: string; weather: string; wetness: number; rain: number };
   /** Set the park brake directly (the key toggles it). */
   setParkBrake(on: boolean): void;
+  /** Set the headlights directly (the key cycles them). */
+  setLights(mode: HeadlightMode): void;
+  /** How strongly the beams light the ground now (0 in daylight, where there are none). */
+  beams(): { head: number; roof: number };
+  /**
+   * Render a frame and return the mean brightness (0..255) of part of the screen, given
+   * as fractions of its width and height from the top left.
+   */
+  brightness(x0: number, y0: number, x1: number, y1: number): number;
 }
 
 declare global {
@@ -248,6 +259,28 @@ export function installHook(game: Game): void {
     setParkBrake: (on) => {
       g.vehicle.parkBrake = on;
     },
+    setLights: (mode) => {
+      g.vehicle.lights = mode;
+    },
+    beams: () => g.model.beams?.strengths ?? { head: 0, roof: 0 },
+    brightness: (x0, y0, x1, y1) => {
+      // Read straight after rendering, before the browser shows (and clears) the frame.
+      g.model.update(g.vehicle, 1, 0);
+      g.view.render();
+      const gl = g.view.renderer.getContext();
+      const w = gl.drawingBufferWidth,
+        h = gl.drawingBufferHeight;
+      const px = Math.floor(x0 * w),
+        py = Math.floor((1 - y1) * h);
+      const pw = Math.max(1, Math.floor((x1 - x0) * w)),
+        ph = Math.max(1, Math.floor((y1 - y0) * h));
+      const buf = new Uint8Array(pw * ph * 4);
+      gl.readPixels(px, py, pw, ph, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i += 4)
+        sum += 0.2126 * buf[i] + 0.7152 * buf[i + 1] + 0.0722 * buf[i + 2];
+      return sum / (pw * ph);
+    },
     vehicle: () => {
       const v = g.vehicle;
       const p = v.body.translation();
@@ -266,6 +299,7 @@ export function installHook(game: Game): void {
         throttle: v.throttle,
         brake: v.brake,
         engineRunning: v.drivetrain.engineRunning,
+        lights: v.lights,
       };
     },
   };

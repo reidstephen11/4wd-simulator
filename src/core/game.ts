@@ -134,7 +134,9 @@ export class Game {
     const camp = exploration.lastCampsite || world.map.spawnCampsite;
     sim.addVehicle(LOCAL_VEHICLE, sim.campsitePose(camp, tuning.wheelRadius), tuning);
 
-    this.model = new VehicleModel(tuning);
+    // Arriving at dusk or night, the headlights are already on.
+    if (sim.env.lampBeams) this.vehicle.lights = 'low';
+    this.model = new VehicleModel(tuning, sim.env.lampBeams);
     view.scene.add(this.model.root);
     this.toolsView = new ToolsView();
     view.scene.add(this.toolsView.group);
@@ -225,6 +227,14 @@ export class Game {
       if (id !== LOCAL_VEHICLE) return;
       this.hud.toast(on ? 'Handbrake on' : 'Handbrake off', 1200);
       this.audio.parkBrake(on);
+    });
+    sim.events.on('lightsChanged', ({ id, mode }) => {
+      if (id !== LOCAL_VEHICLE) return;
+      this.hud.toast(
+        { off: 'Headlights off', low: 'Headlights: low beam', high: 'Headlights: high beam' }[mode],
+        1200,
+      );
+      this.audio.lightSwitch(mode === 'high');
     });
     sim.events.on('diffBlocked', () => this.hud.toast('Slow below 5 km/h to engage diff locks'));
     sim.events.on('precisionChanged', ({ enabled }) =>
@@ -446,7 +456,7 @@ export class Game {
     this.sim.startEngine(LOCAL_VEHICLE);
     this.view.scene.remove(this.model.root);
     this.model.dispose();
-    this.model = new VehicleModel(def.tuning);
+    this.model = new VehicleModel(def.tuning, this.sim.env.lampBeams);
     this.view.scene.add(this.model.root);
     this.vehicleId = id;
     this.input.setSteering(def.tuning.steering);
@@ -528,6 +538,12 @@ export class Game {
         icon: 'feature',
         enabled: true,
       },
+      {
+        id: 'lights',
+        label: { off: 'Headlights on', low: 'High beam', high: 'Headlights off' }[v.lights],
+        icon: 'headlight',
+        enabled: true,
+      },
     ];
   }
 
@@ -536,7 +552,8 @@ export class Game {
     else if (id === 'planks') this.tool.startPlanks();
     else if (id === 'recall') this.sim.recallPlanks(LOCAL_VEHICLE);
     else if (id === 'detach') this.sim.detachWinch(LOCAL_VEHICLE);
-    else if (id === 'frontDiff' || id === 'rearDiff' || id === 'precision') this.input.requestDriveAction(id);
+    else if (id === 'frontDiff' || id === 'rearDiff' || id === 'precision' || id === 'lights')
+      this.input.requestDriveAction(id);
   }
 
   private onToolEvent(e: ToolEvent): void {
@@ -765,6 +782,7 @@ export class Game {
         frameDt,
         this.hud.cockpitView,
         this.sim.env.rain,
+        this.launchConditions.time === 'night',
       ),
     );
     this.touch.update({
@@ -775,6 +793,7 @@ export class Game {
       frontLocked: v.differentials.front,
       rearLocked: v.differentials.rear,
       precision: v.precisionCrawl,
+      lightsOn: v.lights !== 'off',
       winchAttached: tools.winch.attached,
       jackAvailable: tools.jack.state === 'available',
     });

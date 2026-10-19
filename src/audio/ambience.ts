@@ -14,6 +14,8 @@ export interface AmbienceFrame {
   rain: number;
   /** Heard from the driver's seat: the rain drums on the roof. */
   interior: boolean;
+  /** Night: the birds are quiet and the crickets chirp. */
+  night: boolean;
 }
 
 /** Wind by altitude, creek water near the creek, the falls, rain, and bird calls. */
@@ -30,7 +32,10 @@ export class Ambience {
   private readonly rainPatter: GainNode;
   private readonly rainRoof: GainNode;
   private readonly roofBand: BiquadFilterNode;
+  private readonly cricket: GainNode;
+  private readonly cricketTone: OscillatorNode;
   private nextDrum = 0;
+  private nextTrill = 0;
   private gust = 0.5;
   private gustTarget = 0.5;
   private gustTimer = 0;
@@ -124,6 +129,13 @@ export class Ambience {
     this.roofBand = band('bandpass', 700, 1.4);
     loop(ctx, noise.brown).connect(this.roofBand).connect(this.rainRoof).connect(bus);
 
+    // Crickets: one high tone, pulsed in short trills.
+    this.cricketTone = ctx.createOscillator();
+    this.cricketTone.frequency.value = 4600;
+    this.cricket = quiet();
+    this.cricketTone.connect(this.cricket).connect(bus);
+    this.cricketTone.start();
+
     const B = audioTuning.ambience.birds;
     this.nextBird = ctx.currentTime + B.minInterval * 0.5;
   }
@@ -181,9 +193,31 @@ export class Ambience {
       }
     } else this.rainRoof.gain.setTargetAtTime(0, t, 0.2);
 
+    // Crickets at night, scheduled a little ahead; not in the rain, and muffled in the cab.
+    if (f.night && rain < 0.5) {
+      const C = A.crickets;
+      const level = C.gain * (f.interior ? 0.4 : 1) * (1 - 0.6 * alt);
+      if (this.nextTrill < t) this.nextTrill = t + Math.random() * 0.3;
+      while (this.nextTrill < t + 0.25) {
+        const at = this.nextTrill;
+        this.cricketTone.frequency.setValueAtTime(C.hz[0] + Math.random() * (C.hz[1] - C.hz[0]), at);
+        const pulses = C.pulses[0] + Math.floor(Math.random() * (C.pulses[1] - C.pulses[0] + 1));
+        for (let i = 0; i < pulses; i++) {
+          const p = at + i * C.pulseSeconds * 2;
+          this.cricket.gain.setValueAtTime(level, p);
+          this.cricket.gain.setValueAtTime(0, p + C.pulseSeconds);
+        }
+        this.nextTrill =
+          at +
+          pulses * C.pulseSeconds * 2 +
+          C.gapSeconds[0] +
+          Math.random() * (C.gapSeconds[1] - C.gapSeconds[0]);
+      }
+    }
+
     // Birds at random intervals, quieter and rarer up high.
-    // In rain they keep quiet.
-    if (rain > 0.5) this.nextBird = Math.max(this.nextBird, t + 5);
+    // In rain and at night they keep quiet.
+    if (rain > 0.5 || f.night) this.nextBird = Math.max(this.nextBird, t + 5);
     if (t >= this.nextBird) {
       const B = A.birds;
       const kooka = Math.random() < B.kookaburraChance;

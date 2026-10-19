@@ -39,6 +39,15 @@ export interface EnvironmentConfig {
   wetness: number;
   /** 0 = none, 1 = steady rain falling. */
   rain: number;
+  /**
+   * Dark enough for the headlights to light the ground (dusk and night). In daylight the
+   * lamps only glow, which keeps their lights out of the scene and its cost.
+   */
+  lampBeams: boolean;
+  /** 0..1 how bright the stars are (night only). */
+  stars: number;
+  /** Cloud brightness against a midday sky (1 = white cloud). */
+  cloudLight: number;
 }
 
 export const lateAfternoon: EnvironmentConfig = {
@@ -70,10 +79,13 @@ export const lateAfternoon: EnvironmentConfig = {
   waterLevelOffset: 0,
   wetness: 0,
   rain: 0,
+  lampBeams: false,
+  stars: 0,
+  cloudLight: 1,
 };
 
 /** The light the welcome screen offers. */
-export type TimeOfDay = 'morning' | 'midday' | 'afternoon' | 'dusk';
+export type TimeOfDay = 'morning' | 'midday' | 'afternoon' | 'dusk' | 'night';
 /** Clear and dry, overcast after rain (wet ground), or raining. */
 export type Weather = 'clear' | 'wet' | 'rain';
 export interface Conditions {
@@ -81,13 +93,14 @@ export interface Conditions {
   weather: Weather;
 }
 export const defaultConditions: Conditions = { time: 'afternoon', weather: 'clear' };
-export const timesOfDay: readonly TimeOfDay[] = ['morning', 'midday', 'afternoon', 'dusk'];
+export const timesOfDay: readonly TimeOfDay[] = ['morning', 'midday', 'afternoon', 'dusk', 'night'];
 export const weathers: readonly Weather[] = ['clear', 'wet', 'rain'];
 export const timeLabels: Record<TimeOfDay, string> = {
   morning: 'Morning',
   midday: 'Midday',
   afternoon: 'Late afternoon',
   dusk: 'Dusk',
+  night: 'Night',
 };
 export const weatherLabels: Record<Weather, string> = {
   clear: 'Clear',
@@ -101,7 +114,8 @@ export const isWeather = (x: unknown): x is Weather => weathers.includes(x as We
 /**
  * Clear-sky light for each time of day. The sun's bearing is from the north (Australia):
  * morning light comes from the east-north-east, midday from high in the north, late
- * afternoon from the west-north-west and dusk low in the west.
+ * afternoon from the west-north-west and dusk low in the west. At night the "sun" is a
+ * high moon in the north-east: faint blue light, soft shadows and stars.
  */
 const clearSkies: Record<TimeOfDay, EnvironmentConfig> = {
   morning: {
@@ -146,6 +160,31 @@ const clearSkies: Record<TimeOfDay, EnvironmentConfig> = {
       groundColor: '#8094AE',
     },
     exposure: 0.82,
+    lampBeams: true,
+  },
+  night: {
+    ...lateAfternoon,
+    sun: { color: '#A9BEE6', intensity: 0.42, elevationDeg: 40, azimuthDeg: 35, shadowRadius: 5 },
+    hemisphere: { sky: '#33476B', ground: '#1C1B1D', intensity: 0.42 },
+    fog: {
+      nearColor: '#18202E',
+      farColor: '#1E283A',
+      start: 50,
+      end: 1500,
+      colorShiftEnd: 800,
+      maxAmount: 0.92,
+    },
+    sky: {
+      horizon: '#1E2A40',
+      zenith: '#070C18',
+      sunGlow: '#C9D6F2',
+      sunGlowSize: 0.008,
+      groundColor: '#161E2C',
+    },
+    exposure: 0.95,
+    lampBeams: true,
+    stars: 1,
+    cloudLight: 0.14,
   },
 };
 
@@ -233,8 +272,8 @@ export function environmentFor(c: Conditions): EnvironmentConfig {
   const base = clearSkies[c.time];
   const w = weatherEffects[c.weather];
   if (c.weather === 'clear') return base;
-  // Grey overcast is darker the lower the sun is.
-  const light = 0.55 + 0.45 * Math.min(1, base.sun.elevationDeg / 40);
+  // Grey overcast is darker the lower the sun is, and darkest at night under the moon.
+  const light = c.time === 'night' ? 0.13 : 0.55 + 0.45 * Math.min(1, base.sun.elevationDeg / 40);
   const g = w.grey;
   const grey = (from: string, to: string) => mixHex(from, shadeHex(to, light * w.dark), g);
   return {
@@ -271,6 +310,8 @@ export function environmentFor(c: Conditions): EnvironmentConfig {
     waterLevelOffset: base.waterLevelOffset + w.waterLevelOffset,
     wetness: w.wetness,
     rain: w.rain,
+    // Overcast hides the stars.
+    stars: 0,
   };
 }
 

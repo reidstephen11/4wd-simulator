@@ -67,7 +67,7 @@ export class InputManager {
     this.deviceListeners.push(fn);
   }
 
-  requestDriveAction(action: 'frontDiff' | 'rearDiff' | 'precision'): void {
+  requestDriveAction(action: 'frontDiff' | 'rearDiff' | 'precision' | 'lights'): void {
     this.vehicleEdges.add(action);
   }
 
@@ -195,6 +195,7 @@ export class InputManager {
     inp.toggleFrontDiff = edges.has('frontDiff');
     inp.toggleRearDiff = edges.has('rearDiff');
     inp.togglePrecision = edges.has('precision');
+    inp.cycleLights = edges.has('lights');
     inp.winchAttach = edges.has('winch');
     inp.interact = edges.has('interact');
     edges.clear();

@@ -16,6 +16,7 @@ export type Action =
   | 'interact'
   | 'jack'
   | 'horn'
+  | 'lights'
   | 'map'
   | 'pause'
   | 'cameraReset'
@@ -45,6 +46,7 @@ export const keyBindings: Record<Action, readonly string[]> = {
   interact: ['KeyE'],
   jack: ['KeyJ'],
   horn: ['KeyH'],
+  lights: ['KeyN'],
   map: ['KeyM'],
   pause: ['Escape'],
   cameraReset: ['KeyV', 'Numpad5'],
@@ -125,6 +127,7 @@ export const glyphs: Record<'keyboard' | 'gamepad' | 'touch', Partial<Record<Act
     interact: 'E',
     jack: 'J',
     horn: 'H',
+    lights: 'N',
     map: 'M',
     pause: 'Esc',
     confirm: 'E',
@@ -145,6 +148,7 @@ export const glyphs: Record<'keyboard' | 'gamepad' | 'touch', Partial<Record<Act
     interact: 'A',
     jack: 'B',
     horn: 'L3',
+    lights: 'LB menu',
     map: 'View',
     pause: 'Start',
     confirm: 'A',
@@ -165,6 +169,7 @@ export const glyphs: Record<'keyboard' | 'gamepad' | 'touch', Partial<Record<Act
     toolMenu: 'TOOLS',
     interact: 'USE',
     jack: 'UPRIGHT',
+    lights: 'LIGHTS',
     map: 'MAP',
     pause: 'II',
     confirm: 'USE',
@@ -192,6 +197,7 @@ export const controlsTable: ReadonlyArray<readonly [string, string, string]> = [
   ['Cycle crawler and driver views', 'C / View button', 'Hold LB + click right stick'],
   ['Crawl gauges: auto (low range) / on / off', 'I', 'Shown in low range'],
   ['Horn', 'H', 'Left stick click'],
+  ['Headlights: off / low beam / high beam', 'N', 'Hold LB → headlights'],
   ['Map', 'M', 'View / Select'],
   ['Pause', 'Esc', 'Start / Options'],
 ];

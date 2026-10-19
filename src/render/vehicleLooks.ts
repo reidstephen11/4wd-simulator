@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import type { Vec3 } from '../sim/vehicle/math';
 import type { VehicleId, VehicleTuning } from '../data/vehicle';
 import { buildVehicleBody } from './vehicleBody';
 import { buildVehicleWheel } from './vehicleWheel';
@@ -14,7 +15,14 @@ export interface VehicleLook {
   plank(index: number): THREE.BufferGeometry;
   paint: { roughness: number; metalness: number; clearcoat: number; clearcoatRoughness: number };
   springs: 'leaf' | 'coil';
+  /** Lens centres: the headlamps, and any driving lamps that come on with high beam. */
+  lamps: { head: readonly Vec3[]; roof?: readonly Vec3[] };
 }
+
+const fortySeriesHeadlamps: Vec3[] = [
+  { x: -0.535, y: 0.605, z: -1.948 },
+  { x: 0.535, y: 0.605, z: -1.948 },
+];
 
 export const vehicleLooks: Record<VehicleId, VehicleLook> = {
   shortie: {
@@ -24,6 +32,7 @@ export const vehicleLooks: Record<VehicleId, VehicleLook> = {
     plank: buildRackPlank,
     paint: { roughness: 0.39, metalness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.24 },
     springs: 'leaf',
+    lamps: { head: fortySeriesHeadlamps },
   },
   camel: {
     name: 'camel-trophy-4wd',
@@ -34,6 +43,10 @@ export const vehicleLooks: Record<VehicleId, VehicleLook> = {
     plank: buildRackPlank,
     paint: { roughness: 0.39, metalness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.24 },
     springs: 'leaf',
+    lamps: {
+      head: fortySeriesHeadlamps,
+      roof: [-0.5, -0.17, 0.17, 0.5].map((x) => ({ x, y: 2.07, z: -0.53 })),
+    },
   },
   perentie: {
     name: 'land-rover-110-perentie',
@@ -43,5 +56,11 @@ export const vehicleLooks: Record<VehicleId, VehicleLook> = {
     // Army enamel is flat: no clearcoat and a dull sheen.
     paint: { roughness: 0.72, metalness: 0.05, clearcoat: 0, clearcoatRoughness: 1 },
     springs: 'coil',
+    lamps: {
+      head: [
+        { x: -0.625, y: 0.39, z: -2.042 },
+        { x: 0.625, y: 0.39, z: -2.042 },
+      ],
+    },
   },
 };

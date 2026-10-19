@@ -1,5 +1,6 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { EnvironmentConfig } from '../data/environment';
+import type { HeadlightMode } from '../data/headlights';
 import { SurfaceId } from '../data/surfaces';
 import { vehicleTuning, type VehicleTuning } from '../data/vehicle';
 import { Emitter } from '../core/events';
@@ -50,6 +51,7 @@ export interface SimEvents extends Record<string, unknown> {
   diffBlocked: { id: string; axle: 'front' | 'rear' };
   precisionChanged: { id: string; enabled: boolean };
   parkBrakeChanged: { id: string; on: boolean };
+  lightsChanged: { id: string; mode: HeadlightMode };
   tool: { id: string; event: ToolEvent };
   /** Flooding stalled or restarted the engine, or it is being started (start-up, a vehicle swap). */
   engine: { id: string; event: 'stalled' | 'restarted' | 'starting' };
@@ -75,6 +77,7 @@ export interface SimState {
     differentials: { front: boolean; rear: boolean };
     precisionCrawl: boolean;
     parkBrake: boolean;
+    lights: HeadlightMode;
     engineRunning: boolean;
     /** Seconds of cranking left before the engine catches. */
     crank: number;
@@ -254,15 +257,16 @@ export class Simulation {
     return v;
   }
 
-  /**
-   * Swap a vehicle for another model where it stands, facing the same way: the winch
-   * lets go, placed planks come back and the new one starts clean.
-   */
   /** Crank a vehicle's engine: it drives once the engine catches. */
   startEngine(id: string): void {
     if (this.vehicleOf(id).startEngine()) this.events.emit('engine', { id, event: 'starting' });
   }
 
+  /**
+   * Swap a vehicle for another model where it stands, facing the same way: the winch
+   * lets go, placed planks come back and the new one starts clean (with its lights as
+   * they were).
+   */
   replaceVehicle(id: string, tuning: VehicleTuning): Vehicle {
     const old = this.vehicleOf(id);
     const tools = this.toolsOf(id);
@@ -283,7 +287,10 @@ export class Simulation {
     this.retired.push(old.body);
     this.vehicles.delete(id);
     this.tools.delete(id);
-    return this.addVehicle(id, pose, tuning);
+    const v = this.addVehicle(id, pose, tuning);
+    // The driver keeps the lights as they had them.
+    v.lights = old.lights;
+    return v;
   }
 
   toolsOf(id: string): VehicleTools {
@@ -325,8 +332,10 @@ export class Simulation {
       const rearBefore = v.differentials.rear;
       const precisionBefore = v.precisionCrawl;
       const parkBefore = v.parkBrake;
+      const lightsBefore = v.lights;
       v.step(input, dt);
       if (v.parkBrake !== parkBefore) this.events.emit('parkBrakeChanged', { id, on: v.parkBrake });
+      if (v.lights !== lightsBefore) this.events.emit('lightsChanged', { id, mode: v.lights });
       if (v.drivetrain.range !== before) this.events.emit('rangeChanged', { id, range: v.drivetrain.range });
       for (const axle of ['front', 'rear'] as const) {
         const previous = axle === 'front' ? frontBefore : rearBefore;
@@ -547,6 +556,7 @@ export class Simulation {
           differentials: { ...v.differentials },
           precisionCrawl: v.precisionCrawl,
           parkBrake: v.parkBrake,
+          lights: v.lights,
           engineRunning: v.drivetrain.engineRunning,
           crank: v.crank,
           flood: {

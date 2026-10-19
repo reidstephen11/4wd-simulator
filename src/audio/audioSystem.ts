@@ -7,7 +7,7 @@ import { createNoiseBank, type NoiseBank } from './buffers';
 import { EngineSound, HornSound } from './engineSound';
 import type { AudioFrame } from './frame';
 import { knockLevel, thumpLevel } from './mix';
-import { clunk, dentCrunch, knock, ratchet, thump } from './oneShots';
+import { clunk, dentCrunch, knock, ratchet, switchClick, thump } from './oneShots';
 import { TyreSound } from './tyreSound';
 import { UiSounds } from './uiSounds';
 import { WinchSound } from './winchSound';
@@ -270,6 +270,12 @@ export class AudioSystem {
   parkBrake(on: boolean): void {
     const g = this.live();
     if (g) ratchet(g.ctx, g.fxBus, g.noise, on);
+  }
+
+  /** The headlight switch clicks (high: the high-beam stalk). */
+  lightSwitch(high: boolean): void {
+    const g = this.live();
+    if (g) switchClick(g.ctx, g.fxBus, g.noise, high);
   }
 
   /** The body was dented (impact speed, m/s). */
