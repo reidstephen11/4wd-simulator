@@ -14,6 +14,7 @@ export interface MenuActions {
   changeSettings(s: Partial<Settings>): void;
   changeVehicle(id: VehicleId): void;
   changeMap(id: MapId): void;
+  mainMenu(): void;
 }
 
 /**
@@ -86,6 +87,7 @@ export class PauseMenu {
         <button data-focus data-act="location">Location<small class="map-name"></small></button>
         <button data-focus data-act="settings">Settings</button>
         <button data-focus data-act="controls">Controls</button>
+        <button data-focus data-act="menu">Main menu<small>World, vehicle and weather</small></button>
         <p class="build-label" title="Build ${BUILD_LABEL}">Version ${GAME_VERSION}</p>`;
       (card.querySelector('small') as HTMLElement).textContent = this.campsiteName;
       (card.querySelector('.vehicle-name') as HTMLElement).textContent = vehicles[this.vehicle].tuning.name;
@@ -155,6 +157,7 @@ export class PauseMenu {
     else if (act === 'location') this.show('location');
     else if (act === 'settings') this.show('settings');
     else if (act === 'controls') this.show('controls');
+    else if (act === 'menu') this.actions.mainMenu();
     else if (act === 'back') this.show('main');
     else if (t.dataset.vehicle) {
       const id = t.dataset.vehicle as VehicleId;

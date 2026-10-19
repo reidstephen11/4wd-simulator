@@ -37,6 +37,7 @@ export function buildAudioFrame(
   paused: boolean,
   dt: number,
   interior = false,
+  rain = 0,
 ): AudioFrame {
   const p = v.body.translation();
   const d = v.drivetrain;
@@ -89,6 +90,8 @@ export function buildAudioFrame(
       altitude: p.y,
       creekDistance: world.features.creekDistance[iz * t.res + ix],
       fallsDistance: falls ? Math.hypot(falls.x - p.x, falls.z - p.z) : Infinity,
+      rain,
+      interior,
     },
   };
 }

@@ -26,7 +26,7 @@ describe('Ironbark 4WD Park stations', () => {
           ['harder', 'both'],
         ] as const) {
           const line = s[which];
-          const r = await drive(`${s.id}-${which}`, lockers, line.oneWay === 'down', 200, tuning);
+          const r = await drive(`${s.id}-${which}`, lockers, false, 200, tuning);
           expect(r.done, `${which} stopped ${r.remaining.toFixed(1)} m from the end`).toBe(true);
           expect(r.tilt, which).toBeLessThan(maxTilt[line.grade]);
           tilts.push(r.tilt);

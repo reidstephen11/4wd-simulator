@@ -1,4 +1,4 @@
-import { lateAfternoon } from '../../src/data/environment';
+import { lateAfternoon, type EnvironmentConfig } from '../../src/data/environment';
 import { vehicleTuning, type VehicleTuning } from '../../src/data/vehicle';
 import { Autopilot } from '../../src/sim/input/autopilot';
 import { emptyInput, type VehicleInput } from '../../src/sim/input/vehicleInput';
@@ -87,7 +87,7 @@ export async function driveLeg(s: Scene, track: TrackInfo, back = false, limit =
 }
 
 /** Drives on one world: a vehicle parked at either end of a track, in low range unless 'high'. */
-export function driver(world: World) {
+export function driver(world: World, env: EnvironmentConfig = lateAfternoon) {
   const trackOf = (id: string) => {
     const track = world.features.tracks.find((t) => t.def.id === id);
     if (!track) throw new Error(`No track ${id}`);
@@ -100,7 +100,7 @@ export function driver(world: World) {
     lockers: Lockers = 'both',
     tuning: VehicleTuning = vehicleTuning,
   ) {
-    const sim = new Simulation(await loadRapier(), world, lateAfternoon);
+    const sim = new Simulation(await loadRapier(), world, env);
     const track = trackOf(trackId);
     const p = trailPoint(track, back ? track.poly.length : 0);
     const pose = sim.poseAt(p.x, p.z, p.headingDeg + (back ? 180 : 0), tuning.wheelRadius);

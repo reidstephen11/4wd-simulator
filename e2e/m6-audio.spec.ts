@@ -3,7 +3,9 @@ import { collectErrors, shot, waitReady } from './helpers';
 
 const audio = (page: Page) => page.evaluate(() => window.__game!.audio());
 
-test('M6: audio starts on first input, follows the car, and the volume settings work', async ({ page }) => {
+test('M6: audio starts with the Drive button, follows the car, and the volume settings work', async ({
+  page,
+}) => {
   test.setTimeout(600_000);
   const errors = collectErrors(page);
   const audioWarnings: string[] = [];
@@ -13,10 +15,8 @@ test('M6: audio starts on first input, follows the car, and the volume settings 
   await page.goto('/?debug');
   await waitReady(page);
 
-  // Nothing plays before the first input (browser autoplay rules).
-  await page.waitForTimeout(1500);
-  expect((await audio(page)).state).toBe('off');
-  await page.keyboard.press('KeyH');
+  // The welcome screen's Drive click is the first input, so sound starts with the game
+  // (browser autoplay rules need one).
   await expect.poll(async () => (await audio(page)).state).toBe('running');
   await expect.poll(async () => (await audio(page)).level).toBeGreaterThan(0.002);
   // The inline-six synthesiser runs in an AudioWorklet; idle fires at about 40 Hz.
@@ -96,8 +96,9 @@ test('M6: without Web Audio the game still runs, silently', async ({ page }) => 
   await waitReady(page);
   await page.keyboard.press('KeyW');
   await expect.poll(async () => (await audio(page)).state).toBe('unavailable');
+  // The game keeps running. A software renderer can take seconds per frame, so wait for
+  // the clock to move rather than for a fixed time.
   const t0 = await page.evaluate(() => window.__game!.simTime());
-  await page.waitForTimeout(2000);
-  expect(await page.evaluate(() => window.__game!.simTime())).toBeGreaterThan(t0);
+  await page.waitForFunction((t) => window.__game!.simTime() > t + 0.1, t0, { timeout: 120_000 });
   expect(errors).toEqual([]);
 });

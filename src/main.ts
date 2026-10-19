@@ -1,18 +1,18 @@
 import './ui/styles.css';
-import { Game } from './core/game';
+import { Game, type LaunchChoice } from './core/game';
+import { choiceFromSave, takeAutostart } from './core/launch';
+import { maps } from './data/maps';
+import { loadSave } from './sim/save/save';
 import { LoadingScreen } from './ui/loading';
+import { WelcomeScreen } from './ui/welcome';
 
-async function boot(): Promise<void> {
+async function play(choice: LaunchChoice, audio?: AudioContext): Promise<void> {
   const appEl = document.getElementById('app') as HTMLElement;
   const uiEl = document.getElementById('ui') as HTMLElement;
   const loading = new LoadingScreen(uiEl);
+  loading.setSubtitle(maps[choice.map].def.name);
   try {
-    const game = await Game.create(
-      appEl,
-      uiEl,
-      (p, label) => loading.set(p, label),
-      (name) => loading.setSubtitle(name),
-    );
+    const game = await Game.create(appEl, uiEl, choice, (p, label) => loading.set(p, label), audio);
     loading.set(1, 'Ready');
     loading.hide();
     game.start();
@@ -26,4 +26,12 @@ async function boot(): Promise<void> {
   }
 }
 
-void boot();
+function boot(): void {
+  const uiEl = document.getElementById('ui') as HTMLElement;
+  const choice = choiceFromSave(loadSave());
+  // Changing map from the pause menu reloads straight into the game.
+  if (takeAutostart()) void play(choice);
+  else new WelcomeScreen(uiEl, choice, (c, audio) => void play(c, audio));
+}
+
+boot();

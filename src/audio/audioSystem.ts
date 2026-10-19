@@ -72,13 +72,19 @@ export class AudioSystem {
   private vehicle: VehicleId = 'shortie';
   private readonly buf = new Float32Array(1024);
 
+  /**
+   * `primed` is an audio context created by an earlier click (the welcome screen's Drive
+   * button), so sound can start straight away instead of waiting for the next gesture.
+   */
   constructor(
     settings: Settings,
     private readonly target: Window = window,
+    private readonly primed?: AudioContext,
   ) {
     this.settings = { ...settings };
     for (const ev of GESTURES) target.addEventListener(ev, this.onGesture, { capture: true });
     document.addEventListener('visibilitychange', this.onVisibility);
+    if (primed) this.start();
   }
 
   get state(): AudioState {
@@ -126,7 +132,7 @@ export class AudioSystem {
   private build(): Graph {
     const Ctor = window.AudioContext as typeof AudioContext | undefined;
     if (!Ctor) throw new Error('No AudioContext');
-    const ctx = new Ctor({ latencyHint: 'interactive' });
+    const ctx = this.primed ?? new Ctor({ latencyHint: 'interactive' });
     const noise = createNoiseBank(ctx);
     const gain = (to: AudioNode, value = 1) => {
       const n = ctx.createGain();

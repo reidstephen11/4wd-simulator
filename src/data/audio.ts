@@ -117,6 +117,8 @@ export const audioTuning = {
     },
     /** Creek water is heard within this distance (m) of the water's edge. */
     creek: { range: 45, gain: 0.32 },
+    /** Rain levels: the far hiss, the near patter, and the roof drumming heard inside. */
+    rain: { hiss: 0.16, patter: 0.1, roof: 0.22 },
     /** The falls POI roars within this range. */
     falls: { poi: 'falls', range: 140, gain: 0.5 },
     birds: {

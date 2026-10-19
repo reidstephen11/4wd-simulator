@@ -4,6 +4,7 @@ import type { CrawlBests } from '../crawlRuns';
 import type { VehicleId } from '../../data/vehicle';
 import { isVehicleId } from '../../data/vehicles';
 import { isMapId, type MapId } from '../../data/maps';
+import { defaultConditions, isTimeOfDay, isWeather, type Conditions } from '../../data/environment';
 
 export interface Settings {
   quality: 'low' | 'medium' | 'high';
@@ -26,6 +27,8 @@ export interface SaveData {
   map?: MapId;
   /** Progress on every map played, so changing map and back keeps it. */
   maps?: Partial<Record<MapId, ExplorationState>>;
+  /** Time of day and weather last chosen on the welcome screen. */
+  conditions?: Conditions;
 }
 
 export const defaultSettings: Settings = {
@@ -80,6 +83,10 @@ export function loadSave(s: KeyValueStore | null = store()): SaveData | null {
       vehicle: isVehicleId(data.vehicle) ? data.vehicle : 'shortie',
       map: isMapId(data.map) ? data.map : 'high-country',
       maps,
+      conditions: {
+        time: isTimeOfDay(data.conditions?.time) ? data.conditions.time : defaultConditions.time,
+        weather: isWeather(data.conditions?.weather) ? data.conditions.weather : defaultConditions.weather,
+      },
     };
   } catch {
     return null;

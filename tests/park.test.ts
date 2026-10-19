@@ -106,7 +106,7 @@ describe('Ironbark 4WD Park', () => {
 
   it('the harder Hill Climb and Steep Descent pitch the car past 30°', async () => {
     const up = await drive('hill-climb-harder', 'both');
-    const down = await drive('steep-descent-harder', 'both', true);
+    const down = await drive('steep-descent-harder', 'both');
     expect(up.pitch).toBeGreaterThan(30);
     expect(down.pitch).toBeGreaterThan(30);
   }, 120_000);

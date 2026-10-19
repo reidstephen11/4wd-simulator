@@ -86,6 +86,8 @@ export interface GameHook {
   /** The loaded map; `setMap` saves another as current and reloads the page. */
   mapId(): MapId;
   setMap(id: MapId): void;
+  /** The welcome screen's time of day and weather, and how wet and rainy that makes it. */
+  conditions(): { time: string; weather: string; wetness: number; rain: number };
   /** Set the park brake directly (the key toggles it). */
   setParkBrake(on: boolean): void;
 }
@@ -237,6 +239,7 @@ export function installHook(game: Game): void {
     vehicleId: () => g.vehicleId,
     mapId: () => g.mapId,
     setMap: (id) => void g.changeMap(id),
+    conditions: () => ({ ...g.launchConditions, wetness: g.sim.env.wetness, rain: g.sim.env.rain }),
     setParkBrake: (on) => {
       g.vehicle.parkBrake = on;
     },

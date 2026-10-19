@@ -878,3 +878,143 @@ table.controls td {
   text-align: center;
   user-select: text;
 }
+
+/* ---------- Welcome screen ---------- */
+.welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 16px;
+  pointer-events: auto;
+  background: linear-gradient(180deg, #8db3c9 0%, #cfc6a8 55%, #e9c89a 100%);
+  transition: opacity 0.35s ease;
+}
+
+.welcome.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.welcome-card {
+  width: min(880px, 100%);
+  padding: 22px 26px 16px;
+  text-align: center;
+}
+
+.welcome h1 {
+  font-family: var(--font-hand);
+  font-size: 46px;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.welcome .subtitle {
+  margin: 0 0 14px;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.welcome-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 22px;
+  text-align: left;
+}
+
+.welcome-section h2 {
+  margin: 0 0 6px;
+  font-family: var(--font-hand);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.welcome-options {
+  display: grid;
+  gap: 6px;
+}
+
+.welcome-options.seg {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.welcome-option,
+.welcome-drive {
+  font: 700 16px var(--font);
+  color: var(--ink);
+  background: var(--paper-dark);
+  border: 2px solid var(--ink);
+  border-radius: 8px 10px 7px 9px;
+  padding: 7px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.welcome-options.seg .welcome-option {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.welcome-option small {
+  display: block;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.welcome-option.on {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.welcome-option.on small {
+  color: var(--paper);
+}
+
+.welcome-option:hover,
+.welcome-option.focused,
+.welcome-drive:hover,
+.welcome-drive.focused,
+.welcome button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.welcome-option.on.focused,
+.welcome-option.on:hover {
+  outline-color: var(--ink);
+}
+
+.welcome-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.welcome-drive {
+  margin: 18px auto 4px;
+  display: block;
+  min-width: 220px;
+  text-align: center;
+  font-size: 22px;
+  font-family: var(--font-hand);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+@media (max-width: 720px) {
+  .welcome {
+    place-items: start center;
+  }
+
+  .welcome-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome h1 {
+    font-size: 36px;
+  }
+}
