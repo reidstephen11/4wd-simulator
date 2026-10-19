@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { collectErrors, shot, waitEngine } from './helpers';
 
 test('damage: a setting, shown on the HUD, fixed with the spare and at camp', async ({ page }) => {
-  test.setTimeout(600_000);
+  test.setTimeout(1_200_000);
   const errors = collectErrors(page);
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
@@ -22,8 +22,16 @@ test('damage: a setting, shown on the HUD, fixed with the spare and at camp', as
   await page.keyboard.press('Escape');
 
   // Away from camp (a campsite puts everything right), a flat tyre and a hurt engine.
-  await page.evaluate(() => window.__game!.teleportPoi('gravel-ford'));
+  // Low graphics so a software-rendered browser runs the 8 s repair in reasonable time.
+  await page.evaluate(() => window.__game!.setQuality('low'));
+  await page.evaluate(() => window.__game!.teleport(-195, 215, 315));
+  await page.evaluate(() => window.__game!.setParkBrake(true));
   await page.evaluate(() => window.__game!.setHealth({ engine: 0.4, tyres: [0, 1, 1, 1] }));
+  await expect
+    .poll(async () => Math.abs((await page.evaluate(() => window.__game!.vehicle())).speed), {
+      timeout: 120_000,
+    })
+    .toBeLessThan(0.3);
   await expect(page.locator('.status-damage')).toHaveClass(/shown/);
   await expect(page.locator('.prompts')).toContainText('Fit the spare');
   await shot(page, 'damage', 'flat-tyre');
@@ -34,7 +42,7 @@ test('damage: a setting, shown on the HUD, fixed with the spare and at camp', as
   await page.keyboard.up('KeyQ');
   await expect.poll(() => page.evaluate(() => window.__game!.health().repairing)).toBe(true);
   await expect
-    .poll(() => page.evaluate(() => window.__game!.health()), { timeout: 300_000 })
+    .poll(() => page.evaluate(() => window.__game!.health()), { timeout: 900_000 })
     .toMatchObject({ tyres: [1, 1, 1, 1], spare: false, engine: 0.4, repairing: false });
 
   // Back to camp: everything put right and the spare back on.

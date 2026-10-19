@@ -26,6 +26,13 @@ export class ToolMenu {
     this.el.className = 'tool-menu hidden';
     root.appendChild(this.el);
     this.el.addEventListener('mousemove', (e) => {
+      // Over an option, that option; on the oval, a corner of one can lie in the
+      // direction of its neighbour.
+      const over = (e.target as HTMLElement).closest('.tool-option');
+      if (over) {
+        this.setSelected([...this.el.querySelectorAll('.tool-option')].indexOf(over));
+        return;
+      }
       const r = this.el.getBoundingClientRect();
       this.pointAt(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2), 30);
     });

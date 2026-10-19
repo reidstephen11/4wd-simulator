@@ -565,7 +565,8 @@ export class Game {
         id: 'repair',
         label: fix ? (fix.kind === 'field' ? 'Field repair' : 'Fit the spare') : 'Nothing to repair',
         icon: 'wrench',
-        enabled: fix?.possible ?? false,
+        // Needed but not possible here: picking it says why (stop first, spare used...).
+        enabled: fix !== null,
       },
     ];
   }
