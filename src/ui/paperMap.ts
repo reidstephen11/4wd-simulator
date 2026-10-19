@@ -4,6 +4,8 @@ import { Noise2D } from '../sim/world/noise';
 import type { PoiDef } from '../sim/world/mapTypes';
 import { icons } from './icons';
 import { placeMapLabels, type MapLabel } from './mapLabels';
+import { trailPoint } from '../sim/world/crawlTrail';
+import { gateColours } from '../data/palette';
 
 const SIZE = 1400;
 const MARGIN = 70;
@@ -307,7 +309,35 @@ export class PaperMap {
         path();
         g.stroke();
       }
+      // A bridge is the usual map sign: a short dark line either side of the track.
+      for (const b of t.def.bridges ?? []) {
+        const reach = (b.kind === 'deck' ? b.width / 2 : (b.gauge ?? 1.48) / 2 + b.width / 2) + 1.6;
+        g.strokeStyle = '#3B2A1E';
+        g.lineWidth = 1.3;
+        for (const side of [-1, 1]) {
+          g.beginPath();
+          for (let s = b.from - 1; s <= b.to + 1; s += 1) {
+            const p = trailPoint(t, s, side * reach);
+            const [x, y] = this.toMap(p.x, p.z);
+            if (s === b.from - 1) g.moveTo(x, y);
+            else g.lineTo(x, y);
+          }
+          g.stroke();
+        }
+      }
     }
+    // Gate flags as red and blue dots either side of the trail.
+    for (const gate of this.world.features.gates)
+      for (const [flag, colour] of [
+        [gate.left, gateColours.left],
+        [gate.right, gateColours.right],
+      ] as const) {
+        const [x, y] = this.toMap(flag.x, flag.z);
+        g.fillStyle = colour;
+        g.beginPath();
+        g.arc(x, y, 1.7, 0, Math.PI * 2);
+        g.fill();
+      }
   }
 
   private drawFrame(g: CanvasRenderingContext2D): void {

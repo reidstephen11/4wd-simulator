@@ -8,6 +8,7 @@ import type { VehicleInput } from './input/vehicleInput';
 import { Vehicle, type SpawnPose } from './vehicle/vehicle';
 import type { World } from './world/world';
 import { placedPropShapes } from './world/props';
+import { deckAt } from './world/bridges';
 import { StaticMeshBatcher } from './world/staticMesh';
 import type { FallenTreeDef } from './world/mapTypes';
 import { scatterTuning } from '../data/vegetation';
@@ -118,6 +119,7 @@ export class Simulation {
     for (const b of world.features.boxes)
       this.physics.addStaticBox(b, b.kind === 'ledge' ? SurfaceId.Rock : SurfaceId.Dirt);
     for (const r of world.features.rocks) this.physics.addStaticRock(r);
+    for (const t of world.features.timbers) this.physics.addStaticRock(t, 0.7, SurfaceId.Wood);
     this.addScatterColliders();
     for (const f of world.map.fallenTrees) this.addFallenTree(f);
   }
@@ -222,9 +224,11 @@ export class Simulation {
     this.dynamics.set(f.id, { id: f.id, kind: 'fallenTree', body, def: f });
   }
 
-  /** Spawn pose on the ground at (x, z) for wheels of this radius. */
+  /** Spawn pose on the ground (or a bridge deck) at (x, z) for wheels of this radius. */
   poseAt(x: number, z: number, headingDeg: number, wheelRadius = vehicleTuning.wheelRadius): SpawnPose {
-    return { x, y: this.world.terrain.heightAt(x, z) + wheelRadius + 0.12, z, headingDeg };
+    const ground = this.world.terrain.heightAt(x, z);
+    const deck = deckAt(this.world.features.tracks, x, z);
+    return { x, y: Math.max(ground, deck ?? -Infinity) + wheelRadius + 0.12, z, headingDeg };
   }
 
   campsitePose(poiId: string, wheelRadius = vehicleTuning.wheelRadius): SpawnPose {

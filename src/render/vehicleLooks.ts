@@ -4,6 +4,7 @@ import { buildVehicleBody } from './vehicleBody';
 import { buildVehicleWheel } from './vehicleWheel';
 import { buildRackPlank } from './vehicleEquipment';
 import { buildPerentieBody, buildPerentiePlank, buildPerentieWheel } from './perentieBody';
+import { addCamelTrophyKit, camelLivery, camelRim } from './camelLivery';
 
 /** How each vehicle is drawn: its body, wheels, carried planks, paint and springs. */
 export interface VehicleLook {
@@ -20,6 +21,16 @@ export const vehicleLooks: Record<VehicleId, VehicleLook> = {
     name: '40-series-4wd',
     body: buildVehicleBody,
     wheel: buildVehicleWheel,
+    plank: buildRackPlank,
+    paint: { roughness: 0.39, metalness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.24 },
+    springs: 'leaf',
+  },
+  camel: {
+    name: 'camel-trophy-4wd',
+    // The snorkel takes the left wing, so the aerial moves to the right.
+    body: (tuning, wheel) =>
+      buildVehicleBody(tuning, wheel, camelLivery, { aerialSide: 1, add: addCamelTrophyKit }),
+    wheel: (tuning) => buildVehicleWheel(tuning, camelRim),
     plank: buildRackPlank,
     paint: { roughness: 0.39, metalness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.24 },
     springs: 'leaf',

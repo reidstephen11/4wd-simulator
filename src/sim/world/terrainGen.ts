@@ -1,10 +1,11 @@
 import { SurfaceId } from '../../data/surfaces';
 import type { FlatDef, MapDef, ScarpDef, HillDef, TrackDef } from './mapTypes';
 import { Noise2D, clamp, smoothstep } from './noise';
-import { attrAt, densify, type DensePolyline } from './polyline';
+import { attrAt, densify, locate, type DensePolyline } from './polyline';
 import { GroundTint, NO_WATER, Terrain } from './terrain';
 import type { CreekInfo, GullyInfo, StaticBox, TerrainFeatures, TrackInfo } from './features';
 import { buildDetailPatch, type DetailPatch } from './detail';
+import { onBridge } from './bridges';
 
 /** Macro relief is evaluated on a coarser grid and upsampled. */
 const MACRO_STEP = 2;
@@ -418,8 +419,12 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
     const poly = densify(pts2, 1);
     const raw = new Float32Array(poly.count);
     for (let k = 0; k < poly.count; k++) raw[k] = sampleH(poly.xs[k], poly.zs[k]);
-    let profile = boxBlur(boxBlur(raw, def.smooth * 0.5), def.smooth * 0.5);
+    // A bridge's approaches are smoothed as if the ground ran straight across the gap.
+    const spans = (def.bridges ?? []).map((b) => [b.from, b.to] as const);
+    const smoothed = linearise(Float32Array.from(raw), poly, spans, 1);
+    let profile = boxBlur(boxBlur(smoothed, def.smooth * 0.5), def.smooth * 0.5);
     profile = applyPins(def, poly, profile);
+    profile = linearise(profile, poly, [...(def.even ?? []), ...spans]);
     // A cutting or gully floor sits below the smoothed ground.
     if (def.cut) for (let k = 0; k < poly.count; k++) profile[k] -= pairsAt(def.cut, poly.s[k]);
     if (def.rockySteps) {
@@ -445,6 +450,8 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
     // Leave the creek channel alone; the profile already dips to the bed.
     const inCreek = creekDist[i] <= creekHalfAt[i] + 0.5;
     if (inCreek) continue;
+    // So is the ground under a bridge.
+    if (def.bridges && onBridge(def, atParam(t.poly.s, p))) continue;
     const hw = def.width / 2;
     const target0 = atParam(t.profile, p);
     const raw = atParam(rawProfiles[id], p);
@@ -755,7 +762,18 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
   terrain.setDetail(patches);
   return {
     terrain,
-    features: { tracks, creek, boxes, rocks: [], logs: [], gullies, trackDistance, creekDistance },
+    features: {
+      tracks,
+      creek,
+      boxes,
+      rocks: [],
+      logs: [],
+      timbers: [],
+      gates: [],
+      gullies,
+      trackDistance,
+      creekDistance,
+    },
   };
 }
 
@@ -768,6 +786,31 @@ function pairsAt(pairs: ReadonlyArray<readonly [number, number]>, s: number): nu
     if (s <= s1) return v0 + ((v1 - v0) * (s - s0)) / Math.max(1e-6, s1 - s0);
   }
   return pairs[pairs.length - 1][1];
+}
+
+/**
+ * Replace the profile between each [from, to] distance (widened by `margin` metres) with
+ * a straight line between its values there.
+ */
+function linearise(
+  profile: Float32Array,
+  poly: DensePolyline,
+  ranges: ReadonlyArray<readonly [number, number]>,
+  margin = 0,
+): Float32Array {
+  const at = (s: number) => {
+    const { i, f } = locate(poly, s);
+    return profile[i] + (profile[Math.min(poly.count - 1, i + 1)] - profile[i]) * f;
+  };
+  for (const [from, to] of ranges) {
+    const a = from - margin,
+      b = to + margin;
+    const ya = at(a),
+      yb = at(b);
+    for (let k = 0; k < poly.count; k++)
+      if (poly.s[k] > a && poly.s[k] < b) profile[k] = ya + ((yb - ya) * (poly.s[k] - a)) / (b - a);
+  }
+  return profile;
 }
 
 /** Apply pinned heights (third value on track control points). */

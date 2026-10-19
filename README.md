@@ -1,6 +1,6 @@
 # 4WD Simulator
 
-A relaxed, single-player off-road exploration and rock-crawling game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD, or the Army green Land Rover 110 Perentie from the _Bush Tucker Man_ TV series, through a patch of Australian high country or round a purpose-built 4WD park, using low range, lockers, a winch, planks and careful line choice to get over rough ground. No races — just the drive, what's over the next hill, and optional scored runs on the rock trails if you want them.
+A relaxed, single-player off-road exploration and rock-crawling game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD (plain, or in Camel Trophy yellow), or the Army green Land Rover 110 Perentie from the _Bush Tucker Man_ TV series, through a patch of Australian high country, round a purpose-built 4WD park or along an RC crawler-style gate trail, using low range, lockers, a winch, planks and careful line choice to get over rough ground. No races — just the drive, what's over the next hill, and optional scored runs on the rock trails if you want them.
 
 Built with Three.js, Rapier physics and TypeScript. Everything, including leaf textures, terrain detail and sound, is generated in code; there are no downloaded asset files. Graphics use smooth terrain lighting, fine eucalyptus foliage, reflective water and detailed vehicle materials. High quality uses the full resolution of displays with up to 2× pixel density.
 
@@ -52,7 +52,10 @@ Pick one on the welcome screen, or from **pause menu → Vehicle** while driving
 | Vehicle                 | Based on                                                                  | Engine and gearbox                                                | Notes                                                                                                  |
 | ----------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | Short-wheelbase 4WD     | 1970s Land Cruiser 40 Series                                              | 4.2 L petrol six, three-speed automatic                           | 2.3 m wheelbase, lifted on leaf springs, roof rack                                                     |
+| Camel Trophy 4WD        | The short-wheelbase 4WD in Camel Trophy dress                             | Same as the short-wheelbase 4WD                                   | Sandglow yellow, door and bonnet decals, four roof lamps, snorkel                                      |
 | Land Rover 110 Perentie | Les Hiddins' Army Land Rover 48-001 in the first _Bush Tucker Man_ series | 3.9 L Isuzu four-cylinder diesel, LT95A four-speed with low range | 2.79 m wheelbase, coil springs, 7.50R16 tyres, canvas tilt, bull bar, spare wheel under the rear floor |
+
+The Camel Trophy 4WD drives exactly like the short-wheelbase 4WD. The only difference you'll feel is its snorkel: the engine breathes from the top of the left windscreen pillar, about 2 m off the ground, so it wades much deeper water before it floods. (The real Camel Trophy cars were Land Rovers; the 1986 event, run in Australia from Cooktown to Darwin, used Land Rover 90s.)
 
 The Perentie shifts its own gears like the other vehicle (the game has no clutch). Its longer wheelbase makes it steadier on the fire trail and harder on crests: it climbs The Chute, but coming down it the chassis grounds on a rock step.
 
@@ -79,6 +82,25 @@ Pick one on the welcome screen, or from **pause menu → Location** while drivin
 | 11. Whoa-boys     | Low drainage humps (moderate)                      | Tall humps with ditches behind, some angled (hard)                         |
 
 Every line is drive-tested with both vehicles. The scored runs work on every line, and the paper map labels each station once you've found it.
+
+**Crawler Creek** is an RC crawler-style trail at full size: one 1.3 km loop from the Trailhead, marked by 52 numbered gates. Each gate is a pair of flags, red on your left and blue on your right, with its number on a board on the red flag's stake. Drive through them in number order. The trail crosses Crawler Creek twice and climbs Knuckle Ridge, an escarpment north of the creek. The gates don't score anything yet (they're laid out so that a later version can count gates passed and flags hit); the scored runs work on every section.
+
+| Section           | Gates | Grade    | What it is                                                                |
+| ----------------- | ----- | -------- | ------------------------------------------------------------------------- |
+| 1. Start Chute    | 1–6   | easy     | A slalom between boulders north of the Trailhead                          |
+| 2. Mud Holes      | 7–10  | moderate | Three mud holes in a row, each deeper than the last                       |
+| 3. Creek Bridge   | 11–13 | easy     | A 14 m timber bridge with kerbs over the creek, gated narrow at both ends |
+| 4. Log Run        | 14–17 | moderate | Five logs across the track at the foot of the ridge                       |
+| 5. Switchbacks    | 18–27 | hard     | Five legs and four tight hairpins up the ridge face, gated at every turn  |
+| 6. Summit Rocks   | 28–31 | moderate | Granite ledges, boulders and slabs along the top of the ridge             |
+| 7. The Drop       | 32–33 | hard     | Down the ridge's steep east end at 24°, nearer 30° over the ruts. One way |
+| 8. Skinny Bridge  | 34–36 | hard     | Two planks over a bog, one under each wheel track                         |
+| 9. Water Crossing | 37–40 | moderate | A wide gravel ford, gated mid-stream                                      |
+| 10. Ramp Bridge   | 41–42 | moderate | An up-and-over timber ramp, 1.2 m high                                    |
+| 11. Rock Garden   | 43–48 | hard     | Two fields of tyre-high boulders in a dry creek bed; needs lockers        |
+| 12. Last Splash   | 49–52 | easy     | A last mud hole and the finish gate back at the Trailhead                 |
+
+Every section is drive-tested with both vehicles in low range, the hard ones with both lockers, and the Camel Trophy 4WD drives the whole loop without stopping. The switchbacks' hairpins are tight enough that you may need to stop, back up and turn again, especially in the Land Rover. The paper map shows the bridges and every gate's flags.
 
 ## Controls
 
@@ -202,6 +224,8 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] **Ironbark 4WD Park:** pause menu → Location → Ironbark 4WD Park. Drive the loop from Park HQ, then try the easier and harder line at each station. The harder Axle Twisters and Rock Garden should stop you with open diffs; Side Slope should lean about 15° and 25°. Change back to the High Country and check your progress there is kept.
 - [ ] **Handbrake:** press Space; the red P and dash lamp come on and stay on. Try to drive off (the car drags and a prompt appears), then press Space again.
 - [ ] **Driver's seat panels:** C → Driver in both vehicles; the windscreen and mirrors should be clear.
+- [ ] **Crawler Creek:** choose it on the welcome screen. From the Trailhead, drive the gates in number order all the way round. Check the hairpins on the Switchbacks (can you make each one in one go?), that both bridges' boards feel solid and the tyres sound like timber on them, that slipping a wheel off the Skinny Bridge drops it into the bog, and that the Rock Garden stops you with open diffs. Open the paper map to see the gates.
+- [ ] **Camel Trophy 4WD:** pause menu → Vehicle → Camel Trophy 4WD. Check the yellow paint and decals, the roof lamps and the snorkel, and that it drives through deep water (the High Country's Deep Crossing) that stalls the plain short-wheelbase 4WD.
 - [ ] **Land Rover 110:** pause menu → Vehicle → Land Rover 110 Perentie. Check the look against the _Bush Tucker Man_ vehicle, the diesel clatter at idle and its starter (no turbo-like whistle as it speeds up), the driver's view (C → Driver), and the Granite Spur loop. Reload the page and it should still be the Land Rover.
 
 ## Project layout
@@ -215,7 +239,7 @@ src/
   ui/      HUD, compass, paper map, menus, tool menu
   audio/   Web Audio synthesis (engine/ holds the AudioWorklet engine synthesiser)
   debug/   overlay, free camera, debug panel
-scripts/   dev helpers: engine-lab (renders the engine to WAV with levels and spectra), drivetrain-lab, crawl-lab, obstacle-lab and drive-lab (headless measurements), shoot (screenshots)
+scripts/   dev helpers: engine-lab (renders the engine to WAV with levels and spectra), drivetrain-lab, crawl-lab, obstacle-lab and drive-lab (headless measurements), shoot and vehicle-shots (screenshots)
 tests/     Vitest unit and headless physics tests
 e2e/       Playwright browser tests (one file per milestone)
 docs/      DECISIONS.md (choices made where the spec was open) and screenshots per milestone

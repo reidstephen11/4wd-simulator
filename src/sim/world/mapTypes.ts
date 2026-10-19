@@ -112,6 +112,10 @@ export interface TrackDef {
   humps?: readonly TrackHumpDef[];
   /** Erosion ruts in the track, built as fine ground detail. */
   erosion?: readonly ErosionRutDef[];
+  /** Grade evenly between these [from, to] distances along the track (switchbacks, causeways). */
+  even?: ReadonlyArray<readonly [number, number]>;
+  /** Timber bridges carrying the track over a creek, ditch or mud hole. */
+  bridges?: readonly TrackBridgeDef[];
   markerColor?: 'green' | 'amber' | 'red';
   routeHint?: string;
 }
@@ -132,6 +136,24 @@ export interface TrackHumpDef {
   ditchSide?: 1 | -1;
   /** Turn away from square across the track (degrees, + moves the right end further along). */
   angleDeg?: number;
+}
+
+/**
+ * A timber bridge from `from` to `to` metres along a track. The ground under it is left
+ * as it is (creek, ditch or mud); the deck runs straight between the graded track at
+ * either end, and on a ramp bridge climbs `rise` metres over `ramp` metres at each end.
+ */
+export interface TrackBridgeDef {
+  from: number;
+  to: number;
+  /** 'deck': one deck `width` wide. 'wheelTracks': two planks `width` wide, `gauge` apart. */
+  kind: 'deck' | 'wheelTracks';
+  width: number;
+  gauge?: number;
+  /** Kerb height along the outer edges (0 = none). */
+  kerb?: number;
+  rise?: number;
+  ramp?: number;
 }
 
 /**
@@ -339,6 +361,19 @@ export interface CrawlTrailDef {
   }>;
 }
 
+/**
+ * A gate on a gate trail, as on an RC crawler course: two flags `width` apart, square
+ * across the track `at` metres along it, numbered in the order they are driven.
+ */
+export interface GateDef {
+  n: number;
+  trackId: string;
+  at: number;
+  /** Gate centre, metres right of the centreline. */
+  lateral?: number;
+  width: number;
+}
+
 export interface BorderDef {
   /** Distance from the map edge over which the border mountains rise. */
   width: number;
@@ -384,6 +419,7 @@ export interface MapDef {
   fallenTrees: readonly FallenTreeDef[];
   crawlCourses?: readonly CrawlCourseDef[];
   crawlTrails?: readonly CrawlTrailDef[];
+  gates?: readonly GateDef[];
   vegetation: VegetationDef;
   /** POI id of the spawn campsite. */
   spawnCampsite: string;
