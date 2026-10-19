@@ -29,19 +29,21 @@ The game opens on a **welcome screen**: choose the world, the vehicle, the time 
 
 ## Time of day and weather
 
-| Choice         | What it does                                                                                                                                                                          |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Morning        | Low, cool-gold sun from the east-north-east                                                                                                                                           |
-| Midday         | High sun from the north, short shadows                                                                                                                                                |
-| Late afternoon | Warm low sun from the west-north-west (the original lighting)                                                                                                                         |
-| Dusk           | Sun on the horizon, pink and orange sky, long shadows                                                                                                                                 |
-| Clear          | Dry ground and sunshine                                                                                                                                                               |
-| After rain     | Overcast, soft shadows, dark damp ground; tyres grip less (on dirt about three quarters as well), no dust, the creeks up 5 cm                                                         |
-| Raining        | Rain falling (not inside the cab), heavier haze, wetter ground with less grip still (on dirt about two thirds), the creeks up 12 cm; rain hisses outside and drums on the roof inside |
+| Choice         | What it does                                                                                                                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Morning        | Low, cool-gold sun from the east-north-east                                                                                                                                                              |
+| Midday         | High sun from the north, short shadows                                                                                                                                                                   |
+| Late afternoon | Warm low sun from the west-north-west (the original lighting)                                                                                                                                            |
+| Dusk           | Sun on the horizon, pink and orange sky, long shadows                                                                                                                                                    |
+| Clear          | Dry ground and sunshine                                                                                                                                                                                  |
+| After rain     | Overcast, soft shadows, dark damp ground; tyres grip less (on dirt about three quarters as well), no dust, the creeks up 5 cm, a few puddles on the tracks                                               |
+| Raining        | Rain falling (not inside the cab), heavier haze, wetter ground with less grip still (on dirt about two thirds), the creeks up 12 cm, many more puddles; rain hisses outside and drums on the roof inside |
+
+On wet ground hard braking takes longer and can lock the wheels: a locked tyre slides, scrubs and loses most of its steering grip, so ease off the brake to steer. From 60 km/h on dirt the cars stop in about 16–17 m dry, 18–19 m after rain and 20–23 m in the rain. Puddles lie on the flat stretches of the dirt and gravel tracks (never on the park's obstacle lines); driving through one splashes and sounds like the creek, and the muddy bottom is slippery.
 
 The engine starts as you arrive: the starter cranks for about a second (a little longer for the diesel) and the car stays put until the engine catches. The same happens after swapping vehicles and when restarting a flooded engine.
 
-The version number (for example v0.09) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
+The version number (for example v0.11) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
 
 ## Vehicles
 

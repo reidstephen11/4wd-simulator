@@ -72,7 +72,12 @@ export class GameRenderer {
 
     this.terrainMesh = new TerrainMesh(world.terrain, world.map.seed);
     this.scene.add(this.terrainMesh.group);
-    this.water = new WaterMesh(world.terrain, world.map.seed, env.waterLevelOffset);
+    this.water = new WaterMesh(
+      world.terrain,
+      world.map.seed,
+      env.waterLevelOffset,
+      world.features.creekDistance,
+    );
     this.scene.add(this.water.group);
     this.vegetation = new Vegetation(world, quality);
     this.scene.add(this.vegetation.group);

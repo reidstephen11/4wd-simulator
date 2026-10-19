@@ -1,6 +1,6 @@
 import { flatDirt, Groups, groups, loadRapier, Physics, type GroundQuery } from '../../src/sim/physics';
 import { vehicleTuning, type VehicleTuning } from '../../src/data/vehicle';
-import { Vehicle } from '../../src/sim/vehicle/vehicle';
+import { Vehicle, type VehicleEnv } from '../../src/sim/vehicle/vehicle';
 import { emptyInput, type VehicleInput } from '../../src/sim/input/vehicleInput';
 import { PHYSICS_DT } from '../../src/core/config';
 import { rotate as rotateVec } from '../../src/sim/vehicle/math';
@@ -20,6 +20,8 @@ export async function makeScene(opts: {
   heading?: number;
   speed?: number;
   ground?: GroundQuery;
+  /** Weather the vehicle drives in (dry by default). */
+  env?: VehicleEnv;
 }): Promise<Scene> {
   const R = await loadRapier();
   const physics = new Physics(R, opts.ground ?? flatDirt);
@@ -44,12 +46,18 @@ export async function makeScene(opts: {
   physics.terrainCollider = physics.world.createCollider(ground);
   const tuning = opts.tuning ?? vehicleTuning;
   const lift = tuning.wheelRadius + 0.02;
-  const vehicle = new Vehicle('test', physics, tuning, {
-    x: n.x * lift,
-    y: n.y * lift,
-    z: n.z * lift,
-    headingDeg: opts.heading ?? 0,
-  });
+  const vehicle = new Vehicle(
+    'test',
+    physics,
+    tuning,
+    {
+      x: n.x * lift,
+      y: n.y * lift,
+      z: n.z * lift,
+      headingDeg: opts.heading ?? 0,
+    },
+    opts.env,
+  );
   vehicle.body.setRotation(q, true);
   const scene: Scene = {
     physics,

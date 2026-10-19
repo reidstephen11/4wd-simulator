@@ -11,6 +11,8 @@ export interface WheelSound {
   surface: SurfaceId;
   spin: number;
   slide: number;
+  /** A locked wheel skidding along (m/s). */
+  skid: number;
   water: number;
 }
 
@@ -66,7 +68,7 @@ export function tyreWeights(
     const amount = clamp01(rolling + w.spin * T.spinWeight) * 0.25;
     const layer = inWater ? 'water' : surfaceLayer(w.surface);
     out[layer] += amount;
-    if (layer !== 'water' && layer !== 'mud') out.scrub += clamp01(w.slide / T.fullSlide) * 0.25;
+    if (layer !== 'water' && layer !== 'mud') out.scrub += clamp01((w.slide + w.skid) / T.fullSlide) * 0.25;
     // Rubber chirps and squeals when it spins on hard rock or timber.
     if (layer === 'rock' || layer === 'wood')
       out.squeal += clamp01((w.spin - T.squealFrom) / (1 - T.squealFrom)) * 0.25;

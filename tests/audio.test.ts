@@ -22,6 +22,7 @@ const wheel = (surface: SurfaceId, extra: Partial<WheelSound> = {}): WheelSound 
   surface,
   spin: 0,
   slide: 0,
+  skid: 0,
   water: 0,
   ...extra,
 });
@@ -66,6 +67,11 @@ describe('audio mixing (M6)', () => {
   it('sliding sideways adds scrub', () => {
     const w = tyreWeights(four(wheel(SurfaceId.Dirt, { slide: 3 })), 8);
     expect(w.scrub).toBeGreaterThan(0.9);
+  });
+
+  it('a locked tyre skidding under brakes adds scrub', () => {
+    expect(tyreWeights(four(wheel(SurfaceId.Dirt)), 8).scrub).toBe(0);
+    expect(tyreWeights(four(wheel(SurfaceId.Dirt, { skid: 8 })), 8).scrub).toBeGreaterThan(0.9);
   });
 
   it('a tyre spinning on rock squeals; rolling on rock or spinning in mud does not', () => {

@@ -273,3 +273,23 @@ export function environmentFor(c: Conditions): EnvironmentConfig {
     rain: w.rain,
   };
 }
+
+/**
+ * Puddles on the dirt and gravel tracks when it's wet (src/sim/world/puddles.ts):
+ * shallow dips in the wheel tracks that hold water, more and deeper while it rains.
+ */
+export const puddleTuning = {
+  /** Metres between chances of a puddle along a track, and the chance of one there. */
+  wet: { spacing: 24, chance: 0.6, depth: 0.08 },
+  rain: { spacing: 18, chance: 0.85, depth: 0.12 },
+  /** Size along and across the track (m). */
+  length: [2.4, 5.5] as const,
+  width: [1.6, 3.0] as const,
+  /** Water doesn't lie on steeper track than this (rise per metre). */
+  maxGrade: 0.04,
+  /** Keep this far (m) from the ends of a track, its junctions and the creek. */
+  clearEnds: 6,
+  clearCreek: 8,
+  /** ...and this far (m) beyond the edge of a park station's obstacle line. */
+  clearLines: 4,
+};

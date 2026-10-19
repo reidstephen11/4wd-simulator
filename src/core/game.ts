@@ -6,6 +6,7 @@ import type { VehicleId } from '../data/vehicle';
 import { vehicles } from '../data/vehicles';
 import { cameraTuning } from '../data/camera';
 import { buildWorldSteps, type World } from '../sim/world/world';
+import { addPuddles } from '../sim/world/puddles';
 import { loadRapier } from '../sim/physics';
 import { Simulation } from '../sim/sim';
 import type { Vehicle } from '../sim/vehicle/vehicle';
@@ -286,6 +287,8 @@ export class Game {
       r = gen.next();
     }
     const world = r.value;
+    // Wet weather leaves puddles on the tracks (before physics and meshes read the ground).
+    addPuddles(world, env);
     const exploration = new Exploration(
       world.pois,
       explorationFor(save, mapId) ?? { discovered: [], lastCampsite: world.map.spawnCampsite },
