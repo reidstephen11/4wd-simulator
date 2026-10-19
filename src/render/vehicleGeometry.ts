@@ -17,6 +17,8 @@ export const VehicleMaterial = {
   Headlamp: 8,
   /** Driving lamps that come on with high beam (the Camel Trophy roof lamps). */
   DrivingLamp: 9,
+  /** Dial markings: lit in their own colours with the headlights, like dash lights. */
+  DialMarks: 10,
 } as const;
 export type VehicleMaterialId = (typeof VehicleMaterial)[keyof typeof VehicleMaterial];
 

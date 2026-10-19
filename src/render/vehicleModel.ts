@@ -29,6 +29,8 @@ export class VehicleModel {
   private readonly headLampMaterial: THREE.MeshStandardMaterial;
   /** Needles, plates and small lenses: they light up with the headlights. */
   private readonly panelMaterial: THREE.MeshStandardMaterial;
+  /** The dials' markings: lit with the headlights, each in its own colour. */
+  private readonly dialMarksMaterial: THREE.MeshStandardMaterial;
   private readonly roofLampMaterial: THREE.MeshStandardMaterial;
   /** The lamps' light on the ground, at dusk and night only. */
   readonly beams: HeadlightBeams | null;
@@ -87,6 +89,7 @@ export class VehicleModel {
     this.headLampMaterial = lampLens();
     this.roofLampMaterial = lampLens();
     this.panelMaterial = lampLens();
+    this.dialMarksMaterial = dialMarks();
     const materials: THREE.Material[] = [
       this.bodyMaterial,
       patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.36, metalness: 0.72 })),
@@ -105,6 +108,7 @@ export class VehicleModel {
       patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })),
       this.headLampMaterial,
       this.roofLampMaterial,
+      this.dialMarksMaterial,
     ];
     this.wheelGeo = look.wheel(tuning);
     const geometry = look.body(tuning, this.wheelGeo);
@@ -295,7 +299,25 @@ export class VehicleModel {
         : H.tailGlow.off;
     this.headLampMaterial.emissiveIntensity = H.lensGlow[v.lights];
     this.panelMaterial.emissiveIntensity = lit ? H.panelGlow.on : H.panelGlow.off;
+    this.dialMarksMaterial.emissiveIntensity = lit ? H.dialGlow.on : H.dialGlow.off;
     this.roofLampMaterial.emissiveIntensity = v.lights === 'high' ? H.roofLensGlow.on : H.roofLensGlow.off;
     this.beams?.set(v.lights);
   }
+}
+
+/** Dial markings glow in their own colour (ivory, or red at the redline) when lit. */
+function dialMarks(): THREE.MeshStandardMaterial {
+  const m = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.4,
+    emissive: '#FFFFFF',
+    emissiveIntensity: 0,
+  });
+  m.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\n  totalEmissiveRadiance *= vColor.rgb;',
+    );
+  };
+  return patchFog(m, 'dial-marks');
 }

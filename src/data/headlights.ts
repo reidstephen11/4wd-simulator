@@ -59,7 +59,9 @@ export const headlightTuning = {
   lensGlow: { off: 0.14, low: 2.4, high: 3.4 },
   roofLensGlow: { off: 0.14, on: 3.4 },
   /** Dial needles and number-plate lettering: lit with the headlights, like dash lights. */
-  panelGlow: { off: 0.14, on: 0.7 },
+  panelGlow: { off: 0.14, on: 1.3 },
+  /** The dials' markings, in their own ivory and red: dark by day, lit with the headlights. */
+  dialGlow: { off: 0, on: 1.1 },
   /** Tail lamps: off, on with the headlights, and under braking (either way). */
   tailGlow: { off: 0.13, on: 0.55, brake: 0.9, brakeWithLights: 1.4 },
 };

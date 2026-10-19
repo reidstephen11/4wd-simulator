@@ -44,6 +44,7 @@ export function addDialFaces(b: VehicleBuilder, cabin: CabinLayout, redlineRpm: 
         dialPoint(cabin, x, radius * 0.88, angle, cabin.dialZ + 0.011),
         major ? 0.0019 : 0.0011,
         hot || low ? faceRed : faceIvory,
+        M.DialMarks,
       );
     }
   }
