@@ -109,7 +109,7 @@ export const padTuning = {
 };
 
 /** Short glyphs shown in prompts for the active device. */
-export const glyphs: Record<'keyboard' | 'gamepad', Partial<Record<Action, string>>> = {
+export const glyphs: Record<'keyboard' | 'gamepad' | 'touch', Partial<Record<Action, string>>> = {
   keyboard: {
     accelerate: 'W',
     brake: 'S',
@@ -149,6 +149,26 @@ export const glyphs: Record<'keyboard' | 'gamepad', Partial<Record<Action, strin
     pause: 'Start',
     confirm: 'A',
     back: 'B',
+  },
+  /** Labels on the on-screen touch buttons. */
+  touch: {
+    accelerate: 'GAS',
+    brake: 'BRAKE',
+    handbrake: 'HAND',
+    range: 'LOW',
+    frontDiff: 'F LOCK',
+    rearDiff: 'R LOCK',
+    precision: 'CRAWL',
+    winch: 'USE',
+    winchIn: 'IN',
+    winchOut: 'OUT',
+    toolMenu: 'TOOLS',
+    interact: 'USE',
+    jack: 'UPRIGHT',
+    map: 'MAP',
+    pause: 'II',
+    confirm: 'USE',
+    back: 'BACK',
   },
 };
 

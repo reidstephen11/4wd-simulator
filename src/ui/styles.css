@@ -1018,3 +1018,266 @@ table.controls td {
     font-size: 36px;
   }
 }
+
+/* ---------- Touch controls (phones and tablets) ---------- */
+#game-canvas {
+  touch-action: none;
+}
+
+.touch-controls {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.touch-controls.hidden {
+  display: none;
+}
+
+.touch-controls > * {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch-top {
+  top: max(10px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  display: flex;
+  gap: 6px;
+}
+
+.touch-btn {
+  min-width: 44px;
+  height: 42px;
+  padding: 0 8px;
+  font: 800 14px var(--font);
+  color: var(--ink);
+  background: rgba(243, 235, 218, 0.82);
+  border: 2px solid var(--ink);
+  border-radius: 9px 11px 8px 10px;
+  box-shadow: 2px 3px 0 rgba(59, 42, 30, 0.25);
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-btn[hidden] {
+  display: none;
+}
+
+.touch-btn.down {
+  transform: translate(1px, 2px);
+  box-shadow: none;
+  background: var(--paper-dark);
+}
+
+.touch-btn[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.touch-stick {
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  width: 170px;
+  height: 170px;
+  display: grid;
+  place-items: center;
+}
+
+.touch-stick-base {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 3px dashed rgba(243, 235, 218, 0.85);
+  background: rgba(59, 42, 30, 0.22);
+  display: grid;
+  place-items: center;
+}
+
+.touch-stick-knob {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(243, 235, 218, 0.9);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 3px 0 rgba(59, 42, 30, 0.25);
+}
+
+.touch-right {
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.touch-right > * {
+  pointer-events: auto;
+}
+
+.touch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 60px);
+  gap: 6px;
+}
+
+.touch-grid .touch-btn {
+  padding: 0 2px;
+  font-size: 12px;
+}
+
+.touch-wide {
+  grid-column: span 3;
+}
+
+.touch-pedals {
+  display: flex;
+  gap: 10px;
+}
+
+.touch-pedal {
+  width: 86px;
+  height: 104px;
+  font-size: 16px;
+}
+
+.touch-gas {
+  background: rgba(84, 97, 75, 0.88);
+  color: var(--paper);
+}
+
+.touch-brake {
+  background: rgba(181, 101, 58, 0.88);
+  color: var(--paper);
+}
+
+.touch-controls .touch-tool,
+.touch-controls.tool-mode .touch-drive {
+  display: none;
+}
+
+.touch-controls.tool-mode .touch-tool {
+  display: flex;
+}
+
+/* The HUD moves out of the way of the thumbs. */
+.touch-mode .status {
+  top: max(60px, calc(env(safe-area-inset-top) + 50px));
+  bottom: auto;
+  left: max(12px, env(safe-area-inset-left));
+  padding: 3px 10px 3px 6px;
+  font-size: 13px;
+}
+
+.touch-mode .status-drive {
+  display: none;
+}
+
+.touch-mode .course-hint {
+  top: 104px;
+  bottom: auto;
+  left: max(12px, env(safe-area-inset-left));
+  max-width: 230px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+.touch-mode .course-hint small {
+  display: none;
+}
+
+.touch-mode .compass {
+  width: min(420px, 44vw);
+  height: 34px;
+}
+
+.touch-mode .camera-help {
+  top: max(10px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: auto;
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+}
+
+.touch-mode .camera-help .camera-hint,
+.touch-mode .camera-help kbd {
+  display: none;
+}
+
+.touch-mode .camera-help button {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.touch-mode .crawl-gauges,
+.touch-mode .hud.cockpit .crawl-gauges {
+  right: auto;
+  left: 50%;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  transform: translateX(-50%) scale(0.6);
+  transform-origin: bottom center;
+}
+
+.touch-mode .prompts {
+  bottom: 112px;
+}
+
+.touch-mode .prompt {
+  font-size: 13px;
+}
+
+.touch-mode .tool-option {
+  width: 112px;
+  font-size: 12px;
+}
+
+.touch-mode .hud.cockpit .status,
+.touch-mode .hud.cockpit .course-hint {
+  transform-origin: top left;
+}
+
+@media (orientation: portrait) {
+  .touch-mode .compass {
+    top: max(60px, calc(env(safe-area-inset-top) + 50px));
+    width: 64vw;
+  }
+
+  .touch-mode .status {
+    top: 104px;
+  }
+
+  .touch-mode .course-hint {
+    top: 146px;
+  }
+
+  .touch-mode .toasts {
+    top: 108px;
+  }
+
+  .touch-mode .camera-help .camera-preset span {
+    display: none;
+  }
+
+  .touch-mode .crawl-gauges,
+  .touch-mode .hud.cockpit .crawl-gauges {
+    top: 146px;
+    bottom: auto;
+    left: auto;
+    right: max(8px, env(safe-area-inset-right));
+    transform: scale(0.55);
+    transform-origin: top right;
+  }
+
+  .touch-mode .prompts {
+    bottom: 340px;
+  }
+}

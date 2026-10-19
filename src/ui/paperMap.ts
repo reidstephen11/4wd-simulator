@@ -30,7 +30,7 @@ export class PaperMap {
     this.noise = new Noise2D(world.map.seed + 9);
     this.el = document.createElement('div');
     this.el.className = 'paper-map hidden';
-    this.el.innerHTML = `<div class="paper-map-sheet"><canvas width="${SIZE}" height="${SIZE}"></canvas><div class="paper-map-hint">M · Esc to close</div></div>`;
+    this.el.innerHTML = `<div class="paper-map-sheet"><canvas width="${SIZE}" height="${SIZE}"></canvas><div class="paper-map-hint">M · Esc · tap outside to close</div></div>`;
     root.appendChild(this.el);
     this.canvas = this.el.querySelector('canvas') as HTMLCanvasElement;
     this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;

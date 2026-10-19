@@ -2,12 +2,12 @@ import { keyBindings, padBindings, padTuning, Pad, type Action } from '../../dat
 import { vehicleTuning, type VehicleTuning } from '../../data/vehicle';
 import { emptyInput, SteeringSmoother, type VehicleInput } from './vehicleInput';
 
-export type Device = 'keyboard' | 'gamepad';
+export type Device = 'keyboard' | 'gamepad' | 'touch';
 
 /**
- * Reads keyboard and gamepad (SPEC §10) and turns them into a VehicleInput for the
- * locally controlled vehicle, plus edge-triggered UI actions. Tracks which device was
- * touched last so prompts can show the right glyphs.
+ * Reads keyboard, gamepad and the on-screen touch controls (SPEC §10) and turns them into
+ * a VehicleInput for the locally controlled vehicle, plus edge-triggered UI actions. Tracks
+ * which device was used last so prompts can show the right glyphs.
  */
 export class InputManager {
   activeDevice: Device = 'keyboard';
@@ -28,6 +28,9 @@ export class InputManager {
     vehicleTuning.steering.keyboardReturnRate,
   );
   private padSteer = 0;
+  /** Touch buttons held down, and the touch joystick (-1..1, y down). */
+  private readonly touchHeld = new Set<Action>();
+  private touchStick = { x: 0, y: 0 };
   private deviceListeners: Array<(d: Device) => void> = [];
 
   constructor(target: Window = window) {
@@ -35,14 +38,15 @@ export class InputManager {
       if (e.repeat) return;
       this.keys.add(e.code);
       this.setDevice('keyboard');
-      for (const a of this.actionsForKey(e.code)) {
-        if (this.vehicleEnabled) this.vehicleEdges.add(a);
-        this.uiEdges.set(a, (this.uiEdges.get(a) ?? 0) + 1);
-      }
+      for (const a of this.actionsForKey(e.code)) this.press(a);
       if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab') e.preventDefault();
     });
     target.addEventListener('keyup', (e) => this.keys.delete(e.code));
-    target.addEventListener('blur', () => this.keys.clear());
+    target.addEventListener('blur', () => {
+      this.keys.clear();
+      this.touchHeld.clear();
+      this.touchStick = { x: 0, y: 0 };
+    });
     target.addEventListener(
       'wheel',
       (e) => {
@@ -67,8 +71,35 @@ export class InputManager {
     this.vehicleEdges.add(action);
   }
 
-  usePointer(): void {
-    this.setDevice('keyboard');
+  /** A mouse or finger moved the camera or pressed a HUD button. */
+  usePointer(type = 'mouse'): void {
+    this.setDevice(type === 'touch' ? 'touch' : 'keyboard');
+  }
+
+  /** A touch button was tapped (or pressed down, for buttons that are held). */
+  touchPress(a: Action): void {
+    this.setDevice('touch');
+    this.press(a);
+  }
+
+  /** A touch button that acts while held (pedals, winch in/out) went down or up. */
+  touchHold(a: Action, down: boolean): void {
+    if (down) {
+      this.touchHeld.add(a);
+      this.touchPress(a);
+    } else this.touchHeld.delete(a);
+  }
+
+  /** The touch joystick moved (-1..1, y down); `presses` are menu steps it crossed. */
+  touchJoystick(x: number, y: number, presses: readonly Action[] = []): void {
+    this.touchStick = { x, y };
+    if (x !== 0 || y !== 0) this.setDevice('touch');
+    for (const a of presses) this.press(a);
+  }
+
+  private press(a: Action): void {
+    if (this.vehicleEnabled) this.vehicleEdges.add(a);
+    this.uiEdges.set(a, (this.uiEdges.get(a) ?? 0) + 1);
   }
 
   private setDevice(d: Device): void {
@@ -84,8 +115,9 @@ export class InputManager {
     return out;
   }
 
+  /** Held on the keyboard or as an on-screen touch button. */
   private keyDown(a: Action): boolean {
-    return keyBindings[a].some((c) => this.keys.has(c));
+    return keyBindings[a].some((c) => this.keys.has(c)) || this.touchHeld.has(a);
   }
 
   private padDown(a: Action): boolean {
@@ -93,7 +125,7 @@ export class InputManager {
     return !!b && b.some((i) => this.padButtons[i]);
   }
 
-  /** Is an action held on either device? */
+  /** Is an action held on any device? */
   held(a: Action): boolean {
     return this.keyDown(a) || this.padDown(a);
   }
@@ -126,10 +158,7 @@ export class InputManager {
       if (this.padButtons[i]) any = true;
       if (this.padButtons[i] && !this.padPrev[i]) {
         for (const [a, list] of Object.entries(padBindings) as [Action, readonly number[]][]) {
-          if (list.includes(i)) {
-            if (this.vehicleEnabled) this.vehicleEdges.add(a);
-            this.uiEdges.set(a, (this.uiEdges.get(a) ?? 0) + 1);
-          }
+          if (list.includes(i)) this.press(a);
         }
       }
       this.padPrev[i] = this.padButtons[i];
@@ -151,7 +180,8 @@ export class InputManager {
     inp.brake = Math.max(this.keyDown('brake') ? 1 : 0, this.padTriggers.lt);
     const keySteer = (this.keyDown('steerRight') ? 1 : 0) - (this.keyDown('steerLeft') ? 1 : 0);
     const kb = this.steering.update(keySteer, dt);
-    const padTarget = this.padAxes[0];
+    const padTarget =
+      Math.abs(this.touchStick.x) > Math.abs(this.padAxes[0]) ? this.touchStick.x : this.padAxes[0];
     const rate = this.steeringRates.padRate * dt;
     this.padSteer += Math.max(-rate, Math.min(rate, padTarget - this.padSteer));
     inp.steer = Math.max(-1, Math.min(1, Math.abs(this.padSteer) > Math.abs(kb) ? this.padSteer : kb));
@@ -203,8 +233,9 @@ export class InputManager {
     return { yaw: -(this.padAxes[2] + horizontal) * rate, pitch: (this.padAxes[3] + vertical) * rate };
   }
 
-  /** Raw stick (for radial menus). */
+  /** Raw stick (for radial menus and placing planks): the gamepad or the touch joystick. */
   stick(): { x: number; y: number } {
-    return { x: this.padAxes[0], y: this.padAxes[1] };
+    const t = this.touchStick;
+    return t.x !== 0 || t.y !== 0 ? { ...t } : { x: this.padAxes[0], y: this.padAxes[1] };
   }
 }

@@ -34,6 +34,7 @@ export interface HudInputs {
 export function buildHudState(i: HudInputs): HudState {
   const g = glyphs[i.device];
   const kb = i.device === 'keyboard';
+  const touch = i.device === 'touch';
   const v = i.vehicle;
   const t = i.tools;
   const p = v.body.translation();
@@ -42,14 +43,14 @@ export function buildHudState(i: HudInputs): HudState {
 
   if (i.mode === 'plankPlace') {
     prompts.push(
-      { keys: kb ? 'W / S' : 'L-stick ↕', text: 'Move planks' },
-      { keys: kb ? 'A / D' : 'L-stick ↔', text: 'Turn planks' },
+      { keys: kb ? 'W / S' : touch ? 'Stick ↕' : 'L-stick ↕', text: 'Move planks' },
+      { keys: kb ? 'A / D' : touch ? 'Stick ↔' : 'L-stick ↔', text: 'Turn planks' },
       { keys: g.confirm ?? 'E', text: 'Place planks' },
       { keys: g.back ?? 'Esc', text: 'Cancel' },
     );
   } else if (i.mode === 'winchTarget') {
     prompts.push(
-      { keys: kb ? 'A / D' : 'D-pad ↔', text: 'Choose anchor' },
+      { keys: kb ? 'A / D' : touch ? 'Stick ↔' : 'D-pad ↔', text: 'Choose anchor' },
       { keys: g.confirm ?? 'E', text: 'Attach winch' },
       { keys: g.back ?? 'Esc', text: 'Cancel' },
     );
@@ -100,7 +101,9 @@ export function buildHudState(i: HudInputs): HudState {
         controls:
           i.device === 'gamepad'
             ? 'Y low range · LB tools · LB + R3 views'
-            : `${g.range} low range · ${g.frontDiff} front · ${g.rearDiff} rear · ${g.precision} crawl · C views`,
+            : touch
+              ? 'LOW range · F / R LOCK · CRAWL · View'
+              : `${g.range} low range · ${g.frontDiff} front · ${g.rearDiff} rear · ${g.precision} crawl · C views`,
       };
       break;
     }
@@ -129,7 +132,9 @@ export function buildHudState(i: HudInputs): HudState {
           : (section?.hint ?? 'Follow the amber markers. The green gravel bypass connects both ends.'),
         controls: kb
           ? 'L low range · P crawl · Z / X lockers · C views'
-          : 'Y low range · LB tools · LB + R3 views',
+          : touch
+            ? 'LOW range · CRAWL · F / R LOCK · View'
+            : 'Y low range · LB tools · LB + R3 views',
       };
     }
   }
@@ -143,7 +148,11 @@ export function buildHudState(i: HudInputs): HudState {
       courseHint = {
         title: link.track.def.name ?? '4WD Challenge Loop',
         text: link.track.def.routeHint!,
-        controls: kb ? 'L low range · P crawl · C views' : 'Y low range · LB tools · LB + R3 views',
+        controls: kb
+          ? 'L low range · P crawl · C views'
+          : touch
+            ? 'LOW range · CRAWL · View'
+            : 'Y low range · LB tools · LB + R3 views',
       };
   }
 

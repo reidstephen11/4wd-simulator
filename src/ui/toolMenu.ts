@@ -9,13 +9,16 @@ export interface ToolOption {
 
 /**
  * Radial tool menu (SPEC §9): held open with Q / LB. Point with the mouse, the steering
- * keys or the left stick; letting go of Q/LB picks the highlighted option.
+ * keys or the left stick; letting go of Q/LB picks the highlighted option. Opened from the
+ * touch TOOLS button it stays open until an option or the space around it is tapped.
  */
 export class ToolMenu {
   readonly el: HTMLElement;
   private options: ToolOption[] = [];
   private selected = -1;
   isOpen = false;
+  /** Opened by a tap: stays open without a held button. */
+  sticky = false;
   onPick: ((id: string) => void) | null = null;
 
   constructor(root: HTMLElement) {
@@ -26,10 +29,14 @@ export class ToolMenu {
       const r = this.el.getBoundingClientRect();
       this.pointAt(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2), 30);
     });
+    this.el.addEventListener('click', (e) => {
+      if (this.sticky && !(e.target as HTMLElement).closest('.tool-option')) this.close(false);
+    });
   }
 
-  open(options: ToolOption[]): void {
+  open(options: ToolOption[], sticky = false): void {
     this.options = options;
+    this.sticky = sticky;
     this.selected = -1;
     this.isOpen = true;
     this.el.innerHTML = '<div class="tool-ring"></div><div class="tool-centre paper">Tools</div>';
@@ -70,6 +77,7 @@ export class ToolMenu {
   close(pick: boolean): void {
     if (!this.isOpen) return;
     this.isOpen = false;
+    this.sticky = false;
     this.el.classList.add('hidden');
     const o = this.options[this.selected];
     if (pick && o?.enabled) this.onPick?.(o.id);

@@ -74,6 +74,9 @@ export interface GameHook {
   autopilot(poiId: string | null, back?: number, speed?: number): void;
   autopilotState(): { active: boolean; done: boolean; remaining: number };
   setQuality(level: 'low' | 'medium' | 'high'): void;
+  quality(): 'low' | 'medium' | 'high';
+  /** Is the park brake on? */
+  parkBrake(): boolean;
   /** Draw calls and triangles per top-level scene group (renders the scene once per group). */
   breakdown(): Record<string, { calls: number; triangles: number }>;
   /** Audio state, levels and what's playing. */
@@ -146,6 +149,8 @@ export function installHook(game: Game): void {
       g.autopilot = new Autopilot(path, speed);
     },
     setQuality: (level) => g.changeSettings({ quality: level }),
+    quality: () => g.settings.quality,
+    parkBrake: () => g.vehicle.parkBrake,
     breakdown: () => {
       const r = g.view.renderer;
       const scene = g.view.scene;
