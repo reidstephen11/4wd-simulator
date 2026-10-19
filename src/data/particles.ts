@@ -60,6 +60,20 @@ export const particleTuning = {
     opacity: 0.85,
   },
 
+  /** A badly hurt engine smokes from under the bonnet while it runs. */
+  smoke: {
+    /** Engine health below which it starts, puffing harder as the health falls. */
+    from: 0.5,
+    /** Puffs per second at health 0. */
+    rate: 12,
+    /** Where it comes out (vehicle frame, m): the bonnet's front edge. */
+    y: 1.0,
+    z: -1.55,
+    life: [1.6, 2.4],
+    size: [0.25, 0.7],
+    color: '#BDBAB4',
+  },
+
   gravity: 9.81,
 } as const;
 

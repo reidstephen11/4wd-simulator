@@ -40,6 +40,7 @@ import { buildAudioFrame } from '../audio/frame';
 import { GameLoop } from './loop';
 import { ToolController } from './toolController';
 import { buildHudState } from './hudState';
+import { damageMessage } from './damageMessages';
 import { installHook } from './testHook';
 import { requestAutostart } from './launch';
 
@@ -133,6 +134,7 @@ export class Game {
     // Loading puts you at the last campsite (SPEC §14).
     const camp = exploration.lastCampsite || world.map.spawnCampsite;
     sim.addVehicle(LOCAL_VEHICLE, sim.campsitePose(camp, tuning.wheelRadius), tuning);
+    sim.setDamage(settings.damage);
 
     // Arriving at dusk or night, the headlights are already on.
     if (sim.env.lampBeams) this.vehicle.lights = 'low';
@@ -235,6 +237,19 @@ export class Game {
         1200,
       );
       this.audio.lightSwitch(mode === 'high');
+    });
+    sim.events.on('damage', (e) => {
+      if (e.id !== LOCAL_VEHICLE) return;
+      this.hud.toast(damageMessage(e, this.vehicle.tuning, this.sim.damage), 3200);
+      this.audio.damage(e.part, e.part === 'engine' && e.health <= 0);
+    });
+    sim.events.on('repaired', ({ id, kind }) => {
+      if (id !== LOCAL_VEHICLE) return;
+      this.hud.toast(
+        { field: 'Field repair done', spare: 'Spare fitted', camp: 'Repaired at camp' }[kind],
+        2000,
+      );
+      this.audio.drivetrainClunk('range');
     });
     sim.events.on('diffBlocked', () => this.hud.toast('Slow below 5 km/h to engage diff locks'));
     sim.events.on('precisionChanged', ({ enabled }) =>
@@ -362,6 +377,7 @@ export class Game {
     const prevQuality = this.settings.quality;
     this.settings = { ...this.settings, ...s };
     if (this.settings.quality !== prevQuality) this.view.setQuality(qualityPresets[this.settings.quality]);
+    if (this.settings.damage !== this.sim.damage) this.sim.setDamage(this.settings.damage);
     this.pause.setSettings(this.settings);
     this.audio.setSettings(this.settings);
     this.onSettings?.(this.settings);
@@ -510,6 +526,7 @@ export class Game {
   private toolOptions(): ToolOption[] {
     const t = this.sim.toolsOf(LOCAL_VEHICLE);
     const v = this.vehicle;
+    const fix = this.sim.repairOption(LOCAL_VEHICLE);
     const planks: ToolOption =
       t.planks.carried > 0
         ? { id: 'planks', label: 'Place planks', icon: 'planks', enabled: true }
@@ -544,6 +561,12 @@ export class Game {
         icon: 'headlight',
         enabled: true,
       },
+      {
+        id: 'repair',
+        label: fix ? (fix.kind === 'field' ? 'Field repair' : 'Fit the spare') : 'Nothing to repair',
+        icon: 'wrench',
+        enabled: fix?.possible ?? false,
+      },
     ];
   }
 
@@ -552,6 +575,8 @@ export class Game {
     else if (id === 'planks') this.tool.startPlanks();
     else if (id === 'recall') this.sim.recallPlanks(LOCAL_VEHICLE);
     else if (id === 'detach') this.sim.detachWinch(LOCAL_VEHICLE);
+    else if (id === 'repair' && !this.sim.startRepair(LOCAL_VEHICLE))
+      this.hud.toast(this.sim.repairOption(LOCAL_VEHICLE)?.reason ?? 'Nothing to repair');
     else if (id === 'frontDiff' || id === 'rearDiff' || id === 'precision' || id === 'lights')
       this.input.requestDriveAction(id);
   }
@@ -616,6 +641,12 @@ export class Game {
       if (camp && !found.discovered.includes(camp)) this.hud.toast(`Campsite: ${camp.name}`);
     }
     if (found.discovered.length > 0 || found.campsite) this.save();
+    // A campsite puts any damage right.
+    if (
+      this.sim.damage !== 'off' &&
+      this.world.pois.some((q) => q.kind === 'campsite' && Math.hypot(q.x - p.x, q.z - p.z) < q.radius)
+    )
+      this.sim.repairAtCamp(LOCAL_VEHICLE);
     const v = this.vehicle;
     const run = this.crawlRuns.update({
       x: p.x,
@@ -811,6 +842,7 @@ export class Game {
         tracks: this.world.features.tracks,
         anchorInReach: this.anchorInReach,
         run: this.crawlRuns.run,
+        repair: this.sim.repairOption(LOCAL_VEHICLE),
       }),
     );
     if (this.overlay) {

@@ -219,7 +219,7 @@ export class Particles {
   private readonly wakes: Pool;
   private rateScale = 1;
   /** Fractional particles carried between frames, per wheel and effect. */
-  private readonly acc = new Float32Array(4 * 4 + 3);
+  private readonly acc = new Float32Array(4 * 4 + 4);
   private wetness = 0;
   private readonly cDust = mixPal('dirtTrack', 'barkPale', 0.62);
   private readonly cGravelDust = mixPal('rock', 'barkPale', 0.55);
@@ -232,6 +232,8 @@ export class Particles {
   private readonly tmpColor = new THREE.Color();
   private readonly fwd = { x: 0, y: 0, z: 0 };
   private readonly bow = { x: 0, y: 0, z: 0 };
+  private readonly bonnet = { x: 0, y: 0, z: 0 };
+  private readonly cSmoke = new THREE.Color(P.smoke.color);
 
   constructor(
     private readonly terrain: Terrain,
@@ -455,6 +457,27 @@ export class Particles {
             this.cWater,
           );
       }
+    }
+
+    // A badly hurt engine smokes from under the bonnet.
+    const K = P.smoke;
+    const engine = v.condition.engine;
+    if (engine < K.from && v.drivetrain.engineRunning) {
+      const n = this.count(4, 3, K.rate * (1 - engine / K.from) * S * dt);
+      const p = v.localToWorld(0, K.y, K.z, this.bonnet);
+      for (let j = 0; j < n; j++)
+        this.dust.spawn(
+          p.x + (Math.random() - 0.5) * 0.5,
+          p.y,
+          p.z + (Math.random() - 0.5) * 0.5,
+          vel.x * 0.7,
+          0.6 + Math.random() * 0.5,
+          vel.z * 0.7,
+          rnd(K.life),
+          K.size[0],
+          rnd(K.size) * 1.8,
+          this.cSmoke,
+        );
     }
   }
 

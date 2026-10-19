@@ -88,6 +88,24 @@ export function splash(ctx: BaseAudioContext, out: AudioNode, noise: NoiseBank, 
   pluck(g.gain, at, level * audioTuning.tyres.splashGain, 0.01, 0.5);
 }
 
+/** A tyre cut on a rock: a crack as the rock bites, then the air hissing out. */
+export function puncture(ctx: BaseAudioContext, out: AudioNode, noise: NoiseBank): void {
+  const at = ctx.currentTime;
+  const P = audioTuning.puncture;
+  const crack = burst(ctx, noise.white, at, 0.05);
+  const cf = filter(ctx, 'bandpass', 1500, 0.8);
+  const cg = gain(ctx, out);
+  crack.connect(cf).connect(cg);
+  pluck(cg.gain, at, P.crack, 0.001, 0.05);
+  thud(ctx, out, at, 90, P.crack * 0.6, 0.1);
+  const hiss = burst(ctx, noise.white, at + 0.04, P.hissSeconds);
+  const hf = filter(ctx, 'highpass', 3000, 0.7);
+  const hg = gain(ctx, out);
+  hiss.connect(hf).connect(hg);
+  hg.gain.setValueAtTime(P.hiss, at + 0.04);
+  hg.gain.setTargetAtTime(0, at + 0.3, P.hissSeconds / 3);
+}
+
 /** Engine stall: a final shudder and clunk. */
 export function stallClunk(ctx: BaseAudioContext, out: AudioNode, noise: NoiseBank): void {
   const at = ctx.currentTime + 0.28;

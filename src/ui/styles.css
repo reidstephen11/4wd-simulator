@@ -503,8 +503,13 @@ body {
 
 .status-winch,
 .status-engine,
-.status-lights {
+.status-lights,
+.status-damage {
   display: none;
+}
+
+.status-damage.shown {
+  display: flex;
 }
 
 .status-lights.shown {
@@ -1276,6 +1281,12 @@ table.controls td {
 }
 
 @media (orientation: portrait) {
+  /* Narrow enough for the tool menu's options to sit side by side across the screen. */
+  .touch-mode .tool-option {
+    width: 104px;
+    font-size: 11px;
+  }
+
   .touch-mode .compass {
     top: max(60px, calc(env(safe-area-inset-top) + 50px));
     width: 64vw;

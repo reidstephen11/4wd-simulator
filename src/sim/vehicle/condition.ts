@@ -1,7 +1,8 @@
 /**
- * Vehicle condition (SPEC §6.4, §11). v0.1 only uses dirt, dents and engine flooding;
- * the health values exist so mechanical damage can plug in later. The drivetrain and
- * suspension read multipliers from here (all 1.0 for now).
+ * Vehicle condition (SPEC §6.4, §11): dirt, dents and engine flooding, and the health
+ * of the engine, tyres and suspension corners (1 = as new) that mechanical damage
+ * lowers (src/sim/vehicle/damage.ts). The drivetrain and suspension read multipliers
+ * from here.
  */
 export interface Dent {
   /** Local-space point on the body and inward direction. */
@@ -28,6 +29,10 @@ export interface FloodState {
 export interface VehicleCondition {
   engine: number;
   tyres: [number, number, number, number];
+  /** What each tyre is going down to (1 = not cut); `tyres` follows it as the air escapes. */
+  tyreTarget: [number, number, number, number];
+  /** The spare wheel is on its carrier, ready to fit. */
+  spare: boolean;
   suspension: [number, number, number, number];
   panels: { front: number; left: number; right: number; rear: number; roof: number };
   /** 0..1 dirt per zone. */
@@ -42,6 +47,8 @@ export function createCondition(): VehicleCondition {
   return {
     engine: 1,
     tyres: [1, 1, 1, 1],
+    tyreTarget: [1, 1, 1, 1],
+    spare: true,
     suspension: [1, 1, 1, 1],
     panels: { front: 1, left: 1, right: 1, rear: 1, roof: 1 },
     dirt: { front: 0, sides: 0, rear: 0, wheels: 0 },
@@ -51,7 +58,7 @@ export function createCondition(): VehicleCondition {
   };
 }
 
-/** Multipliers the physics reads. With no mechanical damage in v0.1 these are all 1. */
+/** Multipliers the physics reads (all 1 on an undamaged vehicle). */
 export function enginePowerMultiplier(c: VehicleCondition): number {
   return Math.max(0, Math.min(1, 0.4 + 0.6 * c.engine));
 }

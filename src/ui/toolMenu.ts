@@ -40,13 +40,11 @@ export class ToolMenu {
     this.selected = -1;
     this.isOpen = true;
     this.el.innerHTML = '<div class="tool-ring"></div><div class="tool-centre paper">Tools</div>';
+    this.el.classList.remove('hidden');
     const n = options.length;
-    options.forEach((o, i) => {
+    const buttons = options.map((o, i) => {
       const b = document.createElement('button');
       b.className = `tool-option paper${o.enabled ? '' : ' disabled'}`;
-      const ang = -Math.PI / 2 + (i / n) * Math.PI * 2;
-      b.style.left = `calc(50% + ${Math.cos(ang) * 120}px)`;
-      b.style.top = `calc(50% + ${Math.sin(ang) * 120}px)`;
       b.innerHTML = `<span class="tool-icon">${icons[o.icon]}</span><span>${o.label}</span>`;
       b.addEventListener('click', () => {
         if (!o.enabled) return;
@@ -54,8 +52,26 @@ export class ToolMenu {
         this.close(true);
       });
       this.el.appendChild(b);
+      return b;
     });
-    this.el.classList.remove('hidden');
+    const w = Math.max(...buttons.map((b) => b.offsetWidth)),
+      h = Math.max(...buttons.map((b) => b.offsetHeight));
+    const { rx, ry } = ringRadii(
+      n,
+      w,
+      h,
+      this.el.clientWidth || innerWidth,
+      this.el.clientHeight || innerHeight,
+    );
+    buttons.forEach((b, i) => {
+      const p = ringPoint(i, n, rx, ry);
+      b.style.left = `calc(50% + ${p.x}px)`;
+      b.style.top = `calc(50% + ${p.y}px)`;
+    });
+    const ring = this.el.querySelector('.tool-ring') as HTMLElement;
+    ring.style.width = `${rx * 2}px`;
+    ring.style.height = `${ry * 2}px`;
+    ring.style.margin = `${-ry}px 0 0 ${-rx}px`;
   }
 
   /** Highlight the option in a screen direction (dx right, dy down). */
@@ -82,4 +98,44 @@ export class ToolMenu {
     const o = this.options[this.selected];
     if (pick && o?.enabled) this.onPick?.(o.id);
   }
+}
+
+/** Where option i of n sits on an oval of radii rx × ry (clockwise from the top). */
+export function ringPoint(i: number, n: number, rx: number, ry: number): { x: number; y: number } {
+  const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
+  return { x: Math.cos(a) * rx, y: Math.sin(a) * ry };
+}
+
+/** Do any two of n options (w × h px) on this oval overlap? */
+export function ringOverlaps(n: number, rx: number, ry: number, w: number, h: number): boolean {
+  for (let i = 0; i < n; i++)
+    for (let j = i + 1; j < n; j++) {
+      const a = ringPoint(i, n, rx, ry),
+        b = ringPoint(j, n, rx, ry);
+      if (Math.abs(a.x - b.x) < w + 4 && Math.abs(a.y - b.y) < h + 4) return true;
+    }
+  return false;
+}
+
+/**
+ * Radii of the oval the options sit on: from the original 120 px circle, wider until
+ * neighbouring options (w × h px) no longer overlap, then taller if the screen (vw × vh)
+ * is too narrow for that (a phone held upright). Always on the screen.
+ */
+export function ringRadii(
+  n: number,
+  w: number,
+  h: number,
+  vw: number,
+  vh: number,
+): { rx: number; ry: number } {
+  const fitX = Math.max(120, vw / 2 - w / 2 - 6),
+    fitY = Math.max(120, vh / 2 - h / 2 - 6);
+  let rx = 120,
+    ry = 120;
+  while (ringOverlaps(n, rx, ry, w, h) && (rx < fitX || ry < fitY)) {
+    if (rx < fitX) rx = Math.min(fitX, rx + 4);
+    else ry = Math.min(fitY, ry + 4);
+  }
+  return { rx, ry };
 }

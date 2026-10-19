@@ -16,11 +16,21 @@ export type ToolEvent =
   | { type: 'righted' }
   | { type: 'noAnchor' };
 
-/** What a vehicle carries: winch, planks and jack. */
+/** A repair under way at the roadside: the car stays put until it's done. */
+export interface RepairJob {
+  /** Field repair (mild damage) or fitting the spare (realistic). */
+  kind: 'field' | 'spare';
+  /** Seconds left, out of `total`. */
+  remaining: number;
+  total: number;
+}
+
+/** What a vehicle carries: winch, planks, jack and tools for roadside repairs. */
 export class VehicleTools {
   readonly winch = new Winch();
   readonly planks = new PlankKit();
   readonly jack = new Jack();
+  repair: RepairJob | null = null;
   /** Manual winch targeting (tool menu): the candidate list and the highlighted one. */
   targeting: Anchor[] | null = null;
   targetIndex = 0;

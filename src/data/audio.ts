@@ -92,6 +92,8 @@ export const audioTuning = {
   /** Suspension thumps: compression speed (m/s) from faint to full. */
   thump: { from: 1.2, full: 4.5, gain: 0.7 },
   dent: { gain: 0.6 },
+  /** A tyre cut on a rock: a sharp crack, then air hissing out over a few seconds. */
+  puncture: { crack: 0.5, hiss: 0.12, hissSeconds: 3 },
 
   winch: {
     /** Motor whine pitch (Hz) with no load and at the pull limit. */

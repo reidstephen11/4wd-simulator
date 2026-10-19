@@ -4,6 +4,14 @@ import type { Settings } from '../sim/save/save';
 import type { VehicleId } from '../data/vehicle';
 import { vehicleOrder, vehicles } from '../data/vehicles';
 import { mapOrder, maps, type MapId } from '../data/maps';
+import { damageLabels, damageModes, type DamageMode } from '../data/damage';
+
+const damageNotes: Record<DamageMode, string> = {
+  off: 'No mechanical damage. The body still dents and gets dirty.',
+  mild: 'Hard knocks soften tyres, bend suspension and cost engine power, but never stop you. Field repair from the tool menu.',
+  realistic:
+    'Tyres go flat and the engine can be wrecked. One spare; everything else is fixed at a campsite.',
+};
 
 type Page = 'main' | 'vehicle' | 'location' | 'settings' | 'controls';
 
@@ -124,6 +132,13 @@ export class PauseMenu {
         ${slider('engineVolume', 'Engine volume')}
         ${slider('ambienceVolume', 'Ambience volume')}
         <div class="setting-row">Units<div class="seg"><button data-focus data-units="kmh" class="${s.units === 'kmh' ? 'on' : ''}">km/h</button><button data-focus data-units="mph" class="${s.units === 'mph' ? 'on' : ''}">mph</button></div></div>
+        <div class="setting-row">Damage<div class="seg">${damageModes
+          .map(
+            (m) =>
+              `<button data-focus data-damage="${m}" class="${s.damage === m ? 'on' : ''}">${damageLabels[m]}</button>`,
+          )
+          .join('')}</div></div>
+        <p class="menu-note damage-note">${damageNotes[s.damage]}</p>
         <button data-focus data-act="back">Back</button>`;
     } else {
       const rows = controlsTable
@@ -174,6 +189,10 @@ export class PauseMenu {
     } else if (t.dataset.units) {
       this.settings.units = t.dataset.units as Settings['units'];
       this.actions.changeSettings({ units: this.settings.units });
+      this.show('settings');
+    } else if (t.dataset.damage) {
+      this.settings.damage = t.dataset.damage as DamageMode;
+      this.actions.changeSettings({ damage: this.settings.damage });
       this.show('settings');
     }
   }
