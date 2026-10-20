@@ -2,8 +2,9 @@ import type { MapDef } from '../sim/world/mapTypes';
 import { highCountryMap } from './map';
 import { ironbarkParkMap } from './park';
 import { crawlerCreekMap } from './crawlerCreek';
+import { stringybarkMap } from './stringybark';
 
-export type MapId = 'high-country' | 'ironbark-park' | 'crawler-creek';
+export type MapId = 'high-country' | 'ironbark-park' | 'crawler-creek' | 'stringybark-range';
 
 export interface MapEntry {
   def: MapDef;
@@ -25,9 +26,18 @@ export const maps: Record<MapId, MapEntry> = {
     blurb:
       'An RC crawler-style trail at full size: numbered gates through mud, bridges, switchbacks and climbs.',
   },
+  'stringybark-range': {
+    def: stringybarkMap,
+    blurb: 'Big, steep range country: fire trails to the top and eight rocky and muddy climbs you winch up.',
+  },
 };
 
-export const mapOrder: readonly MapId[] = ['high-country', 'ironbark-park', 'crawler-creek'];
+export const mapOrder: readonly MapId[] = [
+  'high-country',
+  'ironbark-park',
+  'crawler-creek',
+  'stringybark-range',
+];
 
 export function isMapId(x: unknown): x is MapId {
   return typeof x === 'string' && x in maps;

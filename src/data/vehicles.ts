@@ -1,4 +1,5 @@
 import { camelTuning } from './camel';
+import { patrolTuning } from './patrol';
 import { perentieTuning } from './perentie';
 import { vehicleTuning, type VehicleId, type VehicleTuning } from './vehicle';
 
@@ -124,9 +125,41 @@ export const vehicles: Record<VehicleId, VehicleDef> = {
       },
     },
   },
+  patrol: {
+    tuning: patrolTuning,
+    blurb: 'GQ Patrol wagon, 4.2 L TD42 diesel, five-speed, coil springs, bull bar, snorkel and roof rack.',
+    cabin: {
+      // A bucket seat behind a wide, flat bonnet; the screen leans back over the dash.
+      eye: { x: 0.42, y: 1.12, z: 0.02 },
+      pitch: -0.16,
+      dialY: 0.84,
+      dialZ: -0.47,
+      dials: {
+        speed: { x: 0.5, radius: 0.058, max: 180, major: 20, minor: 10 },
+        rpm: { x: 0.34, radius: 0.058, max: 5000, major: 1000, minor: 500 },
+        oil: { x: 0.21, radius: 0.032, max: 1, major: 0.5, minor: 0.25 },
+      },
+      lamps: { xs: [0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55], y: 0.765, z: -0.462 },
+      // A T-handle under the dash, left of the column, as on Nissan's 4WDs of the time.
+      handbrake: {
+        kind: 'pull',
+        base: { x: 0.2, y: 0.6, z: -0.53 },
+        tip: { x: 0.2, y: 0.59, z: -0.39 },
+        travel: 0.1,
+      },
+      steeringWheel: {
+        centre: { x: 0.42, y: 0.86, z: -0.24 },
+        columnBase: { x: 0.42, y: 0.6, z: -0.55 },
+        radius: 0.19,
+        // Power steering, about 1½ turns to full lock.
+        ratio: 17,
+        spokes: 4,
+      },
+    },
+  },
 };
 
-export const vehicleOrder: readonly VehicleId[] = ['shortie', 'camel', 'perentie'];
+export const vehicleOrder: readonly VehicleId[] = ['shortie', 'camel', 'perentie', 'patrol'];
 
 export function isVehicleId(x: unknown): x is VehicleId {
   return typeof x === 'string' && x in vehicles;

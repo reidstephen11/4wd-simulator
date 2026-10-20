@@ -1,6 +1,6 @@
 # 4WD Simulator
 
-A relaxed, single-player off-road exploration and rock-crawling game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD (plain, or in Camel Trophy yellow), or the Army green Land Rover 110 Perentie from the _Bush Tucker Man_ TV series, through a patch of Australian high country, round a purpose-built 4WD park or along an RC crawler-style gate trail, using low range, lockers, a winch, planks and careful line choice to get over rough ground. No races — just the drive, what's over the next hill, and optional scored runs on the rock trails if you want them.
+A relaxed, single-player off-road exploration and rock-crawling game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD (plain, or in Camel Trophy yellow), the Army green Land Rover 110 Perentie from the _Bush Tucker Man_ TV series, or a GQ Patrol wagon, through a patch of Australian high country, round a purpose-built 4WD park, along an RC crawler-style gate trail or up a steep range you have to winch your way up, using low range, lockers, a winch, planks and careful line choice to get over rough ground. No races — just the drive, what's over the next hill, and optional scored runs on the rock trails if you want them.
 
 Built with Three.js, Rapier physics and TypeScript. Everything, including leaf textures, terrain detail and sound, is generated in code; there are no downloaded asset files. Graphics use smooth terrain lighting, fine eucalyptus foliage, reflective water and detailed vehicle materials. High quality uses the full resolution of displays with up to 2× pixel density.
 
@@ -80,8 +80,11 @@ Pick one on the welcome screen, or from **pause menu → Vehicle** while driving
 | Short-wheelbase 4WD     | 1970s Land Cruiser 40 Series                                              | 4.2 L petrol six, three-speed automatic                           | 2.3 m wheelbase, lifted on leaf springs, roof rack                                                     |
 | Camel Trophy 4WD        | The short-wheelbase 4WD in Camel Trophy dress                             | Same as the short-wheelbase 4WD                                   | Sandglow yellow, door and bonnet decals, four roof lamps, snorkel                                      |
 | Land Rover 110 Perentie | Les Hiddins' Army Land Rover 48-001 in the first _Bush Tucker Man_ series | 3.9 L Isuzu four-cylinder diesel, LT95A four-speed with low range | 2.79 m wheelbase, coil springs, 7.50R16 tyres, canvas tilt, bull bar, spare wheel under the rear floor |
+| GQ Patrol               | A Nissan GQ Patrol wagon set up for touring, late 1980s–90s               | 4.2 L TD42 six-cylinder diesel, five-speed with low range         | 2.97 m wheelbase, coil springs, 31-inch tyres, bull bar with driving lamps, snorkel, roof rack         |
 
 The Camel Trophy 4WD drives exactly like the short-wheelbase 4WD. The only difference you'll feel is its snorkel: the engine breathes from the top of the left windscreen pillar, about 2 m off the ground, so it wades much deeper water before it floods. (The real Camel Trophy cars were Land Rovers; the 1986 event, run in Australia from Cooktown to Darwin, used Land Rover 90s.)
+
+The GQ Patrol is the biggest and heaviest (about 2.4 t): steady and roomy, with the TD42's slow diesel knock, a snorkel for deep water and the longest wheelbase, so mind its belly on crests. Like the others it changes gear itself.
 
 The Perentie shifts its own gears like the other vehicle (the game has no clutch). Its longer wheelbase makes it steadier on the fire trail and harder on crests: it climbs The Chute, but coming down it the chassis grounds on a rock step.
 
@@ -128,6 +131,23 @@ Every line is drive-tested with both vehicles. The scored runs work on every lin
 
 Every section is drive-tested with both vehicles in low range, the hard ones with both lockers, and the Camel Trophy 4WD drives the whole loop without stopping. The switchbacks' hairpins are tight enough that you may need to stop, back up and turn again, especially in the Land Rover. The paper map shows the bridges and every gate's flags.
 
+**Stringybark Range** is big, steep country, 2 km across. The Stringybark River runs along the valley; north of it the land climbs in two steps, about 60 m to The Shelf and about 70 m more to the range top, where Stringybark Peak has a fire tower and Eagle Rock stands on cliffs. South of the river is Wombat Hill. Start at River Camp. Gravel fire trails (green markers) zig-zag up both steps and reach every campsite, the peak, the ford and the Wombat Hill lookout without winching.
+
+Eight **winch climbs** take the direct way up. Each zig-zags up the slope in short, steep pitches, each ending on a level landing, with a marked boulder straight ahead of every pitch. You can't drive up any of them, even in low range with both lockers. At the bottom, select low range (L), lock both diffs and press E: quick attach hooks the marked boulder ahead. Hold R to reel in with a little throttle, and steer to keep the nose on the boulder. On the landing, let go (E), turn to face the next pitch, stop and press E again. Eagle Rock's lookout and the old Stockman's Hut on Clay Knoll can only be reached this way.
+
+| Climb          | Surface  | Pitches | Leads to           |
+| -------------- | -------- | ------- | ------------------ |
+| Granite Steps  | Granite  | 8       | The Shelf          |
+| Slippery Dip   | Wet clay | 6       | The Shelf          |
+| Greasy Pole    | Wet clay | 8       | The Shelf          |
+| Devil's Ladder | Granite  | 8       | The range top      |
+| Goat Track     | Granite  | 8       | The range top      |
+| Eagle Rock     | Granite  | 5       | Eagle Rock lookout |
+| Hut Spur       | Wet clay | 4       | Stockman's Hut     |
+| Bullock Track  | Wet clay | 5       | Top of Wombat Hill |
+
+The granite pitches have rock steps 0.7 m tall every 5 m, too tall for a tyre on a slope that steep. The clay pitches are about 25–29°, and wet clay grips about half as well as dirt, so the tyres just spin. Every climb is tested with all four vehicles, winching up and failing to drive up.
+
 ## Controls
 
 | Action                         | Keyboard                                              | Gamepad                                              |
@@ -153,6 +173,8 @@ Every section is drive-tested with both vehicles in low range, the hard ones wit
 | Headlights: off / low / high   | N                                                     | Hold LB → headlights                                 |
 | Map                            | M (scroll to zoom, drag to move it)                   | View / Select                                        |
 | Pause                          | Esc                                                   | Start / Options                                      |
+
+Winch quick attach (E) hooks the best anchor ahead within reach of the 30 m cable: it prefers marked boulders (a ring bolt and a paint mark on top) to trees and skips anything closer than 7 m. To choose an anchor yourself, use **Winch** in the tool menu.
 
 Placing planks: choose **Place planks** in the tool menu, move them with W/S, turn them with A/D, place with E, cancel with Esc. Prompts on screen switch between keyboard and gamepad glyphs depending on what you last touched.
 
@@ -199,7 +221,7 @@ The **handbrake** stays on once pulled (Space or X/Square), until you press it a
 
 **Crawl gauges** appear at the bottom right in low range, with precision crawl or in the driver view (**I** cycles auto / always / off). The inclinometer shows pitch and roll and turns red near tipping angles (about 32° pitch, 28° roll). The tyre diagram shades each tyre by how much weight it carries, draws a lifted tyre as a dashed outline and a spinning one in orange, and marks locked axles. It warns when the belly is on a rock, and shows gear (L1, H2, R…), speed and revs.
 
-**Scored runs (optional):** drive into either end of a crawl trail's technical line (Granite Link or any Granite Spur obstacle) and a clock starts under the compass. Each time the car backs up costs 1 point, each time the chassis knocks a rock 1 point, and hooking up the winch 5 points. Reach the far end to see your time and points; your best per trail (fewest points, then quickest) is saved. Leaving the line or rolling ends the run; drifting past an entrance just cancels it.
+**Scored runs (optional):** drive into either end of a crawl trail's technical line (Granite Link or any Granite Spur obstacle) and a clock starts under the compass. Each time the car backs up costs 1 point, each time the chassis knocks a rock 1 point, and hooking up the winch 5 points (except on Stringybark Range's winch climbs, which need it). Reach the far end to see your time and points; your best per trail (fewest points, then quickest) is saved. Leaving the line or rolling ends the run; drifting past an entrance just cancels it.
 
 **Sound** follows what the car is doing: the inline six's burble changes with revs and load, low range adds transfer-case whine, tyres chirp when they spin on rock, the springs squeak as the axles flex, and the chassis grinds and knocks when it touches rock. Range changes clunk, the air lockers click and hiss, and selecting drive or reverse clunks. In rain there is a broad hiss and a closer patter outside, and the rain drums on the roof in the driver's seat.
 
@@ -260,6 +282,8 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] **Camel Trophy 4WD:** pause menu → Vehicle → Camel Trophy 4WD. Check the yellow paint and decals, the roof lamps and the snorkel, and that it drives through deep water (the High Country's Deep Crossing) that stalls the plain short-wheelbase 4WD.
 - [ ] **v0.18 flag touches:** on Crawler Creek, clip a gate's flag on the way through: a knock plays, "Touched gate N's red flag" (or blue) shows and the gate count adds "· 1 flag". Back up and touch the same flag again: it doesn't count twice. Drive the middle of the gates and nothing is counted. Finish a lap and check the result card lists the flags.
 - [ ] **v0.17 playtest fixes:** Settings → Units → mph changes the speed in the status strip and the crawl gauges. The High Country start faces along the track past the Camp Rock Course, and no shrub pokes through the bonnet in the driver's seat. Drive into a tree at 60 km/h: the car stops against it instead of spinning away or rolling. On Crawler Creek, the gate count under the compass goes up gate by gate, and driving round a gate shows "Missed gate …". On a phone held upright, the top buttons don't overlap; the welcome screen opens at the top; the map opens zoomed on the car (pinch and drag work); Pause → Controls lists the touch controls. At 1024×600 and on a phone held sideways the pause menu fits without scrolling, and the tool menu doesn't cover the compass. Dust looks like soft puffs, and the headlight pool fades out at its edges.
+- [ ] **v0.19 Stringybark Range:** choose it on the welcome screen. Drive the fire trails from River Camp up to Shelf Camp, Range Top Camp and Stringybark Peak, and across the ford to Wombat Hill; none of them should need the winch or low range. Then try the winch climbs: first try to drive up (the clay should just spin, and the rock steps should stop you), then winch up from anchor to anchor. Check E picks the boulder straight ahead each time, not the one you just reached or a tree, that every next anchor is in reach from the landing, and that the mud looks and feels slippery. Winch up to Eagle Rock and Stockman's Hut. Check the scored run on a climb doesn't add points for the winch. Check the frame rate on Medium with `?debug`; this map has the most trees.
+- [ ] **v0.19 GQ Patrol:** pause menu → Vehicle → GQ Patrol. Check its look (white over charcoal, bull bar with driving lamps, snorkel, roof rack, white steel wheels), the TD42 idle and knock, the driver's seat (C → Driver) and the dials, and the pull handbrake under the dash. It should wade deeper water than the short-wheelbase 4WD.
 - [ ] **Land Rover 110:** pause menu → Vehicle → Land Rover 110 Perentie. Check the look against the _Bush Tucker Man_ vehicle, the diesel clatter at idle and its starter (no turbo-like whistle as it speeds up), the driver's view (C → Driver), and the Granite Spur loop. Reload the page and it should still be the Land Rover.
 
 ## Project layout

@@ -1,14 +1,23 @@
 import { SurfaceId } from '../../data/surfaces';
-import type { FlatDef, MapDef, ScarpDef, HillDef, TrackDef } from './mapTypes';
+import type { FlatDef, MapDef, ScarpDef, HillDef, TrackDef, TrackStepsDef } from './mapTypes';
 import { Noise2D, clamp, smoothstep } from './noise';
 import { attrAt, densify, locate, type DensePolyline } from './polyline';
 import { GroundTint, NO_WATER, Terrain } from './terrain';
-import type { CreekInfo, GullyInfo, StaticBox, TerrainFeatures, TrackInfo } from './features';
+import type { CreekInfo, GullyInfo, StaticBox, StaticRock, TerrainFeatures, TrackInfo } from './features';
 import { buildDetailPatch, type DetailPatch } from './detail';
 import { onBridge } from './bridges';
+import { stoneMesh } from './rockShape';
 
 /** Macro relief is evaluated on a coarser grid and upsampled. */
 const MACRO_STEP = 2;
+/**
+ * A stair step's rise is spread over this much of the 1 m ground, starting this far
+ * behind its riser so the 1 m grid doesn't smear it in front of the face (m).
+ */
+const STAIR_RAMP = 1;
+const STAIR_LEAD = 1;
+/** Stair risers reach this far up the track behind the face, over the ramp (m). */
+const STAIR_DEPTH = 2.6;
 /** Distance from the creek centreline over which the banks are carved. */
 const CREEK_BANK_REACH = 34;
 /** Steepest rise (height per metre) of the valley sides beyond the carved banks. */
@@ -425,6 +434,12 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
     let profile = boxBlur(boxBlur(smoothed, def.smooth * 0.5), def.smooth * 0.5);
     profile = applyPins(def, poly, profile);
     profile = linearise(profile, poly, [...(def.even ?? []), ...spans]);
+    if (def.landings) profile = climbProfile(def, poly, profile);
+    if (def.endBlend)
+      for (let k = 0; k < poly.count; k++) {
+        const w = smoothstep(0, def.endBlend, Math.min(poly.s[k], poly.length - poly.s[k]));
+        profile[k] = raw[k] + (profile[k] - raw[k]) * w;
+      }
     // A cutting or gully floor sits below the smoothed ground.
     if (def.cut) for (let k = 0; k < poly.count; k++) profile[k] -= pairsAt(def.cut, poly.s[k]);
     if (def.rockySteps) {
@@ -468,12 +483,36 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
     heights[i] = h + (target - h) * w;
   }
 
+  // Anchor knolls beside winch climbs, at a height set by the climb's profile. The
+  // ground of every track stays as graded.
+  for (const t of tracks)
+    for (const kn of t.def.knolls ?? []) {
+      const { i: k, f } = locate(t.poly, kn.at);
+      const k1 = Math.min(t.poly.count - 1, k + 1);
+      const target = t.profile[k] + (t.profile[k1] - t.profile[k]) * f + kn.height;
+      const core = kn.radius * 0.35;
+      for (let iz = Math.floor(kn.z - kn.radius + half); iz <= Math.ceil(kn.z + kn.radius + half); iz++)
+        for (let ix = Math.floor(kn.x - kn.radius + half); ix <= Math.ceil(kn.x + kn.radius + half); ix++) {
+          const d = Math.hypot(ix - half - kn.x, iz - half - kn.z);
+          if (d >= kn.radius) continue;
+          const i = iz * res + ix;
+          const owner = trackOwner[i];
+          if (owner >= 0 && trackDist[i] <= tracks[owner].def.width / 2 + 0.3) continue;
+          heights[i] += (target - heights[i]) * (1 - smoothstep(core, kn.radius, d));
+        }
+    }
+
   // Staircase ledges: granite steps across the track (static boxes). Each leans with the
   // graded track across it and reaches below the ground under its whole footprint, so an
   // end over a falling hillside juts out of the slope instead of floating above it.
   const boxes: StaticBox[] = [];
+  const rocks: StaticRock[] = [];
   for (const t of tracks) {
     for (const st of t.def.steps ?? []) {
+      if (st.stair) {
+        for (const at of stairSteps(st)) rocks.push(stairRiser(t, at, st, sampleH));
+        continue;
+      }
       for (let s = st.from; s <= st.to; s += st.spacing) {
         const k = Math.min(t.poly.count - 2, Math.round(s));
         const dx = t.poly.xs[k + 1] - t.poly.xs[k];
@@ -677,6 +716,7 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
         else if (kind === 'gravel') tint[i] = GroundTint.Gravel;
         else if (kind === 'dirt') tint[i] = GroundTint.DirtTrack;
         else if (kind === 'mud') tint[i] = GroundTint.Mud;
+        else if (kind === 'grass') tint[i] = GroundTint.GrassDry;
       }
   }
 
@@ -697,9 +737,16 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
       continue;
     }
     const sid =
-      def.surface === 'gravel' ? SurfaceId.Gravel : def.surface === 'rock' ? SurfaceId.Rock : SurfaceId.Dirt;
+      def.surface === 'gravel'
+        ? SurfaceId.Gravel
+        : def.surface === 'rock'
+          ? SurfaceId.Rock
+          : def.surface === 'mud'
+            ? SurfaceId.Mud
+            : SurfaceId.Dirt;
     surface[i] = sid;
-    if (def.surface === 'rock') {
+    if (def.surface === 'mud') tint[i] = GroundTint.Mud;
+    else if (def.surface === 'rock') {
       const x = (i % res) - half;
       const z = Math.floor(i / res) - half;
       tint[i] = noise2.noise(x / 5, z / 5) > -0.15 ? GroundTint.Rock : GroundTint.Scree;
@@ -766,7 +813,7 @@ export function* generateTerrainSteps(map: MapDef): Generator<GenStep, Generated
       tracks,
       creek,
       boxes,
-      rocks: [],
+      rocks,
       logs: [],
       timbers: [],
       gates: [],
@@ -811,6 +858,88 @@ function linearise(
       if (poly.s[k] > a && poly.s[k] < b) profile[k] = ya + ((yb - ya) * (poly.s[k] - a)) / (b - a);
   }
   return profile;
+}
+
+/**
+ * A winch climb: landings rising at the landing grade and pitches taking the rest of the
+ * rise, evenly, from the profile's height at the start of the track to its height at the
+ * end, so the climb meets the ground it joins at both ends.
+ */
+function climbProfile(def: TrackDef, poly: DensePolyline, profile: Float32Array): Float32Array {
+  const landings = def.landings ?? [];
+  const landingTan = Math.tan(((def.landingGrade ?? 4) * Math.PI) / 180);
+  const total = poly.length;
+  const flatLength = landings.reduce((sum, [from, to]) => sum + Math.max(0, to - from), 0);
+  // Stair risers take their share of the rise; the pitches between them are gentler.
+  const stairs = (def.steps ?? []).flatMap((st) =>
+    st.stair ? stairSteps(st).map((at) => [at, st.rise]) : [],
+  );
+  const stairRise = stairs.reduce((sum, [, rise]) => sum + rise, 0);
+  const rise = profile[poly.count - 1] - profile[0];
+  const pitchTan = (rise - stairRise - flatLength * landingTan) / Math.max(1, total - flatLength);
+  // Height gained from the start to distance s.
+  const gained = (s: number) => {
+    let flat = 0;
+    for (const [from, to] of landings) flat += clamp(s, from, to) - from;
+    let up = flat * landingTan + (s - flat) * pitchTan;
+    for (const [at, r] of stairs) up += r * clamp((s - at - STAIR_LEAD) / STAIR_RAMP, 0, 1);
+    return up;
+  };
+  const out = Float32Array.from(profile);
+  for (let k = 0; k < poly.count; k++) out[k] = profile[0] + gained(poly.s[k]);
+  return out;
+}
+
+/** Distances along the track of a stair's risers. */
+function stairSteps(st: TrackStepsDef): number[] {
+  const out: number[] = [];
+  for (let s = st.from; s <= st.to + 1e-6; s += st.spacing) out.push(s);
+  return out;
+}
+
+/**
+ * A stair riser `at` metres along a winch climb: a granite hull across the track whose
+ * front face stands `stair.vertical` sheer above the tread below, bevels up to the full
+ * rise and runs back over the ground behind at the tread's grade, leaning across with
+ * the graded track.
+ */
+function stairRiser(
+  t: TrackInfo,
+  at: number,
+  st: TrackStepsDef,
+  sampleH: (x: number, z: number) => number,
+): StaticRock {
+  const { i, f } = locate(t.poly, at);
+  const k = Math.min(t.poly.count - 2, i);
+  const x = t.poly.xs[k] + (t.poly.xs[k + 1] - t.poly.xs[k]) * f;
+  const z = t.poly.zs[k] + (t.poly.zs[k + 1] - t.poly.zs[k]) * f;
+  const len = Math.hypot(t.poly.xs[k + 1] - t.poly.xs[k], t.poly.zs[k + 1] - t.poly.zs[k]) || 1;
+  const ux = (t.poly.xs[k + 1] - t.poly.xs[k]) / len,
+    uz = (t.poly.zs[k + 1] - t.poly.zs[k]) / len;
+  const y = t.profile[k] + (t.profile[k + 1] - t.profile[k]) * f;
+  // The tread's grade, from the three metres below the riser.
+  const back = Math.max(0, k - 3);
+  const grade = (t.profile[k] - t.profile[back]) / Math.max(1, t.poly.s[k] - t.poly.s[back]);
+  const hx = t.def.width / 2 + 0.9;
+  const lean = (sampleH(x + uz * hx, z - ux * hx) - sampleH(x - uz * hx, z + ux * hx)) / (2 * hx);
+  const { vertical, bevelDeg } = st.stair!;
+  const run = (st.rise - vertical) / Math.tan((bevelDeg * Math.PI) / 180);
+  let bottom = Infinity;
+  for (let u = 0; u <= STAIR_DEPTH + 1e-6; u += STAIR_DEPTH / 3)
+    for (const w of [-hx, 0, hx])
+      bottom = Math.min(bottom, sampleH(x + ux * u + uz * w, z + uz * u - ux * w));
+  bottom -= y + 0.4;
+  const pts: number[] = [];
+  for (const w of [-hx, hx])
+    for (const [u, h] of [
+      [0, bottom],
+      [0, vertical],
+      [run, st.rise + grade * run],
+      [STAIR_DEPTH, st.rise + grade * STAIR_DEPTH],
+      [STAIR_DEPTH, bottom + grade * STAIR_DEPTH],
+    ])
+      pts.push(ux * u + uz * w, h + (h > bottom + 0.1 ? w * lean : 0), uz * u - ux * w);
+  return { x, y, z, ...stoneMesh(pts) };
 }
 
 /** Apply pinned heights (third value on track control points). */

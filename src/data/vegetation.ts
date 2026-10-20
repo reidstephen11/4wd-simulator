@@ -29,6 +29,8 @@ export const scatterTuning = {
   anchorRockRadius: 1.0,
   /** Share of large scattered boulders that are marked anchors. */
   markedShare: 0.35,
+  /** No scattered boulder within this distance of a winch climb is marked as an anchor (m). */
+  climbAnchorClearance: 32,
   /** Trees closer than this to the creek's water edge are skipped (m). */
   creekClearance: 3,
   propClearance: 9,

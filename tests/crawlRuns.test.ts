@@ -6,8 +6,9 @@ import { emptyInput } from '../src/sim/input/vehicleInput';
 import { loadRapier } from '../src/sim/physics';
 import { Simulation } from '../src/sim/sim';
 import { betterRun, CrawlRuns, type CrawlRunEvent, type CrawlRunInput } from '../src/sim/crawlRuns';
+import { winchClimbs } from '../src/data/winchClimbs';
 import { trailPoint } from '../src/sim/world/crawlTrail';
-import { testWorld } from './world';
+import { stringybarkWorld, testWorld } from './world';
 
 const DT = 1 / 60;
 const trail = challengeTrails.find((t) => t.id === 'whoa-boys')!;
@@ -81,6 +82,22 @@ describe('scored crawl runs', () => {
     expect(e?.type).toBe('started');
     expect(runs.run?.trail.id).toBe('sidling');
     expect(runs.run?.dir).toBe(1);
+  });
+
+  it('counts no points for the winch on a winch climb, which needs it', () => {
+    const world = stringybarkWorld();
+    const climb = winchClimbs[0];
+    const track = world.features.tracks.find((t) => t.def.id === climb.id)!;
+    const runs = new CrawlRuns([climb.trail], world.features.tracks);
+    const at = (along: number, winchAttached = false) => {
+      const p = trailPoint(track, along);
+      return runs.update({ x: p.x, z: p.z, tiltDeg: 20, knock: false, winchAttached, dt: DT });
+    };
+    expect(at(1)?.type).toBe('started');
+    let end: CrawlRunEvent | null = null;
+    for (let s = 1; s < track.poly.length && !end; s += 0.05) end = at(s, Math.floor(s / 10) % 2 === 0);
+    expect(end?.type).toBe('finished');
+    if (end?.type === 'finished') expect(end.result.points).toBe(0);
   });
 
   it('ranks fewer penalty points first, then the quicker time', () => {
