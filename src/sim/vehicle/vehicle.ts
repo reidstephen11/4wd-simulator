@@ -1,6 +1,6 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
 import { SurfaceId, surfaceGrip, surfaces, tyreLock, waterDrag } from '../../data/surfaces';
-import type { VehicleTuning } from '../../data/vehicle';
+import { crashTuning, type VehicleTuning } from '../../data/vehicle';
 import { nextHeadlightMode, type HeadlightMode } from '../../data/headlights';
 import { damageTuning } from '../../data/damage';
 import { Groups, groups, type Physics } from '../physics';
@@ -850,10 +850,26 @@ export class Vehicle {
       b.rotation += delta - this.wheelRotationDelta[j];
     }
     this.senseBodyContact(dt, vel, ang, com);
-    // Impact detection: sudden change in velocity.
-    const dvx = vel.x - this.lastVel.x;
-    const dvy = vel.y - this.lastVel.y;
-    const dvz = vel.z - this.lastVel.z;
+    const hx = vel.x - this.lastVel.x,
+      hz = vel.z - this.lastVel.z;
+    if (
+      Math.hypot(hx, hz) > crashTuning.minDeltaV &&
+      Math.hypot(this.lastVel.x, this.lastVel.z) > crashTuning.minDeltaV &&
+      hx * this.lastVel.x + hz * this.lastVel.z < 0
+    ) {
+      // Crumple: a hard stop against something. What the contact solver hands back
+      // sideways or in reverse is mostly absorbed.
+      const k = crashTuning.keepSpeed;
+      this.body.setLinvel({ x: vel.x * k, y: Math.min(vel.y, vel.y * k), z: vel.z * k }, true);
+      const s = crashTuning.keepSpin;
+      this.body.setAngvel({ x: ang.x * s, y: ang.y * s, z: ang.z * s }, true);
+      this.speed *= k;
+    }
+    // Impact detection: sudden change in velocity, including what a crumple absorbed.
+    const after = this.body.linvel();
+    const dvx = after.x - this.lastVel.x;
+    const dvy = after.y - this.lastVel.y;
+    const dvz = after.z - this.lastVel.z;
     const dv = Math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
     // Ignore gravity's own contribution.
     this.lastImpact = Math.max(0, dv - 9.81 * dt * 1.5);
@@ -862,9 +878,9 @@ export class Vehicle {
       this.lastImpactDir.y = dvy / dv;
       this.lastImpactDir.z = dvz / dv;
     }
-    this.lastVel.x = vel.x;
-    this.lastVel.y = vel.y;
-    this.lastVel.z = vel.z;
+    this.lastVel.x = after.x;
+    this.lastVel.y = after.y;
+    this.lastVel.z = after.z;
   }
 }
 

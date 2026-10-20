@@ -1,5 +1,5 @@
 import { BUILD_LABEL, GAME_VERSION } from '../core/buildInfo';
-import { controlsTable } from '../data/controls';
+import { controlsTable, touchControlsTable } from '../data/controls';
 import type { Settings } from '../sim/save/save';
 import type { VehicleId } from '../data/vehicle';
 import { vehicleOrder, vehicles } from '../data/vehicles';
@@ -39,6 +39,8 @@ export class PauseMenu {
   private campsiteName = '';
   private vehicle: VehicleId = 'shortie';
   private map: MapId = 'high-country';
+  /** Opened from the touch controls: the Controls page lists those instead of the keyboard. */
+  private touch = false;
 
   constructor(
     root: HTMLElement,
@@ -51,8 +53,9 @@ export class PauseMenu {
     root.appendChild(this.el);
   }
 
-  open(campsiteName: string): void {
+  open(campsiteName: string, touch = false): void {
     this.campsiteName = campsiteName;
+    this.touch = touch;
     this.isOpen = true;
     this.show('main');
     this.el.classList.remove('hidden');
@@ -87,15 +90,18 @@ export class PauseMenu {
     const card = document.createElement('div');
     card.className = 'pause-card paper';
     if (page === 'main') {
+      card.classList.add('pause-main');
       card.innerHTML = `<h2>Paused</h2>
-        <button data-focus data-act="resume">Resume</button>
-        <button data-focus data-act="map">Map</button>
-        <button data-focus data-act="camp">Return to last campsite<small></small></button>
-        <button data-focus data-act="vehicle">Vehicle<small class="vehicle-name"></small></button>
-        <button data-focus data-act="location">Location<small class="map-name"></small></button>
-        <button data-focus data-act="settings">Settings</button>
-        <button data-focus data-act="controls">Controls</button>
-        <button data-focus data-act="menu">Main menu<small>World, vehicle and weather</small></button>
+        <div class="pause-buttons">
+          <button data-focus data-act="resume">Resume</button>
+          <button data-focus data-act="map">Map</button>
+          <button data-focus data-act="camp">Return to last campsite<small></small></button>
+          <button data-focus data-act="vehicle">Vehicle<small class="vehicle-name"></small></button>
+          <button data-focus data-act="location">Location<small class="map-name"></small></button>
+          <button data-focus data-act="settings">Settings</button>
+          <button data-focus data-act="controls">Controls</button>
+          <button data-focus data-act="menu">Main menu<small>World, vehicle and weather</small></button>
+        </div>
         <p class="build-label" title="Build ${BUILD_LABEL}">Version ${GAME_VERSION}</p>`;
       (card.querySelector('small') as HTMLElement).textContent = this.campsiteName;
       (card.querySelector('.vehicle-name') as HTMLElement).textContent = vehicles[this.vehicle].tuning.name;
@@ -141,10 +147,16 @@ export class PauseMenu {
         <p class="menu-note damage-note">${damageNotes[s.damage]}</p>
         <button data-focus data-act="back">Back</button>`;
     } else {
-      const rows = controlsTable
-        .map(([a, k, g]) => `<tr><td>${a}</td><td>${k}</td><td>${g}</td></tr>`)
-        .join('');
-      card.innerHTML = `<h2>Controls</h2><table class="controls"><thead><tr><th>Action</th><th>Keyboard</th><th>Gamepad</th></tr></thead><tbody>${rows}</tbody></table>
+      const table = this.touch
+        ? `<thead><tr><th>Action</th><th>Touch</th></tr></thead><tbody>${touchControlsTable
+            .map(([a, t]) => `<tr><td>${a}</td><td>${t}</td></tr>`)
+            .join('')}</tbody>`
+        : `<thead><tr><th>Action</th><th>Keyboard</th><th>Gamepad</th></tr></thead><tbody>${controlsTable
+            .map(([a, k, g]) => `<tr><td>${a}</td><td>${k}</td><td>${g}</td></tr>`)
+            .join('')}</tbody>`;
+      // The table scrolls on its own so Back stays at the bottom of the card.
+      card.classList.add('pause-controls');
+      card.innerHTML = `<h2>Controls</h2><div class="controls-scroll"><table class="controls">${table}</table></div>
         <button data-focus data-act="back">Back</button>`;
     }
     this.el.innerHTML = '';

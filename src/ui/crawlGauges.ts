@@ -27,6 +27,14 @@ export interface GaugeState {
 
 export type GaugeMode = 'auto' | 'on' | 'off';
 
+export type SpeedUnits = 'kmh' | 'mph';
+
+/** A speed for the HUD in the chosen units: one decimal under 10, whole numbers above. */
+export function formatSpeed(kmh: number, units: SpeedUnits): string {
+  const v = units === 'mph' ? kmh * 0.621371 : kmh;
+  return `${v < 10 ? v.toFixed(1) : v.toFixed(0)} ${units === 'mph' ? 'mph' : 'km/h'}`;
+}
+
 /**
  * Canvas rotation (radians) for a gauge's vehicle outline. Canvas y points down, so a
  * positive rotation turns clockwise on screen: it lifts the side view's front (drawn on
@@ -58,6 +66,8 @@ export class CrawlGauges {
   private readonly accent: string;
   private readonly paper: string;
   private readonly warn = '#a83a2a';
+  /** Speed units from the settings. */
+  units: SpeedUnits = 'kmh';
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div');
@@ -89,6 +99,7 @@ export class CrawlGauges {
       g.pitch.toFixed(0),
       g.roll.toFixed(0),
       g.speedKmh.toFixed(1),
+      this.units,
       g.gear,
       g.range,
       Math.round(g.rpm / 50),
@@ -111,8 +122,7 @@ export class CrawlGauges {
     c.textBaseline = 'alphabetic';
     const gear = `${g.range === 'low' ? 'L' : 'H'}${g.gear}`;
     c.fillText(gear, 10, H - 9);
-    const kmh = g.speedKmh < 10 ? g.speedKmh.toFixed(1) : g.speedKmh.toFixed(0);
-    c.fillText(`${kmh} km/h`, 44, H - 9);
+    c.fillText(formatSpeed(g.speedKmh, this.units), 44, H - 9);
     // Rev bar.
     const x0 = 128;
     const bw = 120;

@@ -43,6 +43,26 @@ async function fingers(page: Page) {
   };
 }
 
+/** Pairs of visible on-screen buttons (touch controls and HUD) whose boxes overlap. */
+function overlappingButtons(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const boxes = [...document.querySelectorAll<HTMLElement>('.touch-btn, .hud button')]
+      .map((el) => ({
+        name: el.textContent?.trim() || el.getAttribute('aria-label') || '?',
+        r: el.getBoundingClientRect(),
+      }))
+      .filter(({ r }) => r.width > 0 && r.height > 0);
+    const hits: string[] = [];
+    boxes.forEach((a, i) =>
+      boxes.slice(i + 1).forEach((b) => {
+        if (a.r.left < b.r.right && b.r.left < a.r.right && a.r.top < b.r.bottom && b.r.top < a.r.bottom)
+          hits.push(`${a.name} / ${b.name}`);
+      }),
+    );
+    return hits;
+  });
+}
+
 test.describe('phone', () => {
   test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
@@ -128,6 +148,15 @@ test.describe('phone', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await waitSim(page, 0.3);
     await shot(page, 'touch', 'portrait');
+    // Upright, the top row (II, MAP, LIGHTS, ⛶) and the camera buttons share a line without overlapping.
+    for (const size of [
+      { width: 390, height: 844 },
+      { width: 375, height: 667 },
+    ]) {
+      await page.setViewportSize(size);
+      await waitSim(page, 0.2);
+      expect(await overlappingButtons(page), `${size.width}×${size.height}`).toEqual([]);
+    }
     expect(errors).toEqual([]);
   });
 });

@@ -274,3 +274,18 @@ export const vehicleTuning: VehicleTuning = {
   winchMount: { x: 0, y: 0.28, z: -2.0 },
   towPoint: { x: 0, y: 0.05, z: 1.95 },
 };
+
+/**
+ * A hard hit (a tree, a rock face) crumples the bumper and soaks up the energy. Rapier
+ * resolves a deep one-step overlap by pushing the body out, which can turn a 60 km/h
+ * frontal hit into a sideways slide and spin; after a hit this big the chassis keeps only
+ * a little of what is left.
+ */
+export const crashTuning = {
+  /** Horizontal velocity change in one step (m/s) that counts as a crash. */
+  minDeltaV: 5,
+  /** Share of the horizontal velocity kept after the crash. */
+  keepSpeed: 0.12,
+  /** Share of the spin kept after the crash. */
+  keepSpin: 0.2,
+};

@@ -26,6 +26,22 @@ export class UiSounds {
     chime(this.ctx, this.out, this.echo);
   }
 
+  /** One soft bell note: a gate passed. */
+  tick(): void {
+    const ctx = this.ctx;
+    const t = ctx.currentTime + 0.02;
+    const o = ctx.createOscillator();
+    o.frequency.value = 1318.5;
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    o.connect(g);
+    g.connect(this.out);
+    g.connect(this.echo);
+    pluck(g.gain, t, audioTuning.ui.chimeGain * 0.55, 0.005, 0.6);
+    o.start(t);
+    o.stop(t + 1);
+  }
+
   rustle(level = 1): void {
     rustle(this.ctx, this.out, this.noise, level);
   }

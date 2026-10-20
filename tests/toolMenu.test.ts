@@ -19,4 +19,12 @@ describe('tool menu layout', () => {
           expect(Math.abs(p.y) + sc.h / 2).toBeLessThanOrEqual(sc.vh / 2);
         }
       });
+
+  it('keeps the ring low on a phone held sideways, clear of the compass and status strip', () => {
+    for (const n of [6, 7, 8]) {
+      const { ry } = ringRadii(n, 112, 62, 844, 390);
+      // The top option's upper edge stays below the compass (about 50 px from the top).
+      expect(390 / 2 - ry - 62 / 2).toBeGreaterThan(50);
+    }
+  });
 });

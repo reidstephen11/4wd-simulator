@@ -42,9 +42,11 @@ The game opens on a **welcome screen**: choose the world, the vehicle, the time 
 
 On wet ground hard braking takes longer and can lock the wheels: a locked tyre slides, scrubs and loses most of its steering grip, so ease off the brake to steer. From 60 km/h on dirt the cars stop in about 16–17 m dry, 18–19 m after rain and 20–23 m in the rain. Puddles lie on the flat stretches of the dirt and gravel tracks (never on the park's obstacle lines); driving through one splashes and sounds like the creek, and the muddy bottom is slippery.
 
+Your speed and gear show in the status strip (bottom left), in km/h or mph (**Pause menu → Settings → Units**). When the crawl gauges are showing (low range, precision crawl, or with I), the speed moves into them; in the driver's seat the dash speedometer reads km/h, as on the real car.
+
 The engine starts as you arrive: the starter cranks for about a second (a little longer for the diesel) and the car stays put until the engine catches. The same happens after swapping vehicles and when restarting a flooded engine.
 
-The version number (for example v0.16) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
+The version number (for example v0.17) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
 
 ## Headlights
 
@@ -107,7 +109,7 @@ Pick one on the welcome screen, or from **pause menu → Location** while drivin
 
 Every line is drive-tested with both vehicles. The scored runs work on every line, and the paper map labels each station once you've found it.
 
-**Crawler Creek** is an RC crawler-style trail at full size: one 1.3 km loop from the Trailhead, marked by 52 numbered gates. Each gate is a pair of flags, red on your left and blue on your right, with its number on a board on the red flag's stake. Drive through them in number order. The trail crosses Crawler Creek twice and climbs Knuckle Ridge, an escarpment north of the creek. The gates don't score anything yet (they're laid out so that a later version can count gates passed and flags hit); the scored runs work on every section.
+**Crawler Creek** is an RC crawler-style trail at full size: one 1.3 km loop from the Trailhead, marked by 52 numbered gates. Each gate is a pair of flags, red on your left and blue on your right, with its number on a board on the red flag's stake. Drive through them in number order. The trail crosses Crawler Creek twice and climbs Knuckle Ridge, an escarpment north of the creek. The gates are counted: under the compass, **Gate 14 / 52** shows the next one to drive through. Each gate passed rings a soft bell; driving round a gate, or skipping ahead, shows "Missed gate 13" and counts it, and passing gate 52 shows how many you made in order. The count starts at the first gate you drive through, so joining the trail part way round misses nothing. Hitting the flags isn't counted yet. The scored runs work on every section.
 
 | Section           | Gates | Grade    | What it is                                                                |
 | ----------------- | ----- | -------- | ------------------------------------------------------------------------- |
@@ -149,7 +151,7 @@ Every section is drive-tested with both vehicles in low range, the hard ones wit
 | Crawl gauges: auto / on / off  | I                                                     | Shown in low range                                   |
 | Horn                           | H                                                     | Left stick click                                     |
 | Headlights: off / low / high   | N                                                     | Hold LB → headlights                                 |
-| Map                            | M                                                     | View / Select                                        |
+| Map                            | M (scroll to zoom, drag to move it)                   | View / Select                                        |
 | Pause                          | Esc                                                   | Start / Options                                      |
 
 Placing planks: choose **Place planks** in the tool menu, move them with W/S, turn them with A/D, place with E, cancel with Esc. Prompts on screen switch between keyboard and gamepad glyphs depending on what you last touched.
@@ -158,25 +160,26 @@ Placing planks: choose **Place planks** in the tool menu, move them with W/S, tu
 
 On a touch screen the game shows on-screen controls. They work held sideways (landscape) or upright (portrait).
 
-| Action                                | Touch                                                                                                  |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Steer                                 | Joystick, bottom left (push part way for part lock)                                                    |
-| Accelerate / brake and reverse        | GAS / BRAKE, bottom right (hold BRAKE when stopped to reverse)                                         |
-| Handbrake on / off                    | HAND                                                                                                   |
-| High / low range                      | LOW                                                                                                    |
-| Precision crawl, diff locks           | CRAWL, F LOCK, R LOCK                                                                                  |
-| Winch attach / detach, pick up planks | USE                                                                                                    |
-| Winch in / out                        | Hold IN / OUT (shown while the winch is attached)                                                      |
-| Right vehicle                         | Hold UPRIGHT (shown when needed)                                                                       |
-| Tool menu                             | TOOLS, then tap an option (tap the space around it to close)                                           |
-| Placing planks / choosing anchor      | Joystick, then USE to confirm or BACK to cancel                                                        |
-| Orbit camera                          | Drag a finger on the view                                                                              |
-| Camera distance                       | Pinch with two fingers on the view                                                                     |
-| Cycle views / recenter camera         | View and Reset view, top right                                                                         |
-| Map / pause                           | MAP and II, top left (tap outside the map to close it); ⛶ goes full screen where the browser allows it |
-| Headlights                            | LIGHTS, top left: off, low beam, high beam                                                             |
+| Action                                | Touch                                                                                  |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| Steer                                 | Joystick, bottom left (push part way for part lock)                                    |
+| Accelerate / brake and reverse        | GAS / BRAKE, bottom right (hold BRAKE when stopped to reverse)                         |
+| Handbrake on / off                    | HAND                                                                                   |
+| High / low range                      | LOW                                                                                    |
+| Precision crawl, diff locks           | CRAWL, F LOCK, R LOCK                                                                  |
+| Winch attach / detach, pick up planks | USE                                                                                    |
+| Winch in / out                        | Hold IN / OUT (shown while the winch is attached)                                      |
+| Right vehicle                         | Hold UPRIGHT (shown when needed)                                                       |
+| Tool menu                             | TOOLS, then tap an option (tap the space around it to close)                           |
+| Placing planks / choosing anchor      | Joystick, then USE to confirm or BACK to cancel                                        |
+| Orbit camera                          | Drag a finger on the view                                                              |
+| Camera distance                       | Pinch with two fingers on the view                                                     |
+| Cycle views / recenter camera         | View and Reset view (⟲ when the phone is upright), top right                           |
+| Map / pause                           | MAP and II, top left (pinch to zoom the map, drag to move it, tap outside to close it) |
+| Full screen                           | ⛶, top left, where the browser allows it                                               |
+| Headlights                            | LIGHTS, top left: off, low beam, high beam                                             |
 
-The controls appear on phones and tablets, and whenever the screen is touched; pressing a key or using a gamepad hides them. A phone or tablet with no saved settings starts on the Low graphics preset. Add `?touch` to the address to show the touch controls on a desktop browser.
+Pause → Controls lists these touch controls when the menu was opened by touch. On a phone the map opens zoomed in on the car. The controls appear on phones and tablets, and whenever the screen is touched; pressing a key or using a gamepad hides them. A phone or tablet with no saved settings starts on the Low graphics preset. Add `?touch` to the address to show the touch controls on a desktop browser.
 
 ## Rock crawling
 
@@ -255,6 +258,7 @@ The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
 - [ ] **Damage:** pause menu → Settings → Damage → Realistic. Drive off a ledge of a metre or more onto rock, or into a tree at 30 km/h; check the message, the car outline in the status strip, the sagging corner or flat tyre, the pull to one side and the smoke. Fit the spare from the tool menu (stopped), then drive into a campsite and check everything is put right. Then drive a trail carefully with Realistic on and check nothing breaks. Try Mild too: nothing should stop you.
 - [ ] **Signs and messages:** every sign should read straight from both sides, with no second board crossing it (Crawler Creek's section signs show it best). Messages, "Discovered" cards and run results should appear in the top right corner, not over the track ahead; on a phone, below the View and Reset view buttons.
 - [ ] **Camel Trophy 4WD:** pause menu → Vehicle → Camel Trophy 4WD. Check the yellow paint and decals, the roof lamps and the snorkel, and that it drives through deep water (the High Country's Deep Crossing) that stalls the plain short-wheelbase 4WD.
+- [ ] **v0.17 playtest fixes:** Settings → Units → mph changes the speed in the status strip and the crawl gauges. The High Country start faces along the track past the Camp Rock Course, and no shrub pokes through the bonnet in the driver's seat. Drive into a tree at 60 km/h: the car stops against it instead of spinning away or rolling. On Crawler Creek, the gate count under the compass goes up gate by gate, and driving round a gate shows "Missed gate …". On a phone held upright, the top buttons don't overlap; the welcome screen opens at the top; the map opens zoomed on the car (pinch and drag work); Pause → Controls lists the touch controls. At 1024×600 and on a phone held sideways the pause menu fits without scrolling, and the tool menu doesn't cover the compass. Dust looks like soft puffs, and the headlight pool fades out at its edges.
 - [ ] **Land Rover 110:** pause menu → Vehicle → Land Rover 110 Perentie. Check the look against the _Bush Tucker Man_ vehicle, the diesel clatter at idle and its starter (no turbo-like whistle as it speeds up), the driver's view (C → Driver), and the Granite Spur loop. Reload the page and it should still be the Land Rover.
 
 ## Project layout

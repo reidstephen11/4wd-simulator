@@ -298,6 +298,11 @@ export class AudioSystem {
     this.live()?.ui.chime();
   }
 
+  /** Driven through the next gate on a gate trail. */
+  gate(): void {
+    this.live()?.ui.tick();
+  }
+
   mapOpened(): void {
     this.live()?.ui.rustle(1);
   }

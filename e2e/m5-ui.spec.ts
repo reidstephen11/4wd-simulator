@@ -71,6 +71,7 @@ test('M5: driving into a POI shows the toast, adds it to the map, and survives a
   await shot(page, 'M5', 'pause-menu');
   await page.locator('[data-act="settings"]').click();
   await page.locator('[data-quality="low"]').click();
+  await page.locator('[data-units="mph"]').click();
   await shot(page, 'M5', 'settings');
   await page.locator('[data-act="back"]').click();
   await page.locator('[data-act="controls"]').click();
@@ -78,6 +79,9 @@ test('M5: driving into a POI shows the toast, adds it to the map, and survives a
   await page.locator('[data-act="back"]').click();
   await page.locator('[data-act="resume"]').click();
   expect(await page.evaluate(() => window.__game!.ui().paused)).toBe(false);
+  // The speed in the status strip follows the units setting.
+  await expect(page.locator('.status-speed-value')).toBeVisible();
+  await expect(page.locator('.status-speed-value')).toContainText('mph');
 
   // Tool menu.
   await page.evaluate(() => window.__game!.teleport(-188, 225, 315));
@@ -101,6 +105,7 @@ test('M5: driving into a POI shows the toast, adds it to the map, and survives a
   const disc = await page.evaluate(() => window.__game!.discovered());
   expect(disc).toContain('gravel-ford');
   expect(disc).toContain('river-flat-camp');
+  await expect(page.locator('.status-speed-value')).toContainText('mph');
   expect(errors).toEqual([]);
 });
 

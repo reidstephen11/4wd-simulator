@@ -68,6 +68,12 @@ body {
   display: none;
 }
 
+.camera-reset-icon {
+  display: none;
+  font-size: 17px;
+  line-height: 1;
+}
+
 .camera-help kbd {
   margin-left: 5px;
   font: inherit;
@@ -321,6 +327,29 @@ body {
   color: var(--paper);
 }
 
+.status-speed {
+  display: none;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-hand);
+  font-size: 20px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status.with-speed .status-speed {
+  display: flex;
+}
+
+.status-gear {
+  min-width: 1.2em;
+  padding: 1px 4px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 4px;
+  font-size: 16px;
+  text-align: center;
+}
+
 .status-park {
   display: none;
   place-items: center;
@@ -374,6 +403,26 @@ body {
   padding: 4px 16px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.gate-count {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 14px;
+  font-family: var(--font-hand);
+  font-size: 20px;
+  white-space: nowrap;
+  opacity: 0.94;
+}
+
+.gate-count.missed {
+  color: var(--accent);
+}
+
+.gate-count.hidden {
+  display: none;
 }
 
 .crawl-run strong {
@@ -732,6 +781,15 @@ body {
   height: 32px;
 }
 
+/* The ring can reach the compass and status strip on a short screen: fade them out under it. */
+.hud.tool-menu-open .compass,
+.hud.tool-menu-open .status,
+.hud.tool-menu-open .course-hint,
+.hud.tool-menu-open .crawl-gauges,
+.hud.tool-menu-open .camera-help {
+  opacity: 0.12;
+}
+
 /* ---------- Paper map ---------- */
 .paper-map {
   position: fixed;
@@ -752,20 +810,38 @@ body {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
 }
 
+.paper-map-view {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.paper-map-view:active {
+  cursor: grabbing;
+}
+
 .paper-map canvas {
   width: 100%;
   height: 100%;
   display: block;
-  border-radius: 4px;
+  transform-origin: 0 0;
 }
 
+/* Inside the sheet's bottom edge, so a short screen can't cut it off. */
 .paper-map-hint {
   position: absolute;
-  right: 6px;
-  bottom: -26px;
-  color: var(--paper);
+  right: 8px;
+  bottom: 8px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(243, 235, 218, 0.88);
+  color: var(--ink);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
+  pointer-events: none;
 }
 
 @keyframes map-unfold {
@@ -869,6 +945,59 @@ body {
 table.controls {
   border-collapse: collapse;
   font-size: 14px;
+}
+
+.pause-controls {
+  overflow: hidden;
+}
+
+.controls-scroll {
+  min-height: 0;
+  overflow: auto;
+}
+
+.pause-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Short screens (small laptops, phones held sideways): everything on the pause card fits without scrolling. */
+@media (max-height: 640px) {
+  .pause-card {
+    padding: 10px 18px 12px;
+    gap: 6px;
+  }
+
+  .pause-card h2 {
+    margin: 0;
+    font-size: 28px;
+  }
+
+  .pause-card button {
+    padding: 5px 10px;
+    font-size: 15px;
+  }
+
+  .pause-card button small {
+    font-size: 12px;
+  }
+
+  .pause-card .build-label {
+    margin-top: 4px;
+  }
+}
+
+@media (max-height: 640px) and (min-width: 700px) {
+  .pause-main {
+    width: min(640px, 92vw);
+  }
+
+  .pause-main .pause-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
 }
 
 table.controls th,
@@ -1281,6 +1410,20 @@ table.controls td {
 }
 
 @media (orientation: portrait) {
+  /* The top row and the camera buttons share one line: short labels, no gaps to spare. */
+  .touch-top {
+    gap: 4px;
+  }
+
+  .touch-mode .camera-help .camera-preset-name,
+  .touch-mode .camera-help .camera-reset-label {
+    display: none;
+  }
+
+  .touch-mode .camera-help .camera-reset-icon {
+    display: inline;
+  }
+
   /* Narrow enough for the tool menu's options to sit side by side across the screen. */
   .touch-mode .tool-option {
     width: 104px;

@@ -186,8 +186,15 @@ class Pool {
   }
 }
 
-/** Lambert material whose instances carry their own opacity. */
-function fadingMaterial(key: string, params: THREE.MeshLambertMaterialParameters): THREE.MeshLambertMaterial {
+/**
+ * Lambert material whose instances carry their own opacity. A `soft` one also fades
+ * towards its silhouette, so a round puff has no hard outline (dust).
+ */
+function fadingMaterial(
+  key: string,
+  params: THREE.MeshLambertMaterialParameters,
+  soft = false,
+): THREE.MeshLambertMaterial {
   const m = new THREE.MeshLambertMaterial({ transparent: true, depthWrite: false, ...params });
   m.onBeforeCompile = (shader) => {
     shader.vertexShader =
@@ -201,6 +208,11 @@ function fadingMaterial(key: string, params: THREE.MeshLambertMaterialParameters
       shader.fragmentShader.replace(
         '#include <color_fragment>',
         '#include <color_fragment>\n  diffuseColor.a *= vOpacity;',
+      );
+    if (soft)
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <normal_fragment_begin>',
+        '#include <normal_fragment_begin>\n  diffuseColor.a *= smoothstep(0.05, 0.85, abs(dot(normal, normalize(vViewPosition))));',
       );
   };
   return patchFog(m, key);
@@ -242,12 +254,13 @@ export class Particles {
   ) {
     this.dust = new Pool({
       max: P.maxDust,
-      geometry: new THREE.IcosahedronGeometry(1, 0),
-      // Some self-lighting softens the facets so a puff reads as dust, not glass.
-      material: fadingMaterial('dust', {
-        flatShading: true,
-        emissive: mixPal('dirtTrack', 'barkPale', 0.7).multiplyScalar(0.35),
-      }),
+      // Smooth and faded at the edges, so a puff reads as dust rather than a flat facet.
+      geometry: new THREE.IcosahedronGeometry(1, 2),
+      material: fadingMaterial(
+        'dust',
+        { emissive: mixPal('dirtTrack', 'barkPale', 0.7).multiplyScalar(0.35) },
+        true,
+      ),
       opacity: true,
     });
     this.dust.mesh.renderOrder = 2;

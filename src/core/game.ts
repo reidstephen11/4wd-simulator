@@ -19,6 +19,7 @@ import { headingOf } from '../sim/vehicle/math';
 import { Exploration, type ExplorationState } from '../sim/exploration';
 import { defaultSettings, explorationFor, loadSave, writeSave, type Settings } from '../sim/save/save';
 import { CrawlRuns, type CrawlBests, type CrawlRunEvent } from '../sim/crawlRuns';
+import { GateCount, type GateEvent } from '../sim/gateCount';
 import { clock } from '../ui/hud';
 import type { ToolEvent } from '../sim/tools/tools';
 import { GameRenderer } from '../render/renderer';
@@ -79,6 +80,8 @@ export class Game {
   readonly exploration: Exploration;
   /** Optional scored runs on the crawl trails. */
   readonly crawlRuns: CrawlRuns;
+  /** Gates driven on a gate trail (Crawler Creek). */
+  readonly gateCount: GateCount;
   readonly hud: Hud;
   readonly toolMenu: ToolMenu;
   readonly touch: TouchControls;
@@ -127,6 +130,7 @@ export class Game {
     this.mapProgress = { ...mapProgress };
     const tuning = vehicles[vehicleId].tuning;
     this.crawlRuns = new CrawlRuns(world.map.crawlTrails ?? [], world.features.tracks, crawlBests);
+    this.gateCount = new GateCount(world.features.gates);
     this.input = new InputManager(window);
     this.input.setSteering(tuning.steering);
     this.audio = new AudioSystem(settings, window, audioContext);
@@ -155,6 +159,7 @@ export class Game {
     this.freeCam = new FreeCamera(view.camera, view.renderer.domElement);
 
     this.hud = new Hud(uiRoot, (action) => this.input.requestDriveAction(action));
+    this.hud.units = settings.units;
     this.hud.onCameraReset = () => this.chase.recenter();
     this.hud.onCameraPreset = () => this.chase.cyclePreset();
     this.toolMenu = new ToolMenu(uiRoot);
@@ -379,6 +384,7 @@ export class Game {
     if (this.settings.quality !== prevQuality) this.view.setQuality(qualityPresets[this.settings.quality]);
     if (this.settings.damage !== this.sim.damage) this.sim.setDamage(this.settings.damage);
     this.pause.setSettings(this.settings);
+    this.hud.units = this.settings.units;
     this.audio.setSettings(this.settings);
     this.onSettings?.(this.settings);
     this.save();
@@ -397,7 +403,11 @@ export class Game {
   openMap(): void {
     if (this.map.isOpen) return;
     const p = this.vehicle.body.translation();
-    this.map.open(this.exploration.discovered, { x: p.x, z: p.z, heading: this.cameraHeading() });
+    this.map.open(
+      this.exploration.discovered,
+      { x: p.x, z: p.z, heading: this.cameraHeading() },
+      this.input.activeDevice,
+    );
     this.loop.paused = true;
     this.audio.mapOpened();
   }
@@ -410,7 +420,7 @@ export class Game {
 
   openPause(): void {
     const camp = this.world.pois.find((p) => p.id === this.exploration.lastCampsite);
-    this.pause.open(camp?.name ?? '');
+    this.pause.open(camp?.name ?? '', this.input.activeDevice === 'touch');
     this.loop.paused = true;
   }
 
@@ -658,6 +668,24 @@ export class Game {
       dt,
     });
     if (run) this.onCrawlRun(run);
+    for (const e of this.gateCount.update(p.x, p.z)) this.onGate(e);
+  }
+
+  private onGate(e: GateEvent): void {
+    if (e.type === 'passed') this.audio.gate();
+    else if (e.type === 'missed')
+      this.hud.toast(
+        e.gates.length === 1 ? `Missed gate ${e.gates[0]}` : `Missed gates ${e.gates[0]}–${e.gates.at(-1)}`,
+        2400,
+      );
+    else {
+      this.hud.runResult(
+        'Gates',
+        `${e.passed} of ${this.gateCount.total} gates`,
+        e.missed === 0 ? 'Every gate in order' : `${e.missed} missed`,
+      );
+      this.audio.discovery();
+    }
   }
 
   private onCrawlRun(e: CrawlRunEvent): void {
@@ -753,10 +781,13 @@ export class Game {
       this.chase.orbit(orbit.yaw, orbit.pitch);
       this.chase.zoom(zoom);
       if (this.input.pressed('cameraReset') && !cameraChord) this.chase.recenter();
-      if (this.input.pressed('cameraPreset') && this.tool.mode === 'drive') this.chase.cyclePreset();
-      if (this.input.pressed('gauges')) {
+      // Counted, not just seen: several quick presses in one slow frame each take a step.
+      if (this.tool.mode === 'drive')
+        for (let k = this.input.pressCount('cameraPreset'); k > 0; k--) this.chase.cyclePreset();
+      const gaugePresses = this.input.pressCount('gauges');
+      if (gaugePresses > 0) {
         const modes = ['auto', 'on', 'off'] as const;
-        this.hud.gaugeMode = modes[(modes.indexOf(this.hud.gaugeMode) + 1) % modes.length];
+        this.hud.gaugeMode = modes[(modes.indexOf(this.hud.gaugeMode) + gaugePresses) % modes.length];
         this.hud.toast(
           { auto: 'Crawl gauges: in low range', on: 'Crawl gauges: always', off: 'Crawl gauges: off' }[
             this.hud.gaugeMode
@@ -829,6 +860,7 @@ export class Game {
       winchAttached: tools.winch.attached,
       jackAvailable: tools.jack.state === 'available',
     });
+    this.hud.el.classList.toggle('tool-menu-open', this.toolMenu.isOpen);
     this.hud.update(
       buildHudState({
         vehicle: v,
@@ -843,6 +875,7 @@ export class Game {
         tracks: this.world.features.tracks,
         anchorInReach: this.anchorInReach,
         run: this.crawlRuns.run,
+        gates: this.gateCount.total ? this.gateCount : null,
         repair: this.sim.repairOption(LOCAL_VEHICLE),
       }),
     );

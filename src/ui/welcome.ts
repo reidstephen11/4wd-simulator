@@ -73,7 +73,8 @@ export class WelcomeScreen {
     window.addEventListener('keydown', this.onKey);
     this.row = this.rows.length - 1;
     this.refresh();
-    this.rows[this.row][0].focus();
+    // Without preventScroll a phone opens scrolled down to Drive, hiding the title and the worlds.
+    this.rows[this.row][0].focus({ preventScroll: true });
     this.raf = requestAnimationFrame(this.pollPad);
   }
 

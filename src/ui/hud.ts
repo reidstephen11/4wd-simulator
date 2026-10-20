@@ -1,6 +1,6 @@
 import { icons, type PoiIcon } from './icons';
 import { cameraPresets, type CameraPreset } from '../data/camera';
-import { CrawlGauges, type GaugeMode, type GaugeState } from './crawlGauges';
+import { CrawlGauges, formatSpeed, type GaugeMode, type GaugeState, type SpeedUnits } from './crawlGauges';
 import type { HeadlightMode } from '../data/headlights';
 
 export interface Prompt {
@@ -20,6 +20,8 @@ export interface CompassPoi {
 
 export interface HudState {
   gauges: GaugeState;
+  /** Gates on a gate trail: the next one to drive (0 before the first), and the lap so far. */
+  gates: { next: number; total: number; passed: number; missed: number } | null;
   /** A scored crawl run in progress. */
   run: { name: string; seconds: number; points: number } | null;
   /** Camera heading (degrees, 0 = north). */
@@ -61,6 +63,8 @@ export class Hud {
   private readonly cctx: CanvasRenderingContext2D;
   private readonly status: HTMLElement;
   private readonly rangeEl: HTMLElement;
+  private readonly speedEl: HTMLElement;
+  private readonly gearEl: HTMLElement;
   private readonly parkEl: HTMLElement;
   private readonly lightsEl: HTMLElement;
   private readonly damageEl: HTMLElement;
@@ -79,8 +83,16 @@ export class Hud {
   private readonly cameraPresetButton: HTMLButtonElement;
   private readonly gauges: CrawlGauges;
   private readonly runEl: HTMLElement;
+  private readonly gateEl: HTMLElement;
   /** Crawl gauges: 'auto' shows them in low range, precision crawl or the driver's seat. */
   gaugeMode: GaugeMode = 'auto';
+  /** Speed units from the settings, for the status strip and the crawl gauges. */
+  set units(u: SpeedUnits) {
+    this.gauges.units = u;
+  }
+  get units(): SpeedUnits {
+    return this.gauges.units;
+  }
   /** Set by the game: the driver's-seat camera is in use. */
   cockpitView = false;
   private lastCompassKey = '';
@@ -94,6 +106,7 @@ export class Hud {
       <div class="compass paper"><canvas width="840" height="76"></canvas></div>
       <div class="status paper">
         <div class="status-range" title="Transfer range">H</div>
+        <div class="status-speed" title="Speed and gear"><span class="status-speed-value">0.0 km/h</span><span class="status-gear">1</span></div>
         <button type="button" class="status-drive" data-drive="frontDiff" aria-label="Front differential lock" aria-pressed="false" title="Front diff lock: Z / LB menu">F OPEN</button>
         <button type="button" class="status-drive" data-drive="rearDiff" aria-label="Rear differential lock" aria-pressed="false" title="Rear diff lock: X / LB menu">R OPEN</button>
         <button type="button" class="status-drive" data-drive="precision" aria-label="Precision crawl" aria-pressed="false" title="Precision crawl: P / LB menu. Hold throttle for walking pace.">CRAWL</button>
@@ -108,18 +121,22 @@ export class Hud {
       <div class="prompts"></div>
       <div class="camera-help paper">
         <span class="camera-hint">Drag to orbit · Scroll to zoom</span>
-        <button type="button" class="camera-preset" aria-label="Camera view" title="Cycle wheel-placement views: C / hold LB + click right stick">View: <span>Follow</span> <kbd>C</kbd></button>
-        <button type="button" class="camera-reset" title="Return behind the vehicle">Reset view <kbd>V</kbd></button>
+        <button type="button" class="camera-preset" aria-label="Camera view" title="Cycle wheel-placement views: C / hold LB + click right stick">View<span class="camera-preset-name">: <span>Follow</span></span> <kbd>C</kbd></button>
+        <button type="button" class="camera-reset" aria-label="Reset view" title="Return behind the vehicle"><span class="camera-reset-label">Reset view</span><span class="camera-reset-icon" aria-hidden="true">⟲</span> <kbd>V</kbd></button>
       </div>
+      <div class="gate-count paper hidden"></div>
       <div class="crawl-run paper hidden"><strong></strong><span class="crawl-run-time"></span><span class="crawl-run-points"></span></div>
       <div class="notices"><div class="discovery"></div><div class="toasts"></div></div>`;
     root.appendChild(this.el);
     this.gauges = new CrawlGauges(this.el);
     this.runEl = this.el.querySelector('.crawl-run') as HTMLElement;
+    this.gateEl = this.el.querySelector('.gate-count') as HTMLElement;
     this.compass = this.el.querySelector('.compass canvas') as HTMLCanvasElement;
     this.cctx = this.compass.getContext('2d') as CanvasRenderingContext2D;
     this.status = this.el.querySelector('.status') as HTMLElement;
     this.rangeEl = this.el.querySelector('.status-range') as HTMLElement;
+    this.speedEl = this.el.querySelector('.status-speed-value') as HTMLElement;
+    this.gearEl = this.el.querySelector('.status-gear') as HTMLElement;
     this.parkEl = this.el.querySelector('.status-park') as HTMLElement;
     this.lightsEl = this.el.querySelector('.status-lights') as HTMLElement;
     this.damageEl = this.el.querySelector('.status-damage') as HTMLElement;
@@ -182,7 +199,8 @@ export class Hud {
     const key = device === 'keyboard' ? 'V' : 'R3';
     if (this.cameraResetKey.textContent !== key) this.cameraResetKey.textContent = key;
     this.cameraPresetButton.hidden = !driving;
-    this.cameraPresetButton.querySelector('span')!.textContent = cameraPresets[preset].label;
+    this.cameraPresetButton.querySelector('.camera-preset-name span')!.textContent =
+      cameraPresets[preset].label;
     this.cameraPresetButton.querySelector('kbd')!.textContent = device === 'keyboard' ? 'C' : 'LB + R3';
   }
 
@@ -195,6 +213,13 @@ export class Hud {
     this.gauges.visible = showGauges;
     if (showGauges) this.gauges.update(s.gauges);
     this.runEl.classList.toggle('hidden', !s.run);
+    // The gate count sits where a scored run's clock goes; the run takes the place while it lasts.
+    this.gateEl.classList.toggle('hidden', !s.gates || !!s.run);
+    if (s.gates) {
+      const text = gateText(s.gates);
+      if (this.gateEl.textContent !== text) this.gateEl.textContent = text;
+      this.gateEl.classList.toggle('missed', s.gates.missed > 0);
+    }
     if (s.run) {
       this.runEl.querySelector('strong')!.textContent = s.run.name;
       this.runEl.querySelector('.crawl-run-time')!.textContent = clock(s.run.seconds);
@@ -202,6 +227,11 @@ export class Hud {
         s.run.points === 0 ? 'clean' : `${s.run.points} pt${s.run.points === 1 ? '' : 's'}`;
     }
     this.rangeEl.textContent = s.range === 'high' ? 'H' : 'L';
+    // Speed and gear, unless the crawl gauges already show them (the dash does in the driver's seat).
+    this.status.classList.toggle('with-speed', !showGauges);
+    const speed = formatSpeed(s.gauges.speedKmh, this.units);
+    if (this.speedEl.textContent !== speed) this.speedEl.textContent = speed;
+    if (this.gearEl.textContent !== s.gauges.gear) this.gearEl.textContent = s.gauges.gear;
     this.rangeEl.classList.toggle('low', s.range === 'low');
     this.parkEl.classList.toggle('shown', s.parkBrake);
     this.lightsEl.classList.toggle('shown', s.lights !== 'off');
@@ -366,6 +396,13 @@ export class Hud {
     setTimeout(() => el.classList.add('out'), 3200);
     setTimeout(() => el.remove(), 3900);
   }
+}
+
+/** "Gate 14 / 52", with gates missed this lap; "52 / 52 gates" once the lap is done. */
+export function gateText(g: { next: number; total: number; passed: number; missed: number }): string {
+  if (g.next > g.total) return `Lap done: ${g.passed} / ${g.total} gates`;
+  const missed = g.missed ? ` · ${g.missed} missed` : '';
+  return `Gate ${Math.max(1, g.next)} / ${g.total}${missed}`;
 }
 
 /** m:ss.s for run times. */
