@@ -303,6 +303,12 @@ export class AudioSystem {
     this.live()?.ui.tick();
   }
 
+  /** The car touched a gate flag's stake. */
+  flag(): void {
+    const g = this.live();
+    if (g) knock(g.ctx, g.fxBus, g.noise, 0.35);
+  }
+
   mapOpened(): void {
     this.live()?.ui.rustle(1);
   }

@@ -43,8 +43,10 @@ test('drives Crawler Creek’s gate trail in the Camel Trophy 4WD', async ({ pag
   await page.evaluate(() => window.__game!.setInput({ throttle: 0, brake: 1 }));
   expect(z, 'across the bridge').toBeLessThan(-30);
   expect(lowest, 'height above the creek bed').toBeGreaterThan(1.2);
-  // The bridge's gates were counted (the count starts at the first one driven through).
-  await expect(page.locator('.gate-count')).toHaveText(/^Gate 1[2-4] \/ 52$/);
+  // The bridge's gates were counted (the count starts at the first one driven through). The
+  // car drives straight rather than lining up, passing gate 11 about 1 m left of centre, so
+  // its left side can touch that gate's red flag.
+  await expect(page.locator('.gate-count')).toHaveText(/^Gate 1[2-4] \/ 52( · [12] flags?)?$/);
   await page.evaluate(() => window.__game!.setInput(null));
   await shot(page, 'crawler-creek', 'creek-bridge');
 

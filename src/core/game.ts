@@ -19,8 +19,8 @@ import { headingOf } from '../sim/vehicle/math';
 import { Exploration, type ExplorationState } from '../sim/exploration';
 import { defaultSettings, explorationFor, loadSave, writeSave, type Settings } from '../sim/save/save';
 import { CrawlRuns, type CrawlBests, type CrawlRunEvent } from '../sim/crawlRuns';
-import { GateCount, type GateEvent } from '../sim/gateCount';
-import { clock } from '../ui/hud';
+import { GateCount, footprintSize, type GateEvent } from '../sim/gateCount';
+import { clock, gateLapDetail } from '../ui/hud';
 import type { ToolEvent } from '../sim/tools/tools';
 import { GameRenderer } from '../render/renderer';
 import { VehicleModel } from '../render/vehicleModel';
@@ -668,12 +668,20 @@ export class Game {
       dt,
     });
     if (run) this.onCrawlRun(run);
-    for (const e of this.gateCount.update(p.x, p.z)) this.onGate(e);
+    if (this.gateCount.total) {
+      const f = v.forward();
+      const flat = Math.hypot(f.x, f.z) || 1;
+      const car = { fx: f.x / flat, fz: f.z / flat, ...footprintSize(v.tuning) };
+      for (const e of this.gateCount.update(p.x, p.z, car)) this.onGate(e);
+    }
   }
 
   private onGate(e: GateEvent): void {
     if (e.type === 'passed') this.audio.gate();
-    else if (e.type === 'missed')
+    else if (e.type === 'flag') {
+      this.audio.flag();
+      this.hud.toast(`Touched gate ${e.n}'s ${e.side === 'left' ? 'red' : 'blue'} flag`, 1800);
+    } else if (e.type === 'missed')
       this.hud.toast(
         e.gates.length === 1 ? `Missed gate ${e.gates[0]}` : `Missed gates ${e.gates[0]}–${e.gates.at(-1)}`,
         2400,
@@ -682,7 +690,7 @@ export class Game {
       this.hud.runResult(
         'Gates',
         `${e.passed} of ${this.gateCount.total} gates`,
-        e.missed === 0 ? 'Every gate in order' : `${e.missed} missed`,
+        gateLapDetail(e.missed, e.flags),
       );
       this.audio.discovery();
     }
