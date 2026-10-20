@@ -21,7 +21,7 @@ export interface CompassPoi {
 export interface HudState {
   gauges: GaugeState;
   /** Gates on a gate trail: the next one to drive (0 before the first), and the lap so far. */
-  gates: { next: number; total: number; passed: number; missed: number } | null;
+  gates: GateState | null;
   /** A scored crawl run in progress. */
   run: { name: string; seconds: number; points: number } | null;
   /** Camera heading (degrees, 0 = north). */
@@ -218,7 +218,7 @@ export class Hud {
     if (s.gates) {
       const text = gateText(s.gates);
       if (this.gateEl.textContent !== text) this.gateEl.textContent = text;
-      this.gateEl.classList.toggle('missed', s.gates.missed > 0);
+      this.gateEl.classList.toggle('missed', s.gates.missed > 0 || s.gates.flags > 0);
     }
     if (s.run) {
       this.runEl.querySelector('strong')!.textContent = s.run.name;
@@ -398,11 +398,35 @@ export class Hud {
   }
 }
 
-/** "Gate 14 / 52", with gates missed this lap; "52 / 52 gates" once the lap is done. */
-export function gateText(g: { next: number; total: number; passed: number; missed: number }): string {
-  if (g.next > g.total) return `Lap done: ${g.passed} / ${g.total} gates`;
+export interface GateState {
+  next: number;
+  total: number;
+  passed: number;
+  missed: number;
+  flags: number;
+}
+
+function flagsText(flags: number): string {
+  return `${flags} flag${flags === 1 ? '' : 's'}`;
+}
+
+/**
+ * "Gate 14 / 52", with gates missed and flags touched this lap; "Lap done: 52 / 52 gates"
+ * once the lap is done.
+ */
+export function gateText(g: GateState): string {
+  const flags = g.flags ? ` · ${flagsText(g.flags)}` : '';
+  if (g.next > g.total) return `Lap done: ${g.passed} / ${g.total} gates${flags}`;
   const missed = g.missed ? ` · ${g.missed} missed` : '';
-  return `Gate ${Math.max(1, g.next)} / ${g.total}${missed}`;
+  return `Gate ${Math.max(1, g.next)} / ${g.total}${missed}${flags}`;
+}
+
+/** The second line of the lap result card. */
+export function gateLapDetail(missed: number, flags: number): string {
+  if (!missed && !flags) return 'Every gate in order, no flags touched';
+  return [missed ? `${missed} missed` : 'Every gate in order', flags ? `${flagsText(flags)} touched` : '']
+    .filter(Boolean)
+    .join(' · ');
 }
 
 /** m:ss.s for run times. */

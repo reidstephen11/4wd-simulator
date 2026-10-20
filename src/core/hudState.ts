@@ -7,7 +7,7 @@ import type { CrawlCourseDef, CrawlTrailDef, PoiDef } from '../sim/world/mapType
 import type { TrackInfo } from '../sim/world/features';
 import { trailProgress } from '../sim/world/crawlTrail';
 import { headingOf } from '../sim/vehicle/math';
-import type { CompassPoi, HudState, Prompt } from '../ui/hud';
+import type { CompassPoi, GateState, HudState, Prompt } from '../ui/hud';
 import type { GaugeState } from '../ui/crawlGauges';
 import { penaltyPoints, type CrawlRun } from '../sim/crawlRuns';
 import { rotate } from '../sim/vehicle/math';
@@ -30,7 +30,7 @@ export interface HudInputs {
   /** Scored crawl run in progress, if any. */
   run?: CrawlRun | null;
   /** Gate count on a map with a gate trail. */
-  gates?: { next: number; total: number; passed: number; missed: number } | null;
+  gates?: GateState | null;
   /** What a roadside repair could do now (null when nothing needs one or damage is off). */
   repair?: { kind: 'field' | 'spare'; possible: boolean } | null;
 }
@@ -178,7 +178,13 @@ export function buildHudState(i: HudInputs): HudState {
   return {
     gauges: gaugeState(v),
     gates: i.gates
-      ? { next: i.gates.next, total: i.gates.total, passed: i.gates.passed, missed: i.gates.missed }
+      ? {
+          next: i.gates.next,
+          total: i.gates.total,
+          passed: i.gates.passed,
+          missed: i.gates.missed,
+          flags: i.gates.flags,
+        }
       : null,
     run: i.run ? { name: i.run.trail.name, seconds: i.run.seconds, points: penaltyPoints(i.run) } : null,
     heading: i.cameraHeading,
