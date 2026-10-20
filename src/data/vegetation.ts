@@ -42,4 +42,6 @@ export const groundCover = {
   tussockDensity: 20,
   shrubDensity: 1.6,
   tile: 32,
+  /** No shrubs this close (m) to a campsite's start position, so none pokes through the bonnet. */
+  spawnClearance: 6,
 };

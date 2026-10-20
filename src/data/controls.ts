@@ -201,3 +201,23 @@ export const controlsTable: ReadonlyArray<readonly [string, string, string]> = [
   ['Map', 'M', 'View / Select'],
   ['Pause', 'Esc', 'Start / Options'],
 ];
+
+/** Action → touch control, for the Controls page on phones and tablets (README "Phones and tablets"). */
+export const touchControlsTable: ReadonlyArray<readonly [string, string]> = [
+  ['Steer', 'Joystick, bottom left (push part way for part lock)'],
+  ['Accelerate / brake and reverse', 'GAS / BRAKE, bottom right (hold BRAKE when stopped to reverse)'],
+  ['Handbrake on / off', 'HAND'],
+  ['High / low range', 'LOW'],
+  ['Precision crawl, diff locks', 'CRAWL, F LOCK, R LOCK'],
+  ['Winch attach / detach, pick up planks', 'USE'],
+  ['Winch in / out', 'Hold IN / OUT (shown while the winch is attached)'],
+  ['Right vehicle', 'Hold UPRIGHT (shown when needed)'],
+  ['Tool menu', 'TOOLS, then tap an option (tap the space around it to close)'],
+  ['Placing planks / choosing anchor', 'Joystick, then USE to confirm or BACK to cancel'],
+  ['Orbit camera', 'Drag a finger on the view'],
+  ['Camera distance', 'Pinch with two fingers on the view'],
+  ['Cycle views / recenter camera', 'View and ⟲ (Reset view), top right'],
+  ['Map / pause', 'MAP and II, top left (tap outside the map to close it)'],
+  ['Full screen', '⛶, top left, where the browser allows it'],
+  ['Headlights', 'LIGHTS, top left: off, low beam, high beam'],
+];

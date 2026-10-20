@@ -464,6 +464,12 @@ export class Vegetation {
     if (changed) this.cover.computeBoundingSphere();
   }
 
+  /** Is (x, z) within the shrub-free space around a campsite's start position? */
+  private nearSpawn(x: number, z: number): boolean {
+    const r = groundCover.spawnClearance;
+    return this.world.pois.some((p) => p.reset && Math.hypot(p.reset.x - x, p.reset.z - z) < r);
+  }
+
   private fillTile(tx: number, tz: number): number[] {
     const t = this.world.terrain;
     const f = this.world.features;
@@ -488,6 +494,7 @@ export class Vegetation {
       const forest = tint === GroundTint.ForestFloor;
       const shrub = r1 < (forest ? shrubShare * 4 : shrubShare * 0.35);
       if (!shrub && forest && r2 < 0.6) continue;
+      if (shrub && this.nearSpawn(x, z)) continue;
       if (this.cover.instanceCount >= this.cover.maxInstanceCount) break;
       const geo = shrub ? this.coverGeo[3 + Math.floor(r2 * 2)] : this.coverGeo[Math.floor(r2 * 3)];
       const id = this.cover.addInstance(geo);

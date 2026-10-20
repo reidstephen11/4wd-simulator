@@ -9,6 +9,17 @@ import { gateColours } from '../data/palette';
 
 const SIZE = 1400;
 const MARGIN = 70;
+/** Closest zoom (the whole map is 1). */
+const MAX_ZOOM = 4;
+/** A sheet smaller than this (CSS px, a phone) opens zoomed in on the car. */
+const SMALL_SHEET = 600;
+const PHONE_ZOOM = 2.5;
+
+const hints = {
+  keyboard: 'Scroll to zoom · drag to move · M or Esc to close',
+  gamepad: 'B or View to close',
+  touch: 'Pinch to zoom · drag to move · tap outside to close',
+};
 
 /**
  * Fold-out paper map (SPEC §9) drawn on a canvas from the real heightfield: shaded
@@ -24,6 +35,14 @@ export class PaperMap {
   private readonly iconImages = new Map<string, HTMLImageElement>();
   isOpen = false;
   onClose: (() => void) | null = null;
+  private readonly view: HTMLElement;
+  private readonly hint: HTMLElement;
+  /** Zoom (1 = the whole map) and the canvas's offset in the view (CSS px). */
+  private zoom = 1;
+  private panX = 0;
+  private panY = 0;
+  /** Pointers down on the map, for dragging and pinching. */
+  private readonly pointers = new Map<number, { x: number; y: number }>();
 
   constructor(
     root: HTMLElement,
@@ -32,9 +51,28 @@ export class PaperMap {
     this.noise = new Noise2D(world.map.seed + 9);
     this.el = document.createElement('div');
     this.el.className = 'paper-map hidden';
-    this.el.innerHTML = `<div class="paper-map-sheet"><canvas width="${SIZE}" height="${SIZE}"></canvas><div class="paper-map-hint">M · Esc · tap outside to close</div></div>`;
+    this.el.innerHTML = `<div class="paper-map-sheet"><div class="paper-map-view"><canvas width="${SIZE}" height="${SIZE}"></canvas></div><div class="paper-map-hint"></div></div>`;
     root.appendChild(this.el);
     this.canvas = this.el.querySelector('canvas') as HTMLCanvasElement;
+    this.view = this.el.querySelector('.paper-map-view') as HTMLElement;
+    this.hint = this.el.querySelector('.paper-map-hint') as HTMLElement;
+    this.view.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        const r = this.view.getBoundingClientRect();
+        this.zoomAt(this.zoom * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
+      },
+      { passive: false },
+    );
+    this.view.addEventListener('pointerdown', (e) => {
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      this.view.setPointerCapture?.(e.pointerId);
+    });
+    this.view.addEventListener('pointermove', (e) => this.onPointerMove(e));
+    const up = (e: PointerEvent) => this.pointers.delete(e.pointerId);
+    this.view.addEventListener('pointerup', up);
+    this.view.addEventListener('pointercancel', up);
     this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
     this.el.addEventListener('click', (e) => {
       if (e.target === this.el) this.onClose?.();
@@ -400,16 +438,35 @@ export class PaperMap {
     g.fillText('200 m', sx + len / 2, sy - 18);
   }
 
-  /** Draw the base map plus discovered POIs and the player arrow, then show it. */
-  open(discovered: ReadonlySet<string>, player: { x: number; z: number; heading: number }): void {
+  /**
+   * Draw the base map plus discovered POIs and the player arrow, then show it: the
+   * whole map on a big screen, zoomed in on the car on a phone.
+   */
+  open(
+    discovered: ReadonlySet<string>,
+    player: { x: number; z: number; heading: number },
+    device: keyof typeof hints = 'keyboard',
+  ): void {
+    const opening = !this.isOpen;
     this.el.classList.remove('hidden');
     this.isOpen = true;
+    this.hint.textContent = hints[device];
+    if (opening) {
+      this.pointers.clear();
+      const side = this.view.clientWidth;
+      const [mx, my] = this.toMap(player.x, player.z);
+      this.zoom = 1;
+      this.panX = this.panY = 0;
+      if (side > 0 && side < SMALL_SHEET)
+        this.zoomAt(PHONE_ZOOM, side / 2, side / 2, (mx / SIZE) * side, (my / SIZE) * side);
+      else this.applyView();
+    }
     if (!this.base) {
       // Still drawing: show the paper and fill it in when ready.
       this.ctx.fillStyle = '#F3EBDA';
       this.ctx.fillRect(0, 0, SIZE, SIZE);
       void this.prepare().then(() => {
-        if (this.isOpen) this.open(discovered, player);
+        if (this.isOpen) this.open(discovered, player, device);
       });
       return;
     }
@@ -442,6 +499,59 @@ export class PaperMap {
   close(): void {
     this.el.classList.add('hidden');
     this.isOpen = false;
+  }
+
+  /** Current zoom and offset (tests). */
+  get viewState(): { zoom: number; panX: number; panY: number } {
+    return { zoom: this.zoom, panX: this.panX, panY: this.panY };
+  }
+
+  /**
+   * Zoom to `zoom`, keeping the point of the map under (vx, vy) in the view there — or,
+   * given (ux, uy) in unzoomed view px, putting that point of the map at (vx, vy).
+   */
+  zoomAt(zoom: number, vx: number, vy: number, ux?: number, uy?: number): void {
+    const z = Math.min(MAX_ZOOM, Math.max(1, zoom));
+    const px = ux ?? (vx - this.panX) / this.zoom;
+    const py = uy ?? (vy - this.panY) / this.zoom;
+    this.zoom = z;
+    this.panX = vx - px * z;
+    this.panY = vy - py * z;
+    this.applyView();
+  }
+
+  private onPointerMove(e: PointerEvent): void {
+    const prev = this.pointers.get(e.pointerId);
+    if (!prev) return;
+    const others = [...this.pointers].filter(([id]) => id !== e.pointerId).map(([, p]) => p);
+    if (others.length === 0) {
+      this.panX += e.clientX - prev.x;
+      this.panY += e.clientY - prev.y;
+      this.applyView();
+    } else {
+      // Pinch: scale by the change in finger spread, about the point between them.
+      const o = others[0];
+      const before = Math.hypot(prev.x - o.x, prev.y - o.y);
+      const after = Math.hypot(e.clientX - o.x, e.clientY - o.y);
+      const r = this.view.getBoundingClientRect();
+      if (before > 10)
+        this.zoomAt(
+          this.zoom * (after / before),
+          (e.clientX + o.x) / 2 - r.left,
+          (e.clientY + o.y) / 2 - r.top,
+        );
+    }
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  }
+
+  /** Keep the map covering the view, then move the canvas. */
+  private applyView(): void {
+    const side = this.view.clientWidth;
+    const min = side - side * this.zoom;
+    this.panX = Math.min(0, Math.max(min, this.panX));
+    this.panY = Math.min(0, Math.max(min, this.panY));
+    this.canvas.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
+    this.view.classList.toggle('zoomed', this.zoom > 1);
   }
 
   private drawPoi(g: CanvasRenderingContext2D, p: PoiDef, label: MapLabel): void {

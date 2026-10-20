@@ -23,6 +23,7 @@ test('drives Crawler Creek’s gate trail in the Camel Trophy 4WD', async ({ pag
   const v = await page.evaluate(() => window.__game!.vehicle());
   expect(Math.hypot(v.x + 150, v.z - 158)).toBeLessThan(3);
   await expect(page.locator('.course-hint')).toContainText('Start Chute');
+  await expect(page.locator('.gate-count')).toHaveText('Gate 1 / 52');
   await shot(page, 'crawler-creek', 'trailhead');
 
   // Roll over the creek bridge: the car stays up on the deck above the water.
@@ -42,6 +43,8 @@ test('drives Crawler Creek’s gate trail in the Camel Trophy 4WD', async ({ pag
   await page.evaluate(() => window.__game!.setInput({ throttle: 0, brake: 1 }));
   expect(z, 'across the bridge').toBeLessThan(-30);
   expect(lowest, 'height above the creek bed').toBeGreaterThan(1.2);
+  // The bridge's gates were counted (the count starts at the first one driven through).
+  await expect(page.locator('.gate-count')).toHaveText(/^Gate 1[2-4] \/ 52$/);
   await page.evaluate(() => window.__game!.setInput(null));
   await shot(page, 'crawler-creek', 'creek-bridge');
 

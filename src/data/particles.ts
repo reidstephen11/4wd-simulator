@@ -15,9 +15,9 @@ export const particleTuning = {
     rate: 14,
     /** Gravel and grass throw less dust than dirt. */
     surfaceScale: { dirt: 1, gravel: 0.6, grass: 0.25 },
-    life: [1.8, 3.2],
-    size: [0.4, 1.9],
-    opacity: 0.55,
+    life: [1.2, 2.4],
+    size: [0.3, 1.3],
+    opacity: 0.5,
     /** Ground wetness above this stops dust. */
     maxWetness: 0.3,
     drag: 1.6,

@@ -14,7 +14,7 @@ export interface BeamTuning {
   distance: number;
   /** Half-angle of the beam (degrees). */
   angleDeg: number;
-  /** 0..1 how soft the edge of the beam is. */
+  /** 0..1 how soft the edge of the beam is: the share of the half-angle over which it fades out. */
   penumbra: number;
   /** Aim below level (degrees): low beam lights the track just ahead. */
   dipDeg: number;
@@ -29,27 +29,27 @@ export interface BeamTuning {
  */
 export const headlightTuning = {
   low: {
-    intensity: 700,
+    intensity: 560,
     distance: 60,
-    angleDeg: 36,
-    penumbra: 0.6,
+    angleDeg: 40,
+    penumbra: 1,
     dipDeg: 9,
     decay: 1.2,
   } satisfies BeamTuning,
   high: {
-    intensity: 1700,
+    intensity: 1450,
     distance: 150,
-    angleDeg: 26,
-    penumbra: 0.5,
+    angleDeg: 30,
+    penumbra: 0.9,
     dipDeg: 3,
     decay: 1.2,
   } satisfies BeamTuning,
   /** The Camel Trophy car's four roof lamps, wired to high beam like real driving lamps. */
   roof: {
-    intensity: 1800,
+    intensity: 1550,
     distance: 170,
-    angleDeg: 20,
-    penumbra: 0.45,
+    angleDeg: 24,
+    penumbra: 0.85,
     dipDeg: 4,
     decay: 1.2,
   } satisfies BeamTuning,

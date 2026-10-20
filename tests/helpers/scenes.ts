@@ -38,9 +38,10 @@ export async function makeScene(opts: {
     y: qr.w * qp.y - qr.x * qp.z + qr.y * qp.w + qr.z * qp.x,
     z: qr.w * qp.z + qr.x * qp.y - qr.y * qp.x + qr.z * qp.w,
   };
-  // Ground slab whose top surface passes through the origin.
+  // Ground slab whose top surface passes through the origin, 3 km across: a 30 s run at
+  // full throttle (drive-lab's top-speed check) covers about 700 m.
   const n = rotateVec(q, 0, 1, 0);
-  const ground = R.ColliderDesc.cuboid(400, 1, 400)
+  const ground = R.ColliderDesc.cuboid(1500, 1, 1500)
     .setTranslation(-n.x, -n.y, -n.z)
     .setRotation(q)
     .setFriction(0.8)

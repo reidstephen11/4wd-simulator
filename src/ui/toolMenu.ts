@@ -125,9 +125,10 @@ export function ringOverlaps(n: number, rx: number, ry: number, w: number, h: nu
 }
 
 /**
- * Radii of the oval the options sit on: from the original 120 px circle, wider until
- * neighbouring options (w × h px) no longer overlap, then taller if the screen (vw × vh)
- * is too narrow for that (a phone held upright). Always on the screen.
+ * Radii of the oval the options sit on: from a circle of 120 px (less on a small screen,
+ * scaled from its shorter side), wider until neighbouring options (w × h px) no longer
+ * overlap, then taller if the screen (vw × vh) is too narrow for that (a phone held
+ * upright). Always on the screen.
  */
 export function ringRadii(
   n: number,
@@ -136,10 +137,11 @@ export function ringRadii(
   vw: number,
   vh: number,
 ): { rx: number; ry: number } {
-  const fitX = Math.max(120, vw / 2 - w / 2 - 6),
-    fitY = Math.max(120, vh / 2 - h / 2 - 6);
-  let rx = 120,
-    ry = 120;
+  const start = Math.min(120, 0.25 * Math.min(vw, vh));
+  const fitX = Math.max(start, vw / 2 - w / 2 - 6),
+    fitY = Math.max(start, vh / 2 - h / 2 - 6);
+  let rx = start,
+    ry = start;
   while (ringOverlaps(n, rx, ry, w, h) && (rx < fitX || ry < fitY)) {
     if (rx < fitX) rx = Math.min(fitX, rx + 4);
     else ry = Math.min(fitY, ry + 4);

@@ -448,7 +448,7 @@ export const highCountryMap: MapDef = {
       x: -160,
       z: 246,
       radius: 30,
-      reset: { x: -150, z: 238, headingDeg: 315 },
+      reset: { x: -152, z: 254, headingDeg: 107 },
       note: 'Grassy flat beside the creek',
     },
     {
