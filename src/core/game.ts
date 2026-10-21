@@ -898,7 +898,8 @@ export class Game {
         audioLine(this.audio),
         `particles: ${this.view.particles.counts()}`,
       ]);
-      this.overlay.frame(frameDt, this.view.renderer);
+      // Real frame time: frameDt stops at 0.25 s, so the fps shown could never drop below 4.
+      this.overlay.frame(this.loop.frameSeconds, this.view.renderer);
     }
     this.input.consumeUi();
     this.frameCount++;

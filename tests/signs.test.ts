@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { signFaces } from '../src/render/worldProps';
+import { placedSignFaces, signFaces } from '../src/render/worldProps';
 import { propYaw } from '../src/sim/world/props';
 import { gateTrailSigns } from '../src/data/gateTrail';
 
@@ -39,5 +39,33 @@ describe('signposts', () => {
       new THREE.MeshBasicMaterial(),
     );
     expect(faces.length).toBe(1);
+  });
+
+  it('share one texture: each sign maps to its own cell, its faces where they stand', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const sign = { kind: 'signpost' as const, x: 10, z: -4, headingDeg: 54.5, text: 'Rock Garden' };
+    const faces = signFaces(sign, 2, material);
+    const range = (g: THREE.BufferGeometry, attr: string, axis: 0 | 1) => {
+      const a = g.getAttribute(attr);
+      const v = Array.from({ length: a.count }, (_, i) => (axis ? a.getY(i) : a.getX(i)));
+      return [Math.min(...v), Math.max(...v)];
+    };
+    // Six signs, four to a row: the first is top left, the fifth starts the second row.
+    for (const [index, u, v] of [
+      [0, [0, 0.25], [0.5, 1]],
+      [3, [0.75, 1], [0.5, 1]],
+      [4, [0, 0.25], [0, 0.5]],
+    ] as const) {
+      const placed = placedSignFaces(faces, index, 6);
+      expect(placed.length).toBe(2);
+      for (const [k, g] of placed.entries()) {
+        expect(range(g, 'uv', 0)).toEqual(u);
+        expect(range(g, 'uv', 1)).toEqual(v);
+        const box = new THREE.Box3().setFromBufferAttribute(
+          g.getAttribute('position') as THREE.BufferAttribute,
+        );
+        expect(box.getCenter(new THREE.Vector3()).distanceTo(faces[k].position)).toBeLessThan(1e-6);
+      }
+    }
   });
 });

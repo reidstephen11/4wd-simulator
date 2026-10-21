@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { World } from '../sim/world/world';
 import type { PropDef } from '../sim/world/mapTypes';
 import { propBase, propDims, propYaw } from '../sim/world/props';
@@ -343,28 +344,58 @@ export function signFaces(p: PropDef, base: number, material: THREE.Material): T
   return faces;
 }
 
-/** Canvas texture with hand-lettered sign text. */
-function signTexture(text: string): THREE.CanvasTexture {
+/** Pixel size of one sign's lettering in the shared sign texture. */
+const SIGN_PX = { w: 256, h: 64 };
+/** Signs side by side across the shared texture. */
+const SIGN_COLUMNS = 4;
+
+/**
+ * Hand-lettered text for every sign, one cell each in a single canvas texture, so all the
+ * sign faces draw together.
+ */
+function signTexture(texts: string[]): THREE.CanvasTexture {
+  const { w, h } = SIGN_PX;
   const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 64;
+  c.width = w * SIGN_COLUMNS;
+  c.height = h * Math.ceil(texts.length / SIGN_COLUMNS);
   const ctx = c.getContext('2d') as CanvasRenderingContext2D;
-  ctx.fillStyle = '#D8D0C0';
-  ctx.fillRect(0, 0, 256, 64);
-  ctx.strokeStyle = '#8E4B2B';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(4, 4, 248, 56);
-  ctx.fillStyle = '#3B2A1E';
-  let size = 30;
-  ctx.font = `${size}px "Patrick Hand", "Nunito", sans-serif`;
-  while (ctx.measureText(text).width > 230 && size > 12)
-    ctx.font = `${--size}px "Patrick Hand", "Nunito", sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, 128, 34);
+  texts.forEach((text, i) => {
+    ctx.save();
+    ctx.translate((i % SIGN_COLUMNS) * w, Math.floor(i / SIGN_COLUMNS) * h);
+    ctx.fillStyle = '#D8D0C0';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#8E4B2B';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(4, 4, 248, 56);
+    ctx.fillStyle = '#3B2A1E';
+    let size = 30;
+    ctx.font = `${size}px "Patrick Hand", "Nunito", sans-serif`;
+    while (ctx.measureText(text).width > 230 && size > 12)
+      ctx.font = `${--size}px "Patrick Hand", "Nunito", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 128, 34);
+    ctx.restore();
+  });
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
+}
+
+/** The faces of sign `index` (see signFaces), moved into place and mapped to its cell. */
+export function placedSignFaces(faces: THREE.Mesh[], index: number, count: number): THREE.BufferGeometry[] {
+  const rows = Math.ceil(count / SIGN_COLUMNS);
+  const col = index % SIGN_COLUMNS;
+  const row = Math.floor(index / SIGN_COLUMNS);
+  return faces.map((face) => {
+    face.updateMatrix();
+    const g = face.geometry.clone().applyMatrix4(face.matrix);
+    const uv = g.getAttribute('uv') as THREE.BufferAttribute;
+    // The canvas's top row is v = 1.
+    for (let i = 0; i < uv.count; i++)
+      uv.setXY(i, (col + uv.getX(i)) / SIGN_COLUMNS, (rows - row - 1 + uv.getY(i)) / rows);
+    return g;
+  });
 }
 
 /**
@@ -380,13 +411,15 @@ export class WorldProps {
     this.material = patchFog(new THREE.MeshLambertMaterial({ vertexColors: true }));
     this.group.name = 'props';
     const b = new MeshBuilder(2024);
+    const signs: { p: PropDef; base: number }[] = [];
     for (const p of world.map.props) {
       const base = propBase(p, world.terrain);
       b.push().translate(p.x, base, p.z).rotate(0, propYaw(p.headingDeg), 0);
       builders[p.kind](b);
       b.pop();
-      if (p.kind === 'signpost' && p.text) this.addSignFace(p, base);
+      if (p.kind === 'signpost' && p.text) signs.push({ p, base });
     }
+    this.addSignFaces(signs);
     // Coloured timber markers bracket the entrance and exit of each practice line.
     for (const course of world.map.crawlCourses ?? [])
       for (const line of course.lines) {
@@ -544,9 +577,20 @@ export class WorldProps {
     }
   }
 
-  private addSignFace(p: PropDef, base: number): void {
-    const mat = patchFog(new THREE.MeshLambertMaterial({ map: signTexture(p.text ?? '') }), 'sign');
-    for (const face of signFaces(p, base, mat)) this.group.add(face);
+  /** Every sign's lettered faces in one mesh. */
+  private addSignFaces(signs: { p: PropDef; base: number }[]): void {
+    if (signs.length === 0) return;
+    const mat = patchFog(
+      new THREE.MeshLambertMaterial({ map: signTexture(signs.map(({ p }) => p.text ?? '')) }),
+      'sign',
+    );
+    const faces = signs.flatMap(({ p, base }, i) =>
+      placedSignFaces(signFaces(p, base, mat), i, signs.length),
+    );
+    const mesh = new THREE.Mesh(mergeGeometries(faces), mat);
+    mesh.name = 'sign-faces';
+    mesh.matrixAutoUpdate = false;
+    this.group.add(mesh);
   }
 
   private buildFallenTree(length: number, radius: number): THREE.BufferGeometry {

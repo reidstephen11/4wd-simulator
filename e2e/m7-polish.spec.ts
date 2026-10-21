@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { collectErrors, shot, waitReady } from './helpers';
+import { collectErrors, shot, waitFrames, waitReady } from './helpers';
 
 type Stats = Awaited<ReturnType<NonNullable<Window['__game']>['stats']>>;
 
@@ -62,6 +62,7 @@ test('M7: quality presets and rendering load across the map', async ({ page }) =
   for (const q of ['low', 'medium', 'high'] as const) {
     await page.evaluate((q) => window.__game!.setQuality(q), q);
     await page.waitForTimeout(3000);
+    await waitFrames(page);
     presets[q] = await stats(page);
     await shot(page, 'M7', `quality-${q}`);
   }
@@ -74,6 +75,7 @@ test('M7: quality presets and rendering load across the map', async ({ page }) =
     for (let x = -600; x <= 600; x += 200) {
       await page.evaluate(([x, z]) => window.__game!.teleport(x, z, 0), [x, z]);
       await page.waitForTimeout(1200);
+      await waitFrames(page);
       grid.push({ x, z, ...(await stats(page)) });
     }
   const load = {
@@ -82,9 +84,10 @@ test('M7: quality presets and rendering load across the map', async ({ page }) =
   };
   report('render-load', { presets, mediumAcrossMap: load, grid });
   console.log('Medium across the map:', JSON.stringify(load));
-  // Budgets that keep Medium within reach of a 2022 integrated GPU.
-  expect(load.drawCalls.max).toBeLessThan(180);
-  expect(load.triangles.max).toBeLessThan(650_000);
+  // Budgets that keep Medium within reach of a 2022 integrated GPU. They were 180 calls
+  // and 650k triangles until the detailed vehicle (docs/DECISIONS.md, v0.21).
+  expect(load.drawCalls.max).toBeLessThan(210);
+  expect(load.triangles.max).toBeLessThan(760_000);
   expect(errors).toEqual([]);
 });
 
@@ -93,6 +96,8 @@ test('M7: 5-minute scripted drive across the map with no console errors', async 
   const errors = collectErrors(page);
   await page.goto('/?debug');
   await waitReady(page);
+  // Simulate up to a second per frame: the software renderer takes seconds per frame.
+  await page.evaluate(() => window.__game!.setCatchUp(true));
   await page.keyboard.press('KeyH'); // start audio so it is part of the run
 
   // Legs along long tracks in different parts of the map.
@@ -100,6 +105,8 @@ test('M7: 5-minute scripted drive across the map with no console errors', async 
   const samples: Array<{ t: number; leg: string; x: number; z: number; speed: number } & Stats> = [];
   const start = Date.now();
   const simStart = await page.evaluate(() => window.__game!.simTime());
+  // Legs are timed in simulated seconds: a slow renderer must not cut them short.
+  const simNow = async () => (await page.evaluate(() => window.__game!.simTime())) - simStart;
   let leg = -1;
   let legStart = 0;
   let lastMove = { t: 0, x: 0, z: 0 };
@@ -108,14 +115,15 @@ test('M7: 5-minute scripted drive across the map with no console errors', async 
   const shots = new Set<number>();
   while (Date.now() - start < 5 * 60_000) {
     const now = (Date.now() - start) / 1000;
+    const sim = await simNow();
     const ap = await page.evaluate(() => window.__game!.autopilotState());
     const v = await vehicle(page);
-    if (Math.hypot(v.x - lastMove.x, v.z - lastMove.z) > 2) lastMove = { t: now, x: v.x, z: v.z };
-    const stuck = now - lastMove.t > 20;
-    if (leg < 0 || ap.done || now - legStart > 75 || stuck) {
+    if (Math.hypot(v.x - lastMove.x, v.z - lastMove.z) > 2) lastMove = { t: sim, x: v.x, z: v.z };
+    const stuck = sim - lastMove.t > 20;
+    if (leg < 0 || ap.done || sim - legStart > 75 || stuck) {
       leg = (leg + 1) % legs.length;
-      legStart = now;
-      lastMove = { t: now, x: Infinity, z: Infinity };
+      legStart = sim;
+      lastMove = { t: sim, x: Infinity, z: Infinity };
       prev = null;
       await page.evaluate((id) => window.__game!.autopilot(id, 320, 9), legs[leg]);
       continue;
@@ -130,16 +138,15 @@ test('M7: 5-minute scripted drive across the map with no console errors', async 
       speed: v.speed,
       ...(await stats(page)),
     });
-    if (now - legStart > 25 && !shots.has(leg) && shots.size < 4) {
+    if (sim - legStart > 25 && !shots.has(leg) && shots.size < 4) {
       shots.add(leg);
       await shot(page, 'M7', `drive-${legs[leg]}`);
     }
     await page.waitForTimeout(3000);
   }
   await page.evaluate(() => window.__game!.autopilot(null));
-  // On a slow machine the simulation runs slower than real time (at most 5 steps per
-  // frame), so judge the distance against simulated time.
-  const simSeconds = (await page.evaluate(() => window.__game!.simTime())) - simStart;
+  // Judge the distance against simulated time, which can still fall behind real time.
+  const simSeconds = await simNow();
   const run = {
     seconds: 300,
     simulatedSeconds: Math.round(simSeconds),
