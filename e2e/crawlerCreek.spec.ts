@@ -3,7 +3,7 @@ import { collectErrors, shot, waitEngine, waitSim } from './helpers';
 
 test('drives Crawler Creek’s gate trail in the Camel Trophy 4WD', async ({ page }) => {
   // Loads the world on the software renderer and drives over a bridge.
-  test.setTimeout(600_000);
+  test.setTimeout(900_000);
   const errors = collectErrors(page);
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());

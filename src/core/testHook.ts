@@ -70,6 +70,11 @@ export interface GameHook {
   /** Seconds of simulated time so far. */
   simTime(): number;
   /**
+   * Simulate up to a second per frame instead of a twelfth. For tests on a software
+   * renderer, which takes seconds to draw each frame.
+   */
+  setCatchUp(on: boolean): void;
+  /**
    * Start the autopilot on the track leading to a POI, `back` metres out (teleports
    * there first). Pass null to stop it.
    */
@@ -253,6 +258,9 @@ export function installHook(game: Game): void {
       mode: g.tool.mode,
     }),
     simTime: () => g.sim.time,
+    setCatchUp: (on) => {
+      g.loop.catchUp = on;
+    },
     audio: () => g.audio.info(),
     bird: (kind) => g.audio.bird(kind),
     setVehicle: (id) => g.swapVehicle(id),

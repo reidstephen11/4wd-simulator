@@ -17,6 +17,8 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/?debug');
   await waitReady(page);
+  // Simulate up to a second per frame: the software renderer takes seconds per frame.
+  await page.evaluate(() => window.__game!.setCatchUp(true));
 
   // --- Winch out of the Bog Hole ---
   await page.evaluate(() => window.__game!.teleport(174, 3, 95));

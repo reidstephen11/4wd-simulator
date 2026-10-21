@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { collectErrors, shot, waitReady } from './helpers';
 
 test('M3: every POI exists, with a screenshot of each', async ({ page }) => {
-  test.setTimeout(900_000);
+  test.setTimeout(1_800_000);
   const errors = collectErrors(page);
   await page.goto('/');
   await waitReady(page);

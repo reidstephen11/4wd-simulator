@@ -1,4 +1,4 @@
-import { MAX_STEPS_PER_FRAME, PHYSICS_DT } from './config';
+import { CATCH_UP_SECONDS, MAX_STEPS_PER_FRAME, PHYSICS_DT } from './config';
 
 export interface LoopCallbacks {
   /** Advance the simulation by exactly PHYSICS_DT. */
@@ -22,6 +22,14 @@ export class GameLoop {
   paused = false;
   /** Scales simulated time (1 = real time). */
   timeScale = 1;
+  /**
+   * Simulate up to CATCH_UP_SECONDS of a slow frame instead of MAX_STEPS_PER_FRAME steps.
+   * Off for players (a slow frame slows the game down instead); the browser tests turn it
+   * on because the software renderer takes seconds to draw each frame.
+   */
+  catchUp = false;
+  /** Real time since the previous frame (s); `frameDt` stops at 0.25 s. */
+  frameSeconds = 0;
   readonly timings: LoopTimings = { sim: 0, render: 0, steps: 0 };
   private acc = 0;
   private last = 0;
@@ -45,18 +53,20 @@ export class GameLoop {
   private readonly frame = (now: number): void => {
     if (!this.running) return;
     this.raf = requestAnimationFrame(this.frame);
-    const frameDt = Math.min(0.25, Math.max(0, (now - this.last) / 1000));
+    this.frameSeconds = Math.max(0, (now - this.last) / 1000);
+    const frameDt = Math.min(0.25, this.frameSeconds);
     this.last = now;
     const t0 = performance.now();
     let steps = 0;
     if (!this.paused) {
-      this.acc += frameDt * this.timeScale;
-      while (this.acc >= PHYSICS_DT && steps < MAX_STEPS_PER_FRAME) {
+      const limit = this.catchUp ? Math.round(CATCH_UP_SECONDS / PHYSICS_DT) : MAX_STEPS_PER_FRAME;
+      this.acc += (this.catchUp ? Math.min(CATCH_UP_SECONDS, this.frameSeconds) : frameDt) * this.timeScale;
+      while (this.acc >= PHYSICS_DT && steps < limit) {
         this.cb.step(PHYSICS_DT);
         this.acc -= PHYSICS_DT;
         steps++;
       }
-      if (steps === MAX_STEPS_PER_FRAME) this.acc = 0;
+      if (steps === limit) this.acc = 0;
     }
     const t1 = performance.now();
     this.cb.render(this.paused ? 1 : this.acc / PHYSICS_DT, frameDt);

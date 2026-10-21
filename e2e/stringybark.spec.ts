@@ -16,6 +16,8 @@ test('winches the GQ Patrol up Hut Spur on Stringybark Range', async ({ page }) 
   await drive.click();
   await page.waitForFunction(() => window.__game?.ready === true, null, { timeout: 300_000 });
   await waitEngine(page);
+  // Simulate up to a second per frame: the software renderer takes seconds per frame.
+  await page.evaluate(() => window.__game!.setCatchUp(true));
   expect(await page.evaluate(() => window.__game!.mapId())).toBe('stringybark-range');
   expect(await page.evaluate(() => window.__game!.vehicleId())).toBe('patrol');
   expect(await page.evaluate(() => window.__game!.lastCampsite())).toBe('river-camp');

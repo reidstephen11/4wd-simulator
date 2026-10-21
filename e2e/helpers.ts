@@ -63,3 +63,18 @@ export async function waitSim(page: Page, seconds: number, timeoutMs = 300_000):
     polling: 100,
   });
 }
+
+/**
+ * Wait until the browser has drawn `frames` more frames, so stats read afterwards describe
+ * the current view (the software renderer takes seconds per frame).
+ */
+export async function waitFrames(page: Page, frames = 2): Promise<void> {
+  await page.evaluate(
+    (n) =>
+      new Promise<void>((done) => {
+        const next = (left: number) => requestAnimationFrame(() => (left > 1 ? next(left - 1) : done()));
+        next(n);
+      }),
+    frames,
+  );
+}
