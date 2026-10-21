@@ -1287,6 +1287,57 @@ table.controls td {
   grid-column: span 3;
 }
 
+/* Range, crawl and diff locks: a row above the other buttons, shown while 4WD is open. */
+.touch-pile {
+  display: none;
+  grid-template-columns: repeat(4, 60px);
+  gap: 6px;
+}
+
+.touch-controls.pile-open:not(.tool-mode) .touch-pile {
+  display: grid;
+}
+
+.touch-pile .touch-btn {
+  padding: 0 2px;
+  font-size: 12px;
+}
+
+.touch-pile-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  line-height: 1;
+}
+
+.touch-pile-toggle[aria-expanded='true'] {
+  background: var(--paper-dark);
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+
+.touch-pile-marks {
+  display: flex;
+  gap: 2px;
+}
+
+.touch-pile-marks i {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 3px;
+  font: 800 9px/10px var(--font);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.touch-pile-marks i.on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--paper);
+}
+
 .touch-pedals {
   display: flex;
   gap: 10px;

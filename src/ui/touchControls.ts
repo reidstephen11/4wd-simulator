@@ -41,6 +41,7 @@ export class TouchControls {
   private readonly stickBase: HTMLElement;
   private readonly knob: HTMLElement;
   private readonly right: HTMLElement;
+  private readonly pileToggle: HTMLElement;
   /** Pointer ids holding each hold button down. */
   private readonly holds = new Map<HTMLElement, number>();
   private lastKey = '';
@@ -60,12 +61,15 @@ export class TouchControls {
       </div>
       <div class="touch-stick" aria-label="Steering"><div class="touch-stick-base"><div class="touch-stick-knob"></div></div></div>
       <div class="touch-right">
-        <div class="touch-grid touch-drive">
-          <button type="button" class="touch-btn" data-tap="handbrake" data-state="parkBrake">HAND</button>
+        <div class="touch-pile touch-drive">
           <button type="button" class="touch-btn" data-tap="range" data-state="lowRange">LOW</button>
           <button type="button" class="touch-btn" data-tap="precision" data-state="precision">CRAWL</button>
           <button type="button" class="touch-btn" data-tap="frontDiff" data-state="frontLocked">F LOCK</button>
           <button type="button" class="touch-btn" data-tap="rearDiff" data-state="rearLocked">R LOCK</button>
+        </div>
+        <div class="touch-grid touch-drive">
+          <button type="button" class="touch-btn" data-tap="handbrake" data-state="parkBrake">HAND</button>
+          <button type="button" class="touch-btn touch-pile-toggle" aria-expanded="false" aria-label="Range, crawl and diff locks">4WD<span class="touch-pile-marks" aria-hidden="true"><i data-mark="lowRange">L</i><i data-mark="precision">C</i><i data-mark="frontLocked">F</i><i data-mark="rearLocked">R</i></span></button>
           <button type="button" class="touch-btn" data-tap="toolMenu">TOOLS</button>
           <button type="button" class="touch-btn" data-tap="winch interact" title="Winch, pick up planks">USE</button>
           <button type="button" class="touch-btn" data-hold="winchIn" data-show="winchAttached">IN</button>
@@ -85,6 +89,7 @@ export class TouchControls {
     this.stickBase = this.el.querySelector('.touch-stick-base') as HTMLElement;
     this.knob = this.el.querySelector('.touch-stick-knob') as HTMLElement;
     this.right = this.el.querySelector('.touch-right') as HTMLElement;
+    this.pileToggle = this.el.querySelector('.touch-pile-toggle') as HTMLElement;
 
     // Long presses must not open the text-selection or context menu.
     this.el.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -120,6 +125,18 @@ export class TouchControls {
       b.addEventListener('pointercancel', up);
       b.addEventListener('lostpointercapture', up);
     }
+
+    // 4WD opens the pile of drivetrain buttons above it, and closes it again.
+    this.pileToggle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this.pileToggle.classList.add('down');
+      const open = !this.el.classList.contains('pile-open');
+      this.el.classList.toggle('pile-open', open);
+      this.pileToggle.setAttribute('aria-expanded', String(open));
+      this.measure();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
+      this.pileToggle.addEventListener(type, () => this.pileToggle.classList.remove('down'));
 
     const zone = this.el.querySelector('.touch-stick') as HTMLElement;
     zone.addEventListener('pointerdown', (e) => {
@@ -175,15 +192,22 @@ export class TouchControls {
     this.el.classList.toggle('tool-mode', tool);
     for (const b of this.el.querySelectorAll<HTMLElement>('[data-state]'))
       b.setAttribute('aria-pressed', String(s[b.dataset.state as keyof TouchControlsState] === true));
+    // With the pile closed, the 4WD button's letters show which of its settings are on.
+    for (const m of this.el.querySelectorAll<HTMLElement>('[data-mark]'))
+      m.classList.toggle('on', s[m.dataset.mark as keyof TouchControlsState] === true);
     for (const b of this.el.querySelectorAll<HTMLElement>('[data-show]')) {
       const show = s[b.dataset.show as keyof TouchControlsState] === true;
       b.hidden = !show;
       if (!show && this.holds.has(b)) this.release(b);
     }
-    // On a phone held upright the HUD's prompts sit just above these buttons, however many show.
-    document.body.style.setProperty('--touch-right-height', `${this.right.offsetHeight}px`);
+    this.measure();
     // Pedals held while a tool mode starts would otherwise stay down.
     if (tool) for (const b of [...this.holds.keys()]) if (b.closest('.touch-drive')) this.release(b);
+  }
+
+  /** On a phone held upright the HUD's prompts sit just above these buttons, however many show. */
+  private measure(): void {
+    document.body.style.setProperty('--touch-right-height', `${this.right.offsetHeight}px`);
   }
 
   private refresh(): void {

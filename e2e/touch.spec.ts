@@ -108,9 +108,19 @@ test.describe('phone', () => {
     await f.tap('[data-tap="handbrake"]');
     await expect.poll(() => page.evaluate(() => window.__game!.parkBrake())).toBe(false);
 
+    // LOW, CRAWL and the diff locks are tucked behind 4WD, whose letters show which are on.
+    const pile = page.locator('.touch-pile');
+    await expect(pile).toBeHidden();
+    await f.tap('.touch-pile-toggle');
+    await expect(pile).toBeVisible();
+    await expect(page.locator('.touch-pile-toggle')).toHaveAttribute('aria-expanded', 'true');
     // LOW switches range.
     await f.tap('[data-tap="range"]');
     await expect.poll(async () => (await page.evaluate(() => window.__game!.vehicle())).range).toBe('low');
+    await expect(page.locator('[data-mark="lowRange"]')).toHaveClass(/\bon\b/);
+    await expect(page.locator('[data-mark="frontLocked"]')).not.toHaveClass(/\bon\b/);
+    await f.tap('.touch-pile-toggle');
+    await expect(pile).toBeHidden();
 
     // TOOLS opens the radial menu, which stays open until the space around it is tapped.
     await f.tap('[data-tap="toolMenu"]');
@@ -181,6 +191,7 @@ test.describe('phone on Crawler Creek', () => {
     const f = await fingers(page);
     // Low range brings up the crawl gauges beside the course hint; GAS against the
     // handbrake brings up a prompt.
+    await f.tap('.touch-pile-toggle');
     await f.tap('[data-tap="range"]');
     await f.tap('[data-tap="handbrake"]');
     await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
@@ -190,24 +201,33 @@ test.describe('phone on Crawler Creek', () => {
     await expect(page.locator('.crawl-gauges')).toBeVisible();
     const panels =
       '.touch-btn, .hud button, .compass, .gate-count, .status, .course-hint, .crawl-gauges, .camera-help, .prompt';
-    for (const view of ['follow', 'cockpit'] as const) {
-      await page.evaluate((v) => window.__game!.cameraPreset(v), view);
-      for (const size of [
-        { width: 390, height: 844 },
-        { width: 375, height: 667 },
-        { width: 844, height: 390 },
-        { width: 740, height: 360 },
-      ]) {
-        await page.setViewportSize(size);
-        await waitSim(page, 0.2);
-        const where = `${view} ${size.width}×${size.height}`;
-        expect(await overlapping(page, panels), where).toEqual([]);
-        // The status strip and camera buttons stay one row high (they once stretched down the screen).
-        for (const panel of ['.status', '.camera-help'])
-          expect((await page.locator(panel).boundingBox())!.height, `${where} ${panel}`).toBeLessThan(60);
+    // With 4WD's pile open, then closed.
+    for (const open of [true, false]) {
+      if (!open) await f.tap('.touch-pile-toggle');
+      await expect(page.locator('.touch-pile')).toBeVisible({ visible: open });
+      for (const view of ['follow', 'cockpit'] as const) {
+        await page.evaluate((v) => window.__game!.cameraPreset(v), view);
+        for (const size of [
+          { width: 390, height: 844 },
+          { width: 375, height: 667 },
+          { width: 844, height: 390 },
+          { width: 740, height: 360 },
+        ]) {
+          await page.setViewportSize(size);
+          await waitSim(page, 0.2);
+          const where = `${open ? 'open' : 'closed'} ${view} ${size.width}×${size.height}`;
+          expect(await overlapping(page, panels), where).toEqual([]);
+          // The status strip and camera buttons stay one row high (they once stretched down the screen).
+          for (const panel of ['.status', '.camera-help'])
+            expect((await page.locator(panel).boundingBox())!.height, `${where} ${panel}`).toBeLessThan(60);
+        }
       }
+      await page.evaluate(() => window.__game!.cameraPreset('follow'));
+      await page.setViewportSize({ width: 390, height: 844 });
+      await waitSim(page, 0.3);
+      await shot(page, 'touch', open ? 'portrait-4wd-open' : 'portrait-crawler-creek');
     }
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => window.__game!.cameraPreset('cockpit'));
     await waitSim(page, 0.3);
     await shot(page, 'touch', 'portrait-driver');
     await page.evaluate(() => window.__game!.setInput(null));
