@@ -9,6 +9,8 @@ test('swaps to the Bush Tucker Man Land Rover from the pause menu and remembers 
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await waitReady(page);
+  // Simulate up to a second per frame: the software renderer takes seconds per frame.
+  await page.evaluate(() => window.__game!.setCatchUp(true));
   expect(await page.evaluate(() => window.__game!.vehicleId())).toBe('shortie');
   const before = await page.evaluate(() => window.__game!.vehicle());
 

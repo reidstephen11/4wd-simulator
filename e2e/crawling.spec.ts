@@ -5,7 +5,7 @@ import { collectErrors, shot, waitReady, waitSim } from './helpers';
 test('crawl controls work from keyboard, HUD and gamepad; course hints explain the selected line', async ({
   page,
 }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(600_000);
   const errors = collectErrors(page);
   await page.goto('/');
   await waitReady(page);

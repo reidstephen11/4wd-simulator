@@ -35,7 +35,7 @@ function discoveryCards(page: Page): Promise<string[]> {
 test('M5: driving into a POI shows the toast, adds it to the map, and survives a reload', async ({
   page,
 }) => {
-  test.setTimeout(600_000);
+  test.setTimeout(900_000);
   const errors = collectErrors(page);
   await recordDiscoveryCards(page);
   await page.goto('/');

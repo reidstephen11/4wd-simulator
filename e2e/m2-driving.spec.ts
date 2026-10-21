@@ -60,6 +60,8 @@ test('M2: a gamepad drives the car', async ({ page }) => {
   });
   await page.goto('/');
   await waitReady(page);
+  // Simulate up to a second per frame: the software renderer takes seconds per frame.
+  await page.evaluate(() => window.__game!.setCatchUp(true));
   const a = await page.evaluate(() => window.__game!.vehicle());
   await waitSim(page, 4);
   const b = await page.evaluate(() => window.__game!.vehicle());

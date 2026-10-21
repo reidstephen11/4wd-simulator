@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { collectErrors, shot, waitReady } from './helpers';
 
 test('M1: world loads without console errors and looks right', async ({ page }) => {
+  test.setTimeout(600_000);
   const errors = collectErrors(page);
   await page.goto('/?debug');
   await waitReady(page);
