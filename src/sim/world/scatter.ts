@@ -4,6 +4,7 @@ import type { MapDef } from './mapTypes';
 import type { TerrainFeatures } from './features';
 import { Noise2D, smoothstep } from './noise';
 import { mulberry32 } from './rng';
+import { segmentDistance } from './polyline';
 import { GroundTint, type Terrain } from './terrain';
 
 export interface TreeInstance {
@@ -142,6 +143,20 @@ export function generateScatter(map: MapDef, terrain: Terrain, features: Terrain
     return false;
   };
   const edgeDist = (x: number, z: number) => half - Math.max(Math.abs(x), Math.abs(z));
+  // Near a winch climb only its own anchors are marked, so quick attach finds them.
+  const climbs = features.tracks.filter((t) => t.def.landings);
+  const nearClimb = (x: number, z: number) =>
+    climbs.some((t) => {
+      for (let k = 0; k + 1 < t.poly.count; k += 2) {
+        const j = Math.min(t.poly.count - 1, k + 2);
+        if (
+          segmentDistance(x, z, t.poly.xs[k], t.poly.zs[k], t.poly.xs[j], t.poly.zs[j]).d <
+          S.climbAnchorClearance
+        )
+          return true;
+      }
+      return false;
+    });
 
   // --- Trees ---
   const trees: TreeInstance[] = [];
@@ -282,7 +297,7 @@ export function generateScatter(map: MapDef, terrain: Terrain, features: Terrain
       if (r1 > p) continue;
       if (inClearing(x, z, -8) || blocked(x, z, 1.5) || nearProp(x, z, 6)) continue;
       const radius = 0.35 + r2 * r2 * 1.6;
-      const anchor = radius >= S.anchorRockRadius && r3 < S.markedShare;
+      const anchor = radius >= S.anchorRockRadius && r3 < S.markedShare && !nearClimb(x, z);
       addRock(x, z, radius, anchor, 0.3 + rand() * 0.15, 0.6 + rand() * 0.35);
     }
   }

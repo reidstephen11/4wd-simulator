@@ -342,7 +342,13 @@ export class PaperMap {
         path();
         g.stroke();
         g.strokeStyle =
-          t.def.surface === 'rock' ? '#B9B2A6' : t.def.surface === 'gravel' ? '#C9A27E' : '#D98A5C';
+          t.def.surface === 'rock'
+            ? '#B9B2A6'
+            : t.def.surface === 'gravel'
+              ? '#C9A27E'
+              : t.def.surface === 'mud'
+                ? '#8E6A4C'
+                : '#D98A5C';
         g.lineWidth = 2.4;
         path();
         g.stroke();

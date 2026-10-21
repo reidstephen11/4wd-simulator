@@ -46,7 +46,12 @@ export class VehicleTools {
       const dz = a.point.z - mount.z;
       const d = Math.hypot(dx, dz) || 1e-3;
       const cos = (dx * f.x + dz * f.z) / (d * (Math.hypot(f.x, f.z) || 1));
-      const score = d * (cos < 0 ? winchTuning.behindPenalty : 1) * (1.6 - 0.6 * Math.max(0, cos));
+      const score =
+        d *
+          (cos < 0 ? winchTuning.behindPenalty : 1) *
+          (1.6 - 0.6 * Math.max(0, cos)) *
+          (a.kind === 'rock' ? winchTuning.markedPreference : 1) +
+        (d < winchTuning.minPullDistance ? 1000 : 0);
       if (score < bestScore) {
         bestScore = score;
         best = a;

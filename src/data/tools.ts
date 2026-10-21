@@ -14,6 +14,13 @@ export const winchTuning = {
   slackOnAttach: 0.3,
   /** Anchors behind the vehicle count as this much further away for quick attach. */
   behindPenalty: 2.5,
+  /**
+   * An anchor closer than this (m) is no use for a pull: quick attach takes it only when
+   * nothing further away is in reach, so on a winch climb it picks the next anchor up.
+   */
+  minPullDistance: 7,
+  /** Marked anchors (ring-bolted boulders) count as this much nearer for quick attach. */
+  markedPreference: 0.5,
 };
 
 export const plankTuning = {

@@ -350,9 +350,67 @@ export const dieselSynthTuning: EngineSynthTuning = {
   outputGain: 1,
 };
 
+/**
+ * The GQ Patrol's TD42: a 4.2 L six-cylinder diesel with no turbo. Six cylinders fire
+ * three times a crank turn, so it idles smoother and deeper than the Perentie's four,
+ * with the same hard combustion knock, a gruff valve clatter and a long exhaust run
+ * back under the wagon to a tailpipe behind the rear wheel.
+ */
+export const td42SynthTuning: EngineSynthTuning = {
+  idleRpm: 650,
+  limiterRpm: 4050,
+  firingOrder: [1, 5, 3, 6, 2, 4],
+  runners: {
+    delayMs: [0.5, 0.3, 0.1, 0.1, 0.3, 0.5],
+    strength: [0.97, 1.0, 1.03, 1.03, 0.99, 0.96],
+  },
+  pulse: { riseMs: [0.4, 0.2], decayMs: [1.8, 1.0], minRiseDeg: 2, minDecayDeg: 5, maxDecayDeg: 24 },
+  turbulence: { idle: 0.3, load: 0.6 },
+  pressure: { idle: 0.3, compression: 0.05 },
+  manifoldSeconds: 0.08,
+  jitter: { idle: 0.11, load: 0.035, timingDeg: 2.5, lopeRpm: 8 },
+  exhaust: {
+    soundSpeed: 500,
+    headPipe: { length: 1.8, reflection: -0.35, dampingHz: 2400 },
+    muffler: { cutoffHz: 750, q: 0.6, boomHz: 68, boomQ: 1.2, boomDb: 4.5, leak: 0.22 },
+    tailPipe: { length: 2.0, reflection: -0.3, dampingHz: 3200 },
+    radiationHz: 32,
+    gain: 1.05,
+  },
+  block: { cutoffHz: 180, gain: 0.5 },
+  valves: { hz: [1500, 2700], q: 4, gain: 0.7 },
+  intake: {
+    openDeg: 380,
+    riseDeg: 30,
+    decayDeg: 32,
+    noiseHz: 480,
+    noiseGain: 1.0,
+    honkHz: 95,
+    honkQ: 3,
+    honkGain: 0.3,
+  },
+  fan: { hz: 600, gain: 0.12 },
+  // Lifting off cuts the fuel: compression pulses only, no pops or throttle whistle.
+  overrun: { fromRpm: 1400, misfire: 0.85, popChance: 0, popGain: 1, whistleHz: 2900, whistleGain: 0 },
+  starter: {
+    seconds: 1.15,
+    rpm: 160,
+    compressionDip: 0.45,
+    meshPerCrankTurn: 120,
+    toneHz: 780,
+    brushHz: 2300,
+    gain: 0.28,
+  },
+  catch: { seconds: 1.7, flareRpm: 1100, flareSeconds: 0.35, settleSeconds: 0.6 },
+  whine: { teeth: [39, 31], second: 0.5, harmonic: 0.12, shaftAm: 0.3, wobble: 0.15, gain: 0.012 },
+  knock: { hz: [950, 1750], q: 2.5, idle: 1, load: 0.3, gain: 4.5 },
+  outputGain: 1,
+};
+
 /** Engine sound for each vehicle. */
 export const engineSynthTunings = {
   shortie: engineSynthTuning,
   camel: engineSynthTuning,
   perentie: dieselSynthTuning,
+  patrol: td42SynthTuning,
 } as const;

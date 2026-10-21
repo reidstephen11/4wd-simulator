@@ -83,6 +83,13 @@ export interface TrackStepsDef {
   spacing: number;
   /** Ledge height (riser) in metres. */
   rise: number;
+  /**
+   * Stair steps (winch climbs only, see `landings`): each riser lifts the track for good,
+   * so the ground behind it stays up and a car can't hang its belly on a lip. The riser
+   * is a granite hull, `vertical` metres sheer and then bevelled at `bevelDeg` up to the
+   * full rise.
+   */
+  stair?: { vertical: number; bevelDeg: number };
 }
 
 export interface TrackDef {
@@ -94,7 +101,12 @@ export interface TrackDef {
   shoulder: number;
   /** Smoothing radius (m) for the height profile. */
   smooth: number;
-  surface: 'dirt' | 'gravel' | 'rock';
+  /**
+   * Over this many metres at each end the smoothed profile blends back to the ground, so
+   * a road graded over a long distance still meets the roads at its ends level.
+   */
+  endBlend?: number;
+  surface: 'dirt' | 'gravel' | 'rock' | 'mud';
   /** Depth of the worn wheel ruts. */
   ruts: number;
   /** Fraction of the natural cross-slope kept (0 = level, 1 = untouched). */
@@ -114,6 +126,20 @@ export interface TrackDef {
   erosion?: readonly ErosionRutDef[];
   /** Grade evenly between these [from, to] distances along the track (switchbacks, causeways). */
   even?: ReadonlyArray<readonly [number, number]>;
+  /**
+   * A winch climb's profile: gentle landings at these [from, to] distances and steep
+   * pitches between them, rising evenly from the graded height at the start of the track
+   * to that at its end. The landings rise at `landingGrade` degrees (4 by default).
+   */
+  landings?: ReadonlyArray<readonly [number, number]>;
+  landingGrade?: number;
+  /**
+   * Knolls beside a winch climb that carry its anchors: the ground within `radius` of
+   * each point is built up (or cut down) to `height` above the track's profile `at`
+   * metres along it, blending out to the ground around, so a winch cable from the pitch
+   * below runs up the line of the pitch.
+   */
+  knolls?: ReadonlyArray<{ x: number; z: number; at: number; height: number; radius: number }>;
   /** Timber bridges carrying the track over a creek, ditch or mud hole. */
   bridges?: readonly TrackBridgeDef[];
   markerColor?: 'green' | 'amber' | 'red';
@@ -342,6 +368,8 @@ export interface CrawlTrailDef {
   /** A separate easier route between the same ends, if there is one. */
   bypassTrackId?: string;
   difficulty?: TrailDifficulty;
+  /** A winch climb: hooking up the winch is part of it, so a scored run counts no points for it. */
+  winchClimb?: boolean;
   bypassHint?: string;
   sections: ReadonlyArray<{
     from: number;

@@ -14,7 +14,7 @@ describe('Camel Trophy 4WD', () => {
     expect(rest).toEqual(base);
     expect([id, name]).toEqual(['camel', 'Camel Trophy 4WD']);
     expect(vehicles.camel.cabin).toBe(vehicles.shortie.cabin);
-    expect(vehicleOrder).toEqual(['shortie', 'camel', 'perentie']);
+    expect(vehicleOrder.slice(0, 3)).toEqual(['shortie', 'camel', 'perentie']);
     // The snorkel head is about 2 m off the ground, beside the left windscreen pillar.
     expect(intakeHeight).toBeGreaterThan(1.9);
     expect(intake.y + vehicleTuning.wheelRadius + 0.12).toBeCloseTo(intakeHeight, 1);

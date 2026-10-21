@@ -33,7 +33,7 @@ export function addPuddles(world: World, env: EnvironmentConfig): Puddle[] {
   const index = (ix: number, iz: number) => iz * t.res + ix;
   for (const track of f.tracks) {
     const d = track.def;
-    if (d.faint || d.surface === 'rock' || lineIds.has(d.id)) continue;
+    if (d.faint || d.surface === 'rock' || d.surface === 'mud' || lineIds.has(d.id)) continue;
     if (d.humps?.length || d.erosion?.length || d.steps?.length || d.rockySteps?.length) continue;
     const L = track.poly.length;
     for (

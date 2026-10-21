@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EngineSynth, type EngineInputs } from '../src/audio/engine/engineSynth';
 import { firingHz } from '../src/audio/mix';
-import { dieselSynthTuning } from '../src/data/audio';
+import { dieselSynthTuning, td42SynthTuning } from '../src/data/audio';
 
 const SR = 48000;
 const base: EngineInputs = {
@@ -151,5 +151,33 @@ describe('engine synthesiser', () => {
     const whine = 37 * 33;
     const near = band(road, whine - 80, whine - 30) / 5;
     expect(power(road, whine)).toBeLessThan(10 * near);
+  });
+
+  it("the GQ Patrol's six-cylinder diesel fires three times per crank turn and still clatters", () => {
+    const td42 = () => new EngineSynth(SR, 3, td42SynthTuning);
+    for (const inp of [
+      { rpm: 650 },
+      { rpm: 2000, throttle: 1, load: 1 },
+      { rpm: 4050, throttle: 1, load: 1 },
+    ]) {
+      let peak = 0;
+      for (const v of render(1, inp, td42()))
+        peak = Number.isFinite(v) ? Math.max(peak, Math.abs(v)) : Infinity;
+      expect(peak).toBeLessThanOrEqual(1);
+    }
+    for (const rpm of [900, 1800]) {
+      const f = firingHz(rpm, 6);
+      const x = render(1.5, { rpm, throttle: 0.6, load: 0.6 }, td42());
+      expect(power(x, f)).toBeGreaterThan(power(x, f * 1.27) * 4);
+    }
+    const band = (x: Float32Array, from: number, to: number) => {
+      let sum = 0;
+      for (let f = from; f <= to; f += 11) sum += power(x, f);
+      return sum;
+    };
+    const clatter = (x: Float32Array) => band(x, 1300, 3200) / band(x, 40, 400);
+    expect(clatter(render(1.5, { rpm: 700 }, td42()))).toBeGreaterThan(
+      2 * clatter(render(1.5, { rpm: 700 })),
+    );
   });
 });

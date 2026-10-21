@@ -21,7 +21,7 @@ const maxTilt: Record<TrailDifficulty, number> = { easy: 20, moderate: 34, hard:
 
 describe('Crawler Creek gate trail', () => {
   it('is a third map: one loop of twelve sections from the Trailhead, each a crawl trail', () => {
-    expect(mapOrder).toEqual(['high-country', 'ironbark-park', 'crawler-creek']);
+    expect(mapOrder.slice(0, 3)).toEqual(['high-country', 'ironbark-park', 'crawler-creek']);
     expect(isMapId('crawler-creek')).toBe(true);
     expect(world.map.name).toBe('Crawler Creek');
     expect(gateTrailSections).toHaveLength(12);

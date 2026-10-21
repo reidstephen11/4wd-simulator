@@ -6,6 +6,7 @@ import { buildVehicleWheel } from './vehicleWheel';
 import { buildRackPlank } from './vehicleEquipment';
 import { buildPerentieBody, buildPerentiePlank, buildPerentieWheel } from './perentieBody';
 import { addCamelTrophyKit, camelLivery, camelRim } from './camelLivery';
+import { buildPatrolBody, buildPatrolPlank, buildPatrolWheel } from './patrolBody';
 
 /** How each vehicle is drawn: its body, wheels, carried planks, paint and springs. */
 export interface VehicleLook {
@@ -60,6 +61,25 @@ export const vehicleLooks: Record<VehicleId, VehicleLook> = {
       head: [
         { x: -0.625, y: 0.39, z: -2.042 },
         { x: 0.625, y: 0.39, z: -2.042 },
+      ],
+    },
+  },
+  patrol: {
+    name: 'gq-patrol',
+    body: buildPatrolBody,
+    wheel: buildPatrolWheel,
+    plank: buildPatrolPlank,
+    paint: { roughness: 0.36, metalness: 0.08, clearcoat: 0.6, clearcoatRoughness: 0.28 },
+    springs: 'coil',
+    lamps: {
+      head: [
+        { x: -0.645, y: 0.43, z: -2.29 },
+        { x: 0.645, y: 0.43, z: -2.29 },
+      ],
+      // The two driving lamps on the bull bar come on with high beam.
+      roof: [
+        { x: -0.28, y: 0.86, z: -2.43 },
+        { x: 0.28, y: 0.86, z: -2.43 },
       ],
     },
   },
