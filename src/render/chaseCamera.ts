@@ -140,8 +140,10 @@ export class ChaseCamera {
 
   update(dt: number, t: ChaseTarget): void {
     const near = this.preset === 'cockpit' ? cockpit.near : C.near;
-    if (this.camera.near !== near) {
+    const fov = viewFov(this.camera.aspect);
+    if (this.camera.near !== near || this.camera.fov !== fov) {
       this.camera.near = near;
+      this.camera.fov = fov;
       this.camera.updateProjectionMatrix();
     }
     if (this.preset === 'cockpit' && t.rotation) {
@@ -237,4 +239,14 @@ export class ChaseCamera {
     this.camera.up.set(0, 1, 0);
     this.camera.lookAt(this.look);
   }
+}
+
+/**
+ * Vertical field of view (degrees) for a screen of this width / height: `fov`, widened on
+ * a narrow screen so the view is at least `minHorizontalFov` across, up to `maxFov`.
+ */
+export function viewFov(aspect: number): number {
+  const rad = THREE.MathUtils.DEG2RAD;
+  const needed = (2 * Math.atan(Math.tan((C.minHorizontalFov * rad) / 2) / aspect)) / rad;
+  return Math.min(C.maxFov, Math.max(C.fov, needed));
 }

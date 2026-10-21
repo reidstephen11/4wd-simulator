@@ -212,6 +212,9 @@ export class Hud {
       (this.gaugeMode === 'auto' && (s.range === 'low' || s.precisionCrawl || this.cockpitView));
     this.gauges.visible = showGauges;
     if (showGauges) this.gauges.update(s.gauges);
+    // On a phone held upright the panels below make room for these (see styles.css).
+    this.el.classList.toggle('with-gauges', showGauges);
+    this.el.classList.toggle('with-progress', !!s.gates || !!s.run);
     this.runEl.classList.toggle('hidden', !s.run);
     // The gate count sits where a scored run's clock goes; the run takes the place while it lasts.
     this.gateEl.classList.toggle('hidden', !s.gates || !!s.run);
