@@ -70,8 +70,8 @@ export interface GameHook {
   /** Seconds of simulated time so far. */
   simTime(): number;
   /**
-   * Simulate up to a second per frame instead of a twelfth, so the simulation keeps up
-   * with frames that take seconds to draw (tests on a software renderer).
+   * Simulate up to a second per frame instead of a twelfth. For tests on a software
+   * renderer, which takes seconds to draw each frame.
    */
   setCatchUp(on: boolean): void;
   /**

@@ -26,6 +26,8 @@ test('M7: dust, mud spray, splash and wake', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/?debug');
   await waitReady(page);
+  // Simulate up to a second per frame: the software renderer takes seconds per frame.
+  await page.evaluate(() => window.__game!.setCatchUp(true));
 
   // Dust on the dry main track.
   await page.evaluate(() => window.__game!.teleport(-262, 152, 323));

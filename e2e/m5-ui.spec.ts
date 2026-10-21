@@ -40,6 +40,8 @@ test('M5: driving into a POI shows the toast, adds it to the map, and survives a
   await recordDiscoveryCards(page);
   await page.goto('/');
   await waitReady(page);
+  // Simulate up to a second per frame: the software renderer takes seconds per frame.
+  await page.evaluate(() => window.__game!.setCatchUp(true));
   // Spawning at River Flat Camp discovers it.
   await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('River Flat Camp');
   await shot(page, 'M5', 'hud-and-first-discovery');
@@ -125,8 +127,10 @@ test('M5: with storage blocked the game still runs', async ({ page }) => {
   await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('River Flat Camp');
   const t0 = await page.evaluate(() => window.__game!.simTime());
   await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
-  await page.waitForTimeout(3000);
-  expect(await page.evaluate(() => window.__game!.simTime())).toBeGreaterThan(t0);
+  // Poll rather than wait a fixed time: the software renderer can take longer than 3 s per frame.
+  await expect
+    .poll(() => page.evaluate(() => window.__game!.simTime()), { timeout: 60_000 })
+    .toBeGreaterThan(t0);
   await shot(page, 'M5', 'storage-blocked-still-running');
   expect(errors).toEqual([]);
 });

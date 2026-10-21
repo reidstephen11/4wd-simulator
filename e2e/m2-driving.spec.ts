@@ -6,6 +6,8 @@ test('M2: keyboard drives the car and the chase camera follows', async ({ page }
   const errors = collectErrors(page);
   await page.goto('/?debug');
   await waitReady(page);
+  // Simulate up to a second per frame: the software renderer takes seconds per frame.
+  await page.evaluate(() => window.__game!.setCatchUp(true));
   await page.waitForTimeout(1000);
   await shot(page, 'M2', 'spawn-chase-camera');
   const start = await page.evaluate(() => window.__game!.vehicle());
