@@ -43,24 +43,29 @@ async function fingers(page: Page) {
   };
 }
 
-/** Pairs of visible on-screen buttons (touch controls and HUD) whose boxes overlap. */
-function overlappingButtons(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const boxes = [...document.querySelectorAll<HTMLElement>('.touch-btn, .hud button')]
+/**
+ * Pairs of visible elements matching `selector` whose boxes overlap (one inside the other
+ * doesn't count). By default the on-screen buttons (touch controls and HUD).
+ */
+function overlapping(page: Page, selector = '.touch-btn, .hud button'): Promise<string[]> {
+  return page.evaluate((selector) => {
+    const boxes = [...document.querySelectorAll<HTMLElement>(selector)]
       .map((el) => ({
-        name: el.textContent?.trim() || el.getAttribute('aria-label') || '?',
+        el,
+        name: el.textContent?.trim().slice(0, 24) || el.getAttribute('aria-label') || el.className,
         r: el.getBoundingClientRect(),
       }))
       .filter(({ r }) => r.width > 0 && r.height > 0);
     const hits: string[] = [];
     boxes.forEach((a, i) =>
       boxes.slice(i + 1).forEach((b) => {
+        if (a.el.contains(b.el) || b.el.contains(a.el)) return;
         if (a.r.left < b.r.right && b.r.left < a.r.right && a.r.top < b.r.bottom && b.r.top < a.r.bottom)
           hits.push(`${a.name} / ${b.name}`);
       }),
     );
     return hits;
-  });
+  }, selector);
 }
 
 test.describe('phone', () => {
@@ -155,8 +160,57 @@ test.describe('phone', () => {
     ]) {
       await page.setViewportSize(size);
       await waitSim(page, 0.2);
-      expect(await overlappingButtons(page), `${size.width}×${size.height}`).toEqual([]);
+      expect(await overlapping(page), `${size.width}×${size.height}`).toEqual([]);
     }
+    expect(errors).toEqual([]);
+  });
+});
+
+test.describe('phone on Crawler Creek', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test("the HUD's panels keep clear of each other and the buttons in every view", async ({ page }) => {
+    test.setTimeout(900_000);
+    const errors = collectErrors(page);
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.getByRole('button', { name: /Crawler Creek/ }).click();
+    await page.getByRole('button', { name: /Camel Trophy 4WD/ }).click();
+    await waitReady(page);
+    const f = await fingers(page);
+    // Low range brings up the crawl gauges beside the course hint; GAS against the
+    // handbrake brings up a prompt.
+    await f.tap('[data-tap="range"]');
+    await f.tap('[data-tap="handbrake"]');
+    await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
+    await expect(page.locator('.prompt')).toContainText('Release the handbrake');
+    await expect(page.locator('.gate-count')).toBeVisible();
+    await expect(page.locator('.course-hint')).toBeVisible();
+    await expect(page.locator('.crawl-gauges')).toBeVisible();
+    const panels =
+      '.touch-btn, .hud button, .compass, .gate-count, .status, .course-hint, .crawl-gauges, .camera-help, .prompt';
+    for (const view of ['follow', 'cockpit'] as const) {
+      await page.evaluate((v) => window.__game!.cameraPreset(v), view);
+      for (const size of [
+        { width: 390, height: 844 },
+        { width: 375, height: 667 },
+        { width: 844, height: 390 },
+        { width: 740, height: 360 },
+      ]) {
+        await page.setViewportSize(size);
+        await waitSim(page, 0.2);
+        const where = `${view} ${size.width}×${size.height}`;
+        expect(await overlapping(page, panels), where).toEqual([]);
+        // The status strip and camera buttons stay one row high (they once stretched down the screen).
+        for (const panel of ['.status', '.camera-help'])
+          expect((await page.locator(panel).boundingBox())!.height, `${where} ${panel}`).toBeLessThan(60);
+      }
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await waitSim(page, 0.3);
+    await shot(page, 'touch', 'portrait-driver');
+    await page.evaluate(() => window.__game!.setInput(null));
     expect(errors).toEqual([]);
   });
 });

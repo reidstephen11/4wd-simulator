@@ -40,6 +40,7 @@ export class TouchControls {
   private stickPointer: number | null = null;
   private readonly stickBase: HTMLElement;
   private readonly knob: HTMLElement;
+  private readonly right: HTMLElement;
   /** Pointer ids holding each hold button down. */
   private readonly holds = new Map<HTMLElement, number>();
   private lastKey = '';
@@ -83,6 +84,7 @@ export class TouchControls {
     root.appendChild(this.el);
     this.stickBase = this.el.querySelector('.touch-stick-base') as HTMLElement;
     this.knob = this.el.querySelector('.touch-stick-knob') as HTMLElement;
+    this.right = this.el.querySelector('.touch-right') as HTMLElement;
 
     // Long presses must not open the text-selection or context menu.
     this.el.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -178,6 +180,8 @@ export class TouchControls {
       b.hidden = !show;
       if (!show && this.holds.has(b)) this.release(b);
     }
+    // On a phone held upright the HUD's prompts sit just above these buttons, however many show.
+    document.body.style.setProperty('--touch-right-height', `${this.right.offsetHeight}px`);
     // Pedals held while a tool mode starts would otherwise stay down.
     if (tool) for (const b of [...this.holds.keys()]) if (b.closest('.touch-drive')) this.release(b);
   }

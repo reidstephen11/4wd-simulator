@@ -1343,8 +1343,9 @@ table.controls td {
   display: none;
 }
 
+/* Narrow enough to stay between the top row's buttons and the camera buttons. */
 .touch-mode .compass {
-  width: min(420px, 44vw);
+  width: min(420px, 44vw, 100vw - 490px);
   height: 34px;
 }
 
@@ -1404,9 +1405,22 @@ table.controls td {
   font-size: 12px;
 }
 
+/* The driver's-seat panels keep their touch places: top left, and the camera buttons top right. */
 .touch-mode .hud.cockpit .status,
 .touch-mode .hud.cockpit .course-hint {
+  bottom: auto;
+  left: max(12px, env(safe-area-inset-left));
   transform-origin: top left;
+}
+
+.touch-mode .hud.cockpit .camera-help {
+  bottom: auto;
+  right: max(12px, env(safe-area-inset-right));
+  padding: 4px;
+}
+
+.touch-mode .hud.cockpit .camera-help button {
+  font-size: 13px;
 }
 
 @media (orientation: portrait) {
@@ -1457,7 +1471,61 @@ table.controls td {
     transform-origin: top right;
   }
 
+  /* The gate count or run clock gets its own line under the compass; the panels below move down. */
+  .touch-mode .gate-count,
+  .touch-mode .crawl-run {
+    top: max(98px, calc(env(safe-area-inset-top) + 88px));
+    padding: 2px 12px;
+    font-size: 17px;
+  }
+
+  .touch-mode .crawl-run strong {
+    font-size: 18px;
+  }
+
+  .touch-mode .crawl-run-time {
+    font-size: 15px;
+  }
+
+  .touch-mode .hud.with-progress .status,
+  .touch-mode .hud.with-progress .notices {
+    top: 132px;
+  }
+
+  .touch-mode .hud.with-progress .course-hint,
+  .touch-mode .hud.with-progress .crawl-gauges {
+    top: 174px;
+  }
+
+  /* Beside the crawl gauges the course hint keeps only its title. */
+  .touch-mode .hud.with-gauges .course-hint {
+    max-width: calc(100vw - 216px);
+  }
+
+  .touch-mode .hud.with-gauges .course-hint span {
+    display: none;
+  }
+
+  /* Small, just above the buttons under the right thumb, rather than over the car. */
   .touch-mode .prompts {
-    bottom: 340px;
+    left: auto;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--touch-right-height, 252px) + 8px);
+    transform: none;
+    align-items: flex-end;
+    max-width: calc(100vw - 24px);
+    gap: 4px;
+  }
+
+  .touch-mode .prompt {
+    padding: 3px 10px 4px 4px;
+    font-size: 12px;
+    white-space: normal;
+    text-align: right;
+  }
+
+  .touch-mode .prompt .key {
+    padding: 0 5px;
+    font-size: 15px;
   }
 }

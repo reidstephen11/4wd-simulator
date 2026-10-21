@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PerspectiveCamera, Quaternion, Vector3 } from 'three';
-import { ChaseCamera, type ChaseTarget, type Blocker } from '../src/render/chaseCamera';
+import { ChaseCamera, viewFov, type ChaseTarget, type Blocker } from '../src/render/chaseCamera';
 import { cameraTuning as C, cameraPresets, cockpit } from '../src/data/camera';
 import { InputManager } from '../src/sim/input/inputManager';
 import { Pad } from '../src/data/controls';
@@ -191,6 +191,38 @@ describe('vehicle camera orbit', () => {
     chase.update(1 / 60, t);
     expect(camera.position.x).toBeCloseTo(t.position.x);
     expect(camera.position.z).toBeGreaterThan(t.position.z);
+  });
+});
+
+describe('field of view', () => {
+  /** Horizontal field of view (degrees) for a vertical one and a screen shape. */
+  const across = (fov: number, aspect: number) =>
+    (2 * Math.atan(Math.tan((fov * Math.PI) / 360) * aspect) * 180) / Math.PI;
+
+  it('keeps the usual view on wide screens and widens it on a phone held upright', () => {
+    for (const aspect of [16 / 9, 2.16, 4 / 3, 1]) expect(viewFov(aspect)).toBe(C.fov);
+    // Upright the view is at least minHorizontalFov across, where maxFov allows.
+    expect(across(viewFov(0.7), 0.7)).toBeCloseTo(C.minHorizontalFov, 6);
+    for (const aspect of [390 / 844, 375 / 667, 360 / 800]) {
+      expect(viewFov(aspect)).toBeLessThanOrEqual(C.maxFov);
+      expect(across(viewFov(aspect), aspect)).toBeGreaterThan(44);
+    }
+    // At a fixed 60° an upright phone saw only about 30° across.
+    expect(across(C.fov, 390 / 844)).toBeLessThan(31);
+  });
+
+  it('follows the screen shape in every view', () => {
+    const { camera, chase, t } = fixture();
+    camera.aspect = 390 / 844;
+    chase.update(1 / 60, t);
+    expect(camera.fov).toBe(viewFov(390 / 844));
+    t.rotation = new Quaternion();
+    chase.selectPreset('cockpit');
+    chase.update(1 / 60, t);
+    expect(camera.fov).toBe(viewFov(390 / 844));
+    camera.aspect = 844 / 390;
+    chase.update(1 / 60, t);
+    expect(camera.fov).toBe(C.fov);
   });
 });
 

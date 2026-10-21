@@ -1,6 +1,13 @@
 /** Chase camera tuning (SPEC §8). */
 export const cameraTuning = {
+  /** Vertical field of view (degrees) on a landscape screen. */
   fov: 60,
+  /**
+   * On a screen held upright the view widens vertically until it is at least this wide
+   * (degrees), up to `maxFov`, so the car and the windscreen don't fill the whole width.
+   */
+  minHorizontalFov: 50,
+  maxFov: 90,
   near: 0.25,
   /** Default follow distance (m); scroll / D-pad adjusts within min..max. */
   distance: 7.5,
