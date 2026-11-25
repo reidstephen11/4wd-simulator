@@ -27,7 +27,7 @@ export type Waypoint = readonly [number, number] | readonly [number, number, num
  *   - The drop: down the north-west face and off a near-vertical lip into a mud hole
  *   - Steep descent: straight down the north face through erosion ruts
  *   - Axle twisters: holes and mounds under alternate wheels, south of the top
- *   - Bog trench: a long bog sunk between high clay walls, on the flat by the river
+ *   - Bog trench: a long bog sunk between high clay walls, on the flat north-east of the top
  * Coordinates in metres: x = east, z = south (north is -z).
  */
 

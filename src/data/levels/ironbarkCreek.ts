@@ -233,8 +233,23 @@ export const creekTracks: TrackDef[] = [
     ...dirt,
     routeHint: 'Along the creek’s far bank: the camp, the bog hole and the rock garden are off this track',
   },
-  { id: 'camp-spur', name: 'Camp track', points: campSpur, ...dirt, smooth: 5 },
-  { id: 'paddock-spur', name: 'Top paddock track', points: paddockSpur, ...dirt, smooth: 5 },
+  {
+    id: 'camp-spur',
+    name: 'Camp track',
+    points: campSpur,
+    ...dirt,
+    smooth: 5,
+    routeHint:
+      'The ford is straight ahead. The bog hole is to the right along the bank track, the rock garden to the left',
+  },
+  {
+    id: 'paddock-spur',
+    name: 'Top paddock track',
+    points: paddockSpur,
+    ...dirt,
+    smooth: 5,
+    routeHint: 'Down to the Knoll track: the bog trench is along it to the right',
+  },
   {
     id: 'creek-ford',
     name: 'The ford',
