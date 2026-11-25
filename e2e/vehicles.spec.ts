@@ -123,7 +123,7 @@ test('the Unimog is chosen on the welcome screen, drives off, and has its own ca
   expect(errors).toEqual([]);
 });
 
-test('the Troop Carrier is chosen on the welcome screen, starts with its sub-tank and two spares, and drives off', async ({
+test('the Troop Carrier is chosen on the welcome screen, starts with its sub-tank filled, and drives off', async ({
   page,
 }) => {
   test.setTimeout(900_000);
@@ -149,14 +149,16 @@ test('the Troop Carrier is chosen on the welcome screen, starts with its sub-tan
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 1280, height: 720 });
 
-  // The briefing lists the Troop Carrier's two spares; a playground uses no fuel.
+  // The briefing lists the level's spare and plugs; a playground uses no fuel.
   await page.locator('[data-welcome-drive]').click({ timeout: 120_000 });
-  await expect(page.locator('.briefing')).toContainText('2 spare wheels');
+  await expect(page.locator('.briefing')).toContainText('1 spare wheel and 3 tyre plugs');
   await expect(page.locator('.briefing')).toContainText('No fuel is used');
   await driveFromBriefing(page);
   expect(await page.evaluate(() => window.__game!.vehicleId())).toBe('troopy');
   const load = await page.evaluate(() => window.__game!.health());
-  expect(load.spares).toBe(2);
+  // The level's 60 L and the sub-tank's 60 L on top.
+  expect(load.fuel).toBe(120);
+  expect(load.spares).toBe(1);
   await page.evaluate(() => window.__game!.setInput({ throttle: 0.6 }));
   await waitSim(page, 3);
   expect((await page.evaluate(() => window.__game!.vehicle())).speed).toBeGreaterThan(2);
