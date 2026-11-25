@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BufferGeometry, Float32BufferAttribute, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from 'three';
-import { graniteLink } from '../src/data/crawlTrail';
+import { graniteLink } from './fixtures/maps/crawlTrail';
 import { lateAfternoon } from '../src/data/environment';
 import { SurfaceId } from '../src/data/surfaces';
 import { vehicleTuning } from '../src/data/vehicle';

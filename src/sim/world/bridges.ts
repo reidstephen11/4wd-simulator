@@ -50,6 +50,76 @@ function strips(b: TrackBridgeDef): Array<[number, number]> {
   ];
 }
 
+/** Punch `[h0, h1]` out of each lane; drop splinters too narrow to drive on. */
+function punch(lanes: Array<[number, number]>, h0: number, h1: number): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (const [l0, l1] of lanes) {
+    if (h1 <= l0 || h0 >= l1) {
+      out.push([l0, l1]);
+      continue;
+    }
+    if (h0 - l0 >= 0.25) out.push([l0, h0]);
+    if (l1 - h1 >= 0.25) out.push([h1, l1]);
+  }
+  return out;
+}
+
+/** Remaining deck strips `s` metres along a bridge, after missing boards. */
+export function deckStripsAt(b: TrackBridgeDef, s: number): Array<[number, number]> {
+  if (s < b.from - BEARING || s > b.to + BEARING) return [];
+  let lanes = strips(b);
+  for (const g of b.gaps ?? []) {
+    if (s < g.from || s > g.to) continue;
+    lanes = punch(lanes, g.left, g.right);
+  }
+  return lanes;
+}
+
+/** Whether `(s, lateral)` is on remaining boards (not a hole, not off the deck). */
+export function onDeckBoards(b: TrackBridgeDef, s: number, lateral: number): boolean {
+  return deckStripsAt(b, s).some(([l0, l1]) => lateral >= l0 && lateral <= l1);
+}
+
+/**
+ * A line that stays on remaining boards: the centre when the deck is whole or a centre
+ * hole is straddled; otherwise the middle of the remaining strip (a missing half).
+ */
+export function deckSteer(b: TrackBridgeDef, s: number): number {
+  const lanes = deckStripsAt(b, s);
+  if (lanes.length === 0) return 0;
+  if (lanes.length > 1) return 0;
+  const [l0, l1] = lanes[0];
+  const full = strips(b);
+  const fullW = full[full.length - 1][1] - full[0][0];
+  if (l1 - l0 > fullW * 0.8) return 0;
+  return (l0 + l1) / 2;
+}
+
+/** `deckSteer` looking `look` metres ahead, so a path eases into a missing half before it. */
+export function smoothDeckSteer(b: TrackBridgeDef, s: number, look = 3): number {
+  let sum = 0,
+    n = 0;
+  for (let d = 0; d <= look; d += 0.5) {
+    sum += deckSteer(b, s + d);
+    n++;
+  }
+  return sum / n;
+}
+
+/**
+ * A driveable line: stay on a missing half until it is cleared, then look ahead to the
+ * next one. A centre gap is straddled (steer 0) with a wheel on each remaining strip.
+ */
+export function approachDeckSteer(b: TrackBridgeDef, s: number, hold = 2, look = 6): number {
+  const now = deckSteer(b, s);
+  if (now !== 0) return now;
+  for (let d = 0.5; d <= hold; d += 0.5) {
+    const prev = deckSteer(b, s - d);
+    if (prev !== 0) return prev;
+  }
+  return smoothDeckSteer(b, s, look);
+}
+
 type V3 = [number, number, number];
 
 /** A closed hull from eight corners: top a, b, c, d (start-left, start-right, end-right, end-left), then the same below. */
@@ -144,9 +214,10 @@ export function bridgeTimbers(track: TrackInfo, terrain: Terrain): StaticTimber[
   const out: StaticTimber[] = [];
   for (const b of track.def.bridges ?? []) {
     const ramp = b.ramp ?? 0;
-    // Break the deck where its slope changes, then into short pieces.
+    // Break the deck where its slope changes, at missing-board edges, then into short pieces.
     const marks = [b.from - BEARING, b.from, b.to, b.to + BEARING];
     if (b.rise && ramp > 0) marks.push(b.from + ramp, b.to - ramp);
+    for (const g of b.gaps ?? []) marks.push(g.from, g.to);
     marks.sort((p, q) => p - q);
     const cuts: number[] = [];
     for (let i = 0; i + 1 < marks.length; i++) {
@@ -155,10 +226,12 @@ export function bridgeTimbers(track: TrackInfo, terrain: Terrain): StaticTimber[
     }
     cuts.push(marks[marks.length - 1]);
     const top = (s: number) => deckTop(track, b, s);
-    const lanes = strips(b);
+    const full = strips(b);
     for (let i = 0; i + 1 < cuts.length; i++) {
       const [s0, s1] = [cuts[i], cuts[i + 1]];
+      if (s1 - s0 < 1e-4) continue;
       const inSpan = s0 >= b.from - 1e-6 && s1 <= b.to + 1e-6;
+      const lanes = deckStripsAt(b, (s0 + s1) / 2);
       for (const [l0, l1] of lanes) {
         out.push(slab(track, 'deck', s0, s1, l0, l1, top, DECK_THICKNESS));
         if (!inSpan) continue;
@@ -166,25 +239,51 @@ export function bridgeTimbers(track: TrackInfo, terrain: Terrain): StaticTimber[
         for (const l of l1 - l0 > 1.2 ? [l0 + 0.35, l1 - 0.35] : [(l0 + l1) / 2])
           out.push(slab(track, 'beam', s0, s1, l - 0.1, l + 0.1, (s) => top(s) - DECK_THICKNESS, 0.24));
       }
+      // Outer kerbs stay wherever that edge still has boards; a missing half drops the
+      // inner kerb so the broken edge is the drop you can see.
       if (inSpan && b.kerb) {
-        const outer: Array<[number, number]> = [
-          [lanes[0][0], lanes[0][0] + KERB_WIDTH],
-          [lanes[lanes.length - 1][1] - KERB_WIDTH, lanes[lanes.length - 1][1]],
-        ];
-        for (const [l0, l1] of outer)
-          out.push(slab(track, 'kerb', s0, s1, l0, l1, (s) => top(s) + b.kerb!, b.kerb + 0.02));
+        const leftEdge = full[0][0];
+        const rightEdge = full[full.length - 1][1];
+        if (lanes.some(([l0]) => Math.abs(l0 - leftEdge) < 1e-6))
+          out.push(
+            slab(
+              track,
+              'kerb',
+              s0,
+              s1,
+              leftEdge,
+              leftEdge + KERB_WIDTH,
+              (s) => top(s) + b.kerb!,
+              b.kerb + 0.02,
+            ),
+          );
+        if (lanes.some(([, l1]) => Math.abs(l1 - rightEdge) < 1e-6))
+          out.push(
+            slab(
+              track,
+              'kerb',
+              s0,
+              s1,
+              rightEdge - KERB_WIDTH,
+              rightEdge,
+              (s) => top(s) + b.kerb!,
+              b.kerb + 0.02,
+            ),
+          );
       }
     }
     // Sills under each end, dug into the abutment.
-    const left = lanes[0][0] - 0.15,
-      right = lanes[lanes.length - 1][1] + 0.15;
+    const left = full[0][0] - 0.15,
+      right = full[full.length - 1][1] + 0.15;
     for (const s of [b.from, b.to])
       out.push(slab(track, 'beam', s - 0.18, s + 0.18, left, right, () => top(s) - DECK_THICKNESS, 0.9));
-    // Posts on headstocks wherever the deck stands clear of the ground.
+    // Posts on headstocks wherever the remaining deck stands clear of the ground.
     const span = b.to - b.from;
     const n = Math.max(1, Math.round(span / POST_SPACING));
     for (let k = 1; k < n; k++) {
       const s = b.from + (span * k) / n;
+      const lanes = deckStripsAt(b, s);
+      if (!lanes.length) continue;
       const under = top(s) - DECK_THICKNESS - 0.24;
       const legs = lanes.flatMap(([l0, l1]) => (l1 - l0 > 1.2 ? [l0 + 0.2, l1 - 0.2] : [(l0 + l1) / 2]));
       let lowest = Infinity;
@@ -193,7 +292,7 @@ export function bridgeTimbers(track: TrackInfo, terrain: Terrain): StaticTimber[
         lowest = Math.min(lowest, terrain.heightAt(p.x, p.z));
       }
       if (under - lowest < 0.15) continue;
-      out.push(slab(track, 'beam', s - 0.1, s + 0.1, left, right, () => under, 0.2));
+      for (const [l0, l1] of lanes) out.push(slab(track, 'beam', s - 0.1, s + 0.1, l0, l1, () => under, 0.2));
       for (const l of legs) {
         const p = at(track, s, l);
         out.push(post(track, s, l, terrain.heightAt(p.x, p.z) - 0.4, under - 0.2));
@@ -222,7 +321,7 @@ export function deckAt(tracks: readonly TrackInfo[], x: number, z: number): numb
     }
     for (const b of track.def.bridges) {
       if (near.s < b.from - BEARING || near.s > b.to + BEARING) continue;
-      if (!strips(b).some(([l0, l1]) => near.lateral >= l0 && near.lateral <= l1)) continue;
+      if (!deckStripsAt(b, near.s).some(([l0, l1]) => near.lateral >= l0 && near.lateral <= l1)) continue;
       const y = deckTop(track, b, near.s);
       best = best === null ? y : Math.max(best, y);
     }

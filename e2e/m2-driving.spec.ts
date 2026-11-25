@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { collectErrors, shot, waitReady, waitSim } from './helpers';
+import { openJourney, collectErrors, lowGraphics, shot, waitReady, waitSim } from './helpers';
 
 test('M2: keyboard drives the car and the chase camera follows', async ({ page }) => {
   test.setTimeout(600_000);
   const errors = collectErrors(page);
-  await page.goto('/?debug');
+  await lowGraphics(page);
+  await page.goto('/?debug&surprises=off&track=reopened');
+  await openJourney(page);
   await waitReady(page);
-  // Simulate up to a second per frame: the software renderer takes seconds per frame.
-  await page.evaluate(() => window.__game!.setCatchUp(true));
   await page.waitForTimeout(1000);
   await shot(page, 'M2', 'spawn-chase-camera');
   const start = await page.evaluate(() => window.__game!.vehicle());
@@ -22,23 +22,27 @@ test('M2: keyboard drives the car and the chase camera follows', async ({ page }
   const moved = await page.evaluate(() => window.__game!.vehicle());
   expect(Math.hypot(moved.x - start.x, moved.z - start.z)).toBeGreaterThan(3);
 
-  // Range toggle.
-  await page.keyboard.down('KeyS');
-  await waitSim(page, 3);
-  await page.keyboard.up('KeyS');
+  // Range toggle. Range only changes below 20 km/h, so stop on the park brake first:
+  // holding S brakes and then reverses, and could leave the car above it.
+  await page.keyboard.press('Space');
+  await expect
+    .poll(async () => Math.abs((await page.evaluate(() => window.__game!.vehicle())).speed))
+    .toBeLessThan(0.5);
   await page.keyboard.press('KeyL');
   await waitSim(page, 0.3);
   expect((await page.evaluate(() => window.__game!.vehicle())).range).toBe('low');
+  await page.keyboard.press('Space');
+  await expect.poll(() => page.evaluate(() => window.__game!.parkBrake())).toBe(false);
 
-  // The Staircase in low range, and the view from the ridge.
-  await page.evaluate(() => window.__game!.teleport(48, -86, 340));
+  // Up Big Red's red clay in low range, and along the range through the rainforest.
+  await page.evaluate(() => window.__game!.teleport(7, 1262, 330));
   await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
   await waitSim(page, 6);
-  await shot(page, 'M2', 'staircase-low-range');
+  await shot(page, 'M2', 'big-red-low-range');
   await page.evaluate(() => window.__game!.setInput(null));
-  await page.evaluate(() => window.__game!.teleport(-300, 110, 230));
+  await page.evaluate(() => window.__game!.teleport(-16, 727, 310));
   await page.waitForTimeout(1500);
-  await shot(page, 'M2', 'valley-chase');
+  await shot(page, 'M2', 'rainforest-chase');
   expect(errors).toEqual([]);
 });
 
@@ -58,10 +62,10 @@ test('M2: a gamepad drives the car', async ({ page }) => {
     };
     Object.defineProperty(navigator, 'getGamepads', { value: () => [pad] });
   });
-  await page.goto('/');
+  await lowGraphics(page);
+  await page.goto('/?surprises=off&track=reopened');
+  await openJourney(page);
   await waitReady(page);
-  // Simulate up to a second per frame: the software renderer takes seconds per frame.
-  await page.evaluate(() => window.__game!.setCatchUp(true));
   const a = await page.evaluate(() => window.__game!.vehicle());
   await waitSim(page, 4);
   const b = await page.evaluate(() => window.__game!.vehicle());

@@ -1,0 +1,2709 @@
+/*
+ * HUD styles (Settings → HUD style). The page carries the style on #ui[data-hud]; the id
+ * keeps these rules ahead of the older per-element rules in styles.css.
+ *
+ * Shared by every style: the instruments replace the old status strip, fuel panel and
+ * compass strip; history and lesson notes sit small in the top right corner; the title
+ * and pause menus sit on the right, clear of the car.
+ */
+
+/* ---------- Shared layout ---------- */
+#ui[data-hud] .hud-readout {
+  display: none;
+}
+
+#ui[data-hud] .hud-stack {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(6 * var(--u));
+  pointer-events: none;
+}
+
+#ui[data-hud] .hud-stack > .paper {
+  position: static;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  max-width: 100%;
+  margin: 0;
+  opacity: 1;
+}
+
+#ui[data-hud] .inst-cluster,
+#ui[data-hud] .inst-compass {
+  position: absolute;
+  pointer-events: none;
+}
+
+#ui[data-hud] .inst-cluster.no-engine .inst-temp,
+#ui[data-hud] .inst-cluster.no-engine .inst-fuel,
+#ui[data-hud] .no-clock .inst-clock,
+#ui[data-hud] .no-clock .inst-clocknote {
+  display: none;
+}
+
+#ui[data-hud] .inst-lamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(4 * var(--u));
+}
+
+#ui[data-hud] .inst-lamps:empty {
+  display: none;
+}
+
+#ui[data-hud] .lamp.blink {
+  animation: blink 0.8s steps(2) infinite;
+}
+
+/* The course or road hint shows under its name for a few seconds, then just the name. */
+#ui[data-hud] .course-hint:not(.brief) span,
+#ui[data-hud] .course-hint small {
+  display: none;
+}
+
+/* A mission line in the stack: the clock dial already shows the time. */
+#ui[data-hud] .mission small {
+  display: none;
+}
+
+/* Phone warnings and notices: one short line each, in the stack under the lamps. */
+#ui[data-hud] .alert-rail {
+  display: none;
+}
+
+.touch-mode #ui[data-hud] .alert-rail {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(4 * var(--u));
+  max-width: 100%;
+  transform: none;
+}
+
+.touch-mode #ui[data-hud] .alert-rail .toast {
+  max-width: 100%;
+}
+
+/* History and lesson notes: a small card in the top right corner, under any discovery card,
+   so the track ahead and the dials stay in view. The card lives in the .notices stack. */
+#ui[data-hud] .notices:has(.history-card:not(.hidden)) {
+  max-width: min(calc(320 * var(--u)), 46vw);
+}
+
+#ui[data-hud] .notices .history-card {
+  position: relative;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  max-height: 44vh;
+  max-height: 44dvh;
+  overflow: auto;
+  pointer-events: auto;
+  animation: note-in 0.35s ease-out;
+}
+
+/* The note names the place, so a Discovered card gives way to it (a timed run's card stays). */
+#ui[data-hud] .notices:has(.history-card:not(.hidden)) .discovery-card.found {
+  display: none;
+}
+
+/* Phones: narrower and shorter, clear of the thumb buttons; it scrolls if the note is long. */
+.touch-mode #ui[data-hud] .notices:has(.history-card:not(.hidden)) {
+  max-width: min(calc(260 * var(--u)), 52vw);
+}
+
+.touch-mode #ui[data-hud] .notices .history-card {
+  padding: calc(8 * var(--u)) calc(12 * var(--u)) calc(9 * var(--u));
+  max-height: 30vh;
+  max-height: 30dvh;
+}
+
+@media (orientation: landscape) {
+  .touch-mode #ui[data-hud] .notices .history-card {
+    max-height: 40vh;
+    max-height: 40dvh;
+  }
+}
+
+.touch-mode #ui[data-hud] .history-card strong {
+  font-size: calc(16 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .history-card .history-do {
+  font-size: calc(13.5 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .history-card p,
+.touch-mode #ui[data-hud] .history-card.lesson .history-text {
+  font-size: calc(11.5 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .discovery-card {
+  padding: calc(5 * var(--u)) calc(10 * var(--u)) calc(6 * var(--u)) calc(8 * var(--u));
+  gap: calc(6 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .discovery-name {
+  font-size: calc(15 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .discovery-icon {
+  width: calc(20 * var(--u));
+  height: calc(20 * var(--u));
+}
+
+/*
+ * A short note: the place, a lesson's keys and two lines. A phone opens notes this way (a tap
+ * opens the rest); elsewhere a note shrinks to it once the player drives on (episodeCards.ts).
+ */
+#ui[data-hud] .history-card.brief .history-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+#ui[data-hud] .history-card.brief .history-hint {
+  display: block;
+  margin-top: calc(3 * var(--u));
+  font-size: calc(10.5 * var(--u));
+}
+
+@keyframes note-in {
+  from {
+    opacity: 0;
+    translate: 0 calc(-10 * var(--u));
+  }
+}
+
+/* A note read with the game stopped: a sheet up from the bottom edge. */
+#ui[data-hud] .history-card.reading {
+  position: fixed;
+  inset: auto 0 0;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  width: min(calc(760 * var(--u)), 100vw);
+  height: auto;
+  max-height: 72vh;
+  max-height: 72dvh;
+  padding-bottom: calc(calc(14 * var(--u)) + env(safe-area-inset-bottom));
+  border-radius: calc(16 * var(--u)) calc(16 * var(--u)) 0 0;
+}
+
+#ui[data-hud] .history-do:empty {
+  display: none;
+}
+
+#ui[data-hud] .history-do {
+  display: block;
+  margin: calc(2 * var(--u)) 0 calc(8 * var(--u));
+}
+
+#ui[data-hud] .history-text {
+  display: block;
+}
+
+#ui[data-hud] .history-do kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.4em;
+  text-align: center;
+  font: inherit;
+  font-weight: 700;
+}
+
+/* Menus on the right, clear of the car. */
+#ui[data-hud] .pause {
+  justify-items: end;
+  padding: max(calc(16 * var(--u)), env(safe-area-inset-top)) max(5vw, env(safe-area-inset-right))
+    max(calc(16 * var(--u)), env(safe-area-inset-bottom)) calc(16 * var(--u));
+}
+
+#ui[data-hud] .welcome[data-screen='journey'],
+#ui[data-hud] .welcome[data-screen='settings'] {
+  align-items: flex-end;
+}
+
+/* The journey page is one column down the right: the trip first, then the episode list.
+   A phone held sideways keeps the two columns, which fit its height. */
+@media (min-height: 501px) {
+  #ui[data-hud] .welcome .welcome-card {
+    width: min(calc(600 * var(--u)), 100%);
+  }
+
+  #ui[data-hud] .welcome .welcome-grid {
+    grid-template-columns: 1fr;
+    gap: calc(18 * var(--u));
+  }
+
+  #ui[data-hud] .welcome .welcome-trip {
+    grid-row: 1;
+    padding: 0 0 calc(18 * var(--u));
+    border-left: 0;
+    border-bottom: 1px solid #c5c5c833;
+  }
+}
+
+@media (max-width: 720px) {
+  #ui[data-hud] .pause {
+    justify-items: center;
+    padding: calc(12 * var(--u));
+  }
+}
+
+/* What you have, at the top of the pause menu. */
+.pause-status {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(6 * var(--u));
+  margin: 0 0 calc(4 * var(--u));
+}
+
+.pause-status:empty {
+  display: none;
+}
+
+.pause-status div {
+  display: flex;
+  flex-direction: column;
+  padding: calc(6 * var(--u)) calc(10 * var(--u));
+  min-width: 0;
+}
+
+.pause-status span {
+  font-size: calc(10.5 * var(--u));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pause-status b {
+  font-size: calc(15 * var(--u));
+  line-height: 1.25;
+}
+
+.pause-status small {
+  font-size: calc(12 * var(--u));
+}
+
+@media (max-height: 640px) {
+  .pause-status div {
+    padding: calc(3 * var(--u)) calc(8 * var(--u));
+  }
+
+  .pause-status b {
+    font-size: calc(13 * var(--u));
+  }
+}
+
+/* Phones held sideways: the four readings in one row, without their notes. */
+@media (max-height: 500px) and (min-width: 700px) {
+  .pause-status {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .pause-status small {
+    display: none;
+  }
+}
+
+/* ---------- Style variables: the shared skin below takes its colours and type from these ---------- */
+
+/* Dash cluster (A): warm white and amber on dark glass. */
+#ui[data-hud='dash'] {
+  --dash-face: #0f100f;
+  --dash-bezel: #4a4740;
+  --dash-tick: #efe8d6;
+  --dash-needle: #ff8f3f;
+  --dash-hub: #1d1c1a;
+  --dash-red: #e0452c;
+  --hud-red: #ff5a3c;
+  --dash-window: #1b1a17;
+  --hud-glass: rgba(14, 13, 12, 0.66);
+  --hud-panel: rgba(14, 13, 12, 0.88);
+  --hud-line: rgba(255, 255, 255, 0.14);
+  --hud-fill: rgba(255, 255, 255, 0.04);
+  --hud-accent-fill: rgba(255, 176, 58, 0.14);
+  --hud-copy: #e4ddcb;
+  --hud-on-accent: #1b1408;
+  --hud-lamp-bg: rgba(10, 10, 9, 0.74);
+  --hud-red-bg: rgba(60, 12, 8, 0.8);
+  --hud-button: rgba(14, 13, 12, 0.6);
+  --hud-button-line: rgba(255, 255, 255, 0.28);
+  --hud-text: #efe8d6;
+  --hud-soft: #b9b09c;
+  --hud-accent: #ffb03a;
+  --hud-green: #5fd47a;
+  --hud-blue: #7db3ff;
+  --hud-display: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --hud-body: 'Barlow', 'Segoe UI', system-ui, sans-serif;
+  --hud-serif: 'Source Serif 4', Georgia, serif;
+}
+
+/* Edge lines (B): white type straight on the view, with a soft shadow. */
+#ui[data-hud='edge'] {
+  --hud-text: #ffffff;
+  --hud-soft: rgba(255, 255, 255, 0.78);
+  --hud-accent: #ffc04d;
+  --hud-green: #7be08e;
+  --hud-blue: #8cc0ff;
+  --hud-red: #ff6a4d;
+  --hud-glass: rgba(0, 0, 0, 0.34);
+  --hud-panel: rgba(12, 12, 12, 0.84);
+  --hud-line: rgba(255, 255, 255, 0.2);
+  --hud-fill: transparent;
+  --hud-accent-fill: rgba(255, 192, 77, 0.12);
+  --hud-copy: rgba(255, 255, 255, 0.9);
+  --hud-on-accent: #1a1406;
+  --hud-lamp-bg: transparent;
+  --hud-red-bg: rgba(70, 14, 8, 0.6);
+  --hud-button: rgba(0, 0, 0, 0.24);
+  --hud-button-line: rgba(255, 255, 255, 0.62);
+  --hud-shadow: 0 1px calc(3 * var(--u)) rgba(0, 0, 0, 0.75);
+  --hud-display: 'Barlow', 'Segoe UI', system-ui, sans-serif;
+  --hud-body: 'Barlow', 'Segoe UI', system-ui, sans-serif;
+  --hud-serif: 'Barlow', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Field kit (C): typed paper slips, Dymo tape and ink. */
+#ui[data-hud='kit'] {
+  --kit-paper: #f3ecda;
+  --kit-line: #c9bfa6;
+  --kit-ink: #22201c;
+  --kit-red: #b8321f;
+  --hud-text: var(--kit-ink);
+  --hud-soft: #5c5446;
+  --hud-accent: var(--kit-red);
+  --hud-green: #2f6b3a;
+  --hud-blue: #2b4f8a;
+  --hud-red: var(--kit-red);
+  --hud-glass: var(--kit-paper);
+  --hud-panel: var(--kit-paper);
+  --hud-line: var(--kit-line);
+  --hud-fill: rgba(255, 255, 255, 0.4);
+  --hud-accent-fill: rgba(184, 50, 31, 0.1);
+  --hud-copy: var(--kit-ink);
+  --hud-on-accent: var(--kit-paper);
+  --hud-lamp-bg: #151515;
+  --hud-red-bg: #8f1f12;
+  --hud-button: rgba(243, 236, 218, 0.9);
+  --hud-button-line: transparent;
+  --hud-display: 'Courier Prime', 'Courier New', monospace;
+  --hud-body: 'Courier Prime', 'Courier New', monospace;
+  --hud-serif: 'Source Serif 4', Georgia, serif;
+}
+
+/* ---------- Shared skin ---------- */
+
+/* The game's panels take the style's colours; the paper map keeps its own. */
+#ui[data-hud] .hud,
+#ui[data-hud] .touch-controls,
+#ui[data-hud] .pause,
+#ui[data-hud] .tool-menu,
+#ui[data-hud] .result,
+#ui[data-hud] .history-card,
+#ui[data-hud] .error-panel {
+  --paper: var(--hud-panel);
+  --paper-dark: rgba(255, 255, 255, 0.08);
+  --ink: var(--hud-text);
+  --ink-soft: var(--hud-soft);
+  --accent: var(--hud-accent);
+  --font: var(--hud-body);
+  --font-hand: var(--hud-display);
+  color: var(--hud-text);
+  font-family: var(--hud-body);
+}
+
+#ui[data-hud] .paper {
+  background: var(--hud-glass);
+  border: 1px solid var(--hud-line);
+  border-radius: calc(10 * var(--u));
+  box-shadow: 0 calc(6 * var(--u)) calc(18 * var(--u)) rgba(0, 0, 0, 0.28);
+  color: var(--hud-text);
+}
+
+/* ---------- Dash cluster (A): instruments ---------- */
+
+/* The binnacle: speedo, TEMP, FUEL and the clock in one dark housing. */
+#ui[data-hud='dash'] .hud {
+  --speedo: calc(132 * var(--u-dash));
+  --dial: calc(84 * var(--u-dash));
+}
+
+/* The binnacle's padding and lettering follow the dash's own scale (src/ui/uiScale.ts). */
+#ui[data-hud='dash'] .inst-cluster {
+  --u: var(--u-dash);
+}
+
+#ui[data-hud='dash'] .inst-cluster {
+  display: flex;
+  align-items: center;
+  gap: calc(6 * var(--u));
+  padding: calc(10 * var(--u)) calc(14 * var(--u)) calc(10 * var(--u)) calc(10 * var(--u));
+  background: rgba(10, 10, 9, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: calc(16 * var(--u));
+  box-shadow: 0 calc(8 * var(--u)) calc(24 * var(--u)) rgba(0, 0, 0, 0.3);
+}
+
+#ui[data-hud='dash'] .inst-speedo {
+  width: var(--speedo);
+  height: var(--speedo);
+  margin-right: calc(6 * var(--u));
+}
+
+#ui[data-hud='dash'] .inst-dial {
+  width: var(--dial);
+  height: var(--dial);
+}
+
+#ui[data-hud='dash'] .inst-cluster svg {
+  display: block;
+  overflow: visible;
+}
+
+#ui[data-hud='dash'] .inst-cluster .face {
+  fill: var(--dash-face);
+  stroke: var(--dash-bezel);
+  stroke-width: 2.5;
+}
+
+#ui[data-hud='dash'] .inst-cluster .ticks {
+  stroke: var(--dash-tick);
+}
+
+#ui[data-hud='dash'] .inst-cluster text {
+  fill: var(--dash-tick);
+  font-family: var(--hud-display);
+  font-weight: 600;
+}
+
+#ui[data-hud='dash'] .inst-cluster .label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+#ui[data-hud='dash'] .inst-cluster .end,
+#ui[data-hud='dash'] .inst-cluster .value {
+  fill: var(--hud-soft);
+}
+
+#ui[data-hud='dash'] .inst-cluster .value.red {
+  fill: var(--hud-red);
+}
+
+#ui[data-hud='dash'] .inst-cluster .danger {
+  fill: none;
+  stroke: var(--dash-red);
+  stroke-width: 5;
+}
+
+#ui[data-hud='dash'] .inst-cluster .dark {
+  fill: none;
+  stroke: var(--dash-red);
+  stroke-width: 6;
+}
+
+#ui[data-hud='dash'] .inst-cluster .needle {
+  stroke: var(--dash-needle);
+}
+
+#ui[data-hud='dash'] .inst-cluster .hub {
+  fill: var(--dash-hub);
+  stroke: var(--dash-needle);
+  stroke-width: 1.5;
+}
+
+#ui[data-hud='dash'] .inst-cluster .hot .needle {
+  stroke: var(--hud-red);
+}
+
+#ui[data-hud='dash'] .inst-cluster .hot .hub {
+  stroke: var(--hud-red);
+}
+
+#ui[data-hud='dash'] .inst-cluster .hot .label {
+  fill: var(--hud-red);
+}
+
+#ui[data-hud='dash'] .inst-cluster .window {
+  fill: var(--dash-window);
+  stroke: var(--dash-bezel);
+  stroke-width: 1;
+}
+
+#ui[data-hud='dash'] .inst-cluster .gear {
+  fill: var(--hud-accent);
+  font-weight: 700;
+}
+
+#ui[data-hud='dash'] .inst-cluster .hand {
+  stroke: var(--dash-tick);
+}
+
+#ui[data-hud='dash'] .inst-cluster .pin {
+  fill: var(--dash-needle);
+}
+
+#ui[data-hud='dash'] .inst-compass {
+  width: calc(160 * var(--u));
+  height: calc(40 * var(--u));
+  filter: drop-shadow(0 calc(3 * var(--u)) calc(8 * var(--u)) rgba(0, 0, 0, 0.35));
+}
+
+#ui[data-hud='dash'] .inst-compass svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#ui[data-hud='dash'] .inst-compass line {
+  stroke: var(--dash-tick);
+}
+
+#ui[data-hud='dash'] .inst-compass .lubber {
+  stroke: var(--dash-needle);
+  stroke-width: 1.6;
+}
+
+#ui[data-hud='dash'] .inst-compass .rim {
+  stroke: var(--dash-bezel);
+  stroke-width: 1.5;
+}
+
+#ui[data-hud='dash'] .inst-compass .marks path {
+  fill: var(--hud-accent);
+}
+
+#ui[data-hud='dash'] .inst-compass text {
+  font-family: var(--hud-display);
+}
+
+#ui[data-hud='dash'] .inst-compass .cmaj {
+  fill: var(--hud-text);
+  font-size: calc(12 * var(--u));
+  font-weight: 700;
+}
+
+#ui[data-hud='dash'] .inst-compass .cmin {
+  fill: var(--hud-soft);
+  font-size: calc(10 * var(--u));
+  font-weight: 600;
+}
+
+/* ---------- Shared skin: lamps, the stack, prompts and notes ---------- */
+
+/* Towing: the trailer and its load, a line in the stack. */
+#ui[data-hud] .hud-stack .status-trailer {
+  padding: calc(4 * var(--u)) calc(10 * var(--u));
+  color: var(--hud-text);
+  font: 600 calc(13 * var(--u)) var(--hud-body);
+}
+
+#ui[data-hud] .hud-stack .status-trailer svg {
+  width: calc(18 * var(--u));
+  height: calc(18 * var(--u));
+}
+
+#ui[data-hud] .hud-stack .status-trailer.warn {
+  color: var(--hud-accent);
+}
+
+#ui[data-hud] .hud-stack .status-trailer.bad {
+  color: var(--hud-red);
+}
+
+/* Lamps: a word lit in its colour, like the warning lights on a dash. */
+#ui[data-hud] .lamp {
+  padding: calc(4 * var(--u)) calc(7 * var(--u)) calc(3 * var(--u));
+  border: 1px solid currentColor;
+  border-radius: calc(4 * var(--u));
+  background: var(--hud-lamp-bg);
+  font: 700 calc(11 * var(--u))/1 var(--hud-display);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+#ui[data-hud] .lamp.amber {
+  color: var(--hud-accent);
+}
+
+#ui[data-hud] .lamp.green {
+  color: var(--hud-green);
+}
+
+#ui[data-hud] .lamp.blue {
+  color: var(--hud-blue);
+}
+
+#ui[data-hud] .lamp.red {
+  color: var(--hud-red);
+  background: var(--hud-red-bg);
+}
+
+/* Short lines by the dials: the road or course name, the mission. */
+#ui[data-hud] .hud-stack .course-hint {
+  max-width: min(calc(360 * var(--u)), 100%);
+  padding: 0;
+  gap: calc(4 * var(--u));
+  background: none;
+  border: 0;
+  box-shadow: none;
+  text-shadow: 0 1px calc(3 * var(--u)) rgba(0, 0, 0, 0.75);
+}
+
+#ui[data-hud] .hud-stack .course-hint strong {
+  font: 700 calc(12 * var(--u))/1.2 var(--hud-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+#ui[data-hud] .hud-stack .course-hint.brief span {
+  padding: calc(6 * var(--u)) calc(10 * var(--u));
+  background: var(--hud-glass);
+  border: 1px solid var(--hud-line);
+  border-radius: calc(8 * var(--u));
+  font: 400 calc(13 * var(--u))/1.4 var(--hud-body);
+  color: var(--hud-copy);
+  text-shadow: none;
+}
+
+#ui[data-hud] .hud-stack .mission {
+  padding: calc(6 * var(--u)) calc(12 * var(--u)) calc(7 * var(--u));
+  max-width: min(calc(360 * var(--u)), 100%);
+}
+
+#ui[data-hud] .hud-stack .mission strong {
+  font: 500 calc(15 * var(--u))/1.25 var(--hud-body);
+}
+
+#ui[data-hud] .hud-stack .mission-clock {
+  font: 600 calc(12 * var(--u)) var(--hud-display);
+  letter-spacing: 0.06em;
+  color: var(--hud-soft);
+  text-transform: uppercase;
+}
+
+#ui[data-hud] .hud-stack .mission-clock.urgent {
+  color: var(--hud-red);
+}
+
+/* Prompts, messages and cards. */
+#ui[data-hud] .prompt {
+  padding: calc(5 * var(--u)) calc(14 * var(--u)) calc(6 * var(--u)) calc(6 * var(--u));
+  font: 600 calc(15 * var(--u)) var(--hud-body);
+}
+
+#ui[data-hud] .prompt .key {
+  border: 1px solid var(--hud-accent);
+  border-radius: calc(5 * var(--u));
+  color: var(--hud-accent);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--hud-accent) 40%, transparent) var(--progress),
+    rgba(255, 255, 255, 0.06) var(--progress)
+  );
+  font: 700 calc(15 * var(--u)) var(--hud-display);
+  letter-spacing: 0.04em;
+}
+
+#ui[data-hud] .toast {
+  font: 600 calc(13 * var(--u)) var(--hud-body);
+}
+
+#ui[data-hud] .discovery-icon {
+  color: var(--hud-accent);
+}
+
+#ui[data-hud] .discovery-label {
+  font-family: var(--hud-display);
+  color: var(--hud-accent);
+}
+
+#ui[data-hud] .discovery-name {
+  font: 600 calc(21 * var(--u)) var(--hud-serif);
+}
+
+#ui[data-hud] .alert {
+  font-family: var(--hud-display);
+  letter-spacing: 0.04em;
+  box-shadow: none;
+}
+
+#ui[data-hud] .alert .mark {
+  background: var(--hud-red);
+  color: #160806;
+}
+
+#ui[data-hud] .alert.critical {
+  border-color: var(--hud-red);
+  background: var(--hud-red-bg);
+}
+
+#ui[data-hud] .crawl-gauges {
+  background: rgba(10, 10, 9, 0.66);
+}
+
+#ui[data-hud] .gate-count,
+#ui[data-hud] .crawl-run {
+  font-family: var(--hud-display);
+  letter-spacing: 0.04em;
+}
+
+#ui[data-hud] .crawl-run strong {
+  font: 700 calc(18 * var(--u)) var(--hud-display);
+  color: var(--hud-accent);
+}
+
+#ui[data-hud] .crawl-run-points {
+  color: var(--hud-accent);
+}
+
+#ui[data-hud] .camera-help {
+  color: var(--hud-soft);
+  font-family: var(--hud-display);
+  letter-spacing: 0.04em;
+}
+
+#ui[data-hud] .camera-help .camera-hint {
+  display: none;
+}
+
+/* Menus hide the camera buttons; the styles' own display rules must not bring them back. */
+#ui[data-hud] .camera-help[hidden] {
+  display: none !important;
+}
+
+#ui[data-hud] .camera-help button {
+  margin: 0;
+  border-color: rgba(255, 255, 255, 0.24);
+  color: var(--hud-text);
+}
+
+#ui[data-hud] .camera-help button:hover,
+#ui[data-hud] .camera-help button:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* History and lesson notes. */
+#ui[data-hud] .history-card {
+  padding: calc(10 * var(--u)) calc(14 * var(--u)) calc(11 * var(--u));
+  background: var(--hud-panel);
+  border-radius: calc(12 * var(--u));
+}
+
+#ui[data-hud] .history-card small {
+  font: 700 calc(11 * var(--u))/1 var(--hud-display);
+  letter-spacing: 0.14em;
+  color: var(--hud-accent);
+}
+
+#ui[data-hud] .history-card strong {
+  margin: calc(4 * var(--u)) 0 calc(4 * var(--u));
+  font: 600 calc(18 * var(--u))/1.15 var(--hud-serif);
+}
+
+#ui[data-hud] .history-card p {
+  font: 400 calc(12.5 * var(--u))/1.45 var(--hud-body);
+  color: var(--hud-copy);
+}
+
+#ui[data-hud] .history-card.reading {
+  border-bottom: 0;
+}
+
+#ui[data-hud] .history-card.reading p {
+  font-size: calc(15.5 * var(--u));
+}
+
+#ui[data-hud] .history-card .history-hint {
+  font: 600 calc(12 * var(--u)) var(--hud-display);
+  letter-spacing: 0.06em;
+  color: var(--hud-soft);
+}
+
+#ui[data-hud] .history-card .history-do {
+  font: 600 calc(15 * var(--u))/1.4 var(--hud-body);
+  color: var(--hud-text);
+}
+
+#ui[data-hud] .history-card .history-do kbd {
+  margin: 0 1px;
+  border: 1px solid var(--hud-accent);
+  border-radius: calc(5 * var(--u));
+  color: var(--hud-accent);
+  font-family: var(--hud-display);
+  letter-spacing: 0.04em;
+}
+
+#ui[data-hud] .history-card.lesson .history-text {
+  font-size: calc(12 * var(--u));
+  color: var(--hud-soft);
+}
+
+#ui[data-hud] .history-close {
+  color: var(--hud-soft);
+}
+
+#ui[data-hud] .history-backdrop {
+  background: rgba(10, 8, 6, 0.42);
+}
+
+/* ---------- Dash cluster (A): night and layouts ---------- */
+
+/* After dusk the panels dim like a dash's lights, so they never outshine the headlights. */
+#ui[data-hud='dash'] .hud.night .inst-cluster,
+#ui[data-hud='dash'] .hud.night .inst-compass,
+#ui[data-hud='dash'] .hud.night .hud-stack,
+#ui[data-hud='dash'] .hud.night .crawl-gauges,
+#ui[data-hud='dash'] .hud.night .camera-help {
+  filter: brightness(0.78);
+}
+
+#ui[data-hud='dash'] .hud.night .inst-compass {
+  filter: brightness(0.78) drop-shadow(0 calc(3 * var(--u)) calc(8 * var(--u)) rgba(0, 0, 0, 0.35));
+}
+
+/* Computer: the binnacle bottom left, the compass top centre, the lines stacked above the dials. */
+body:not(.touch-mode) #ui[data-hud='dash'] .inst-cluster {
+  left: calc(24 * var(--u));
+  bottom: calc(24 * var(--u));
+}
+
+body:not(.touch-mode) #ui[data-hud='dash'] .inst-compass {
+  top: calc(16 * var(--u));
+  left: calc(50% - calc(80 * var(--u)));
+}
+
+body:not(.touch-mode) #ui[data-hud='dash'] .hud-stack {
+  left: calc(24 * var(--u));
+  bottom: calc(calc(24 * var(--u)) + var(--speedo) + calc(30 * var(--u)));
+  width: min(calc(560 * var(--u)), calc(100vw - calc(48 * var(--u))));
+  flex-direction: column-reverse;
+}
+
+body:not(.touch-mode) #ui[data-hud='dash'] .camera-help {
+  top: calc(14 * var(--u));
+  left: calc(18 * var(--u));
+  right: auto;
+  bottom: auto;
+  display: flex;
+  gap: calc(6 * var(--u));
+  padding: calc(4 * var(--u));
+  opacity: 0.85;
+}
+
+body:not(.touch-mode) #ui[data-hud='dash'] .crawl-gauges {
+  right: calc(24 * var(--u));
+  bottom: calc(24 * var(--u));
+}
+
+/* The driver's seat: the dash is in view, so the binnacle shrinks into the corner. */
+body:not(.touch-mode) #ui[data-hud='dash'] .hud.cockpit .inst-cluster {
+  left: calc(10 * var(--u));
+  bottom: calc(10 * var(--u));
+  transform: scale(0.72);
+  transform-origin: bottom left;
+  opacity: 0.85;
+}
+
+body:not(.touch-mode) #ui[data-hud='dash'] .hud.cockpit .hud-stack {
+  left: calc(10 * var(--u));
+  bottom: calc(calc(10 * var(--u)) + (var(--speedo) + calc(22 * var(--u))) * 0.72 + calc(8 * var(--u)));
+}
+
+body:not(.touch-mode) #ui[data-hud='dash'] .hud.cockpit .camera-help {
+  top: calc(10 * var(--u));
+  left: calc(10 * var(--u));
+  right: auto;
+  bottom: auto;
+}
+
+/* Phones: the binnacle top left under the buttons, the lines under it, the thumbs clear. */
+.touch-mode #ui[data-hud='dash'] .hud {
+  --speedo: calc(78 * var(--u));
+  --dial: calc(50 * var(--u));
+}
+
+.touch-mode #ui[data-hud='dash'] .inst-cluster {
+  gap: calc(4 * var(--u));
+  padding: calc(5 * var(--u)) calc(8 * var(--u)) calc(5 * var(--u)) calc(5 * var(--u));
+  border-radius: calc(12 * var(--u));
+  top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)));
+  left: max(calc(8 * var(--u)), env(safe-area-inset-left));
+}
+
+.touch-mode #ui[data-hud='dash'] .inst-speedo {
+  margin-right: calc(4 * var(--u));
+}
+
+.touch-mode #ui[data-hud='dash'] .inst-compass {
+  width: calc(112 * var(--u));
+  height: calc(30 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .lamp {
+  font-size: calc(11 * var(--u));
+  padding: calc(3 * var(--u)) calc(6 * var(--u)) calc(2 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .hud-stack .mission strong {
+  font-size: calc(13 * var(--u));
+}
+
+/* Prompts by the thumbs keep the base layout's small size (styles.css), clear of the stick. */
+.touch-mode #ui[data-hud] .prompt {
+  font-size: calc(13 * var(--u));
+}
+
+@media (orientation: portrait) {
+  /* A long prompt wraps rather than reach over the stick on the left. */
+  .touch-mode #ui[data-hud] .prompts {
+    max-width: calc(100vw - calc(170 * var(--u)));
+  }
+
+  .touch-mode #ui[data-hud] .prompt {
+    padding: calc(3 * var(--u)) calc(10 * var(--u)) calc(4 * var(--u)) calc(4 * var(--u));
+    font-size: calc(12 * var(--u));
+  }
+}
+
+.touch-mode #ui[data-hud] .alert {
+  padding: calc(2 * var(--u)) calc(8 * var(--u)) calc(3 * var(--u)) calc(3 * var(--u));
+  font-size: calc(12 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .alert-rail .toast {
+  padding: calc(3 * var(--u)) calc(8 * var(--u));
+  font-size: calc(12 * var(--u));
+  text-align: left;
+}
+
+@media (orientation: portrait) {
+  .touch-mode #ui[data-hud='dash'] .inst-compass {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)) + calc(28 * var(--u)));
+    right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+  }
+
+  .touch-mode #ui[data-hud='dash'] .hud-stack {
+    top: calc(
+      max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)) + var(--speedo) +
+        calc(18 * var(--u))
+    );
+    left: max(calc(8 * var(--u)), env(safe-area-inset-left));
+    max-width: min(calc(300 * var(--u)), 64vw);
+  }
+
+  .touch-mode #ui[data-hud='dash'] .notices {
+    top: calc(
+      max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)) + var(--speedo) +
+        calc(18 * var(--u))
+    );
+    max-width: 34vw;
+  }
+
+  .touch-mode #ui[data-hud='dash'] .gate-count,
+  .touch-mode #ui[data-hud='dash'] .crawl-run {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)) + calc(66 * var(--u)));
+    left: auto;
+    right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+    transform: none;
+  }
+
+  .touch-mode #ui[data-hud='dash'] .crawl-gauges,
+  .touch-mode #ui[data-hud='dash'] .hud.cockpit .crawl-gauges {
+    top: calc(
+      max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)) + var(--speedo) +
+        calc(18 * var(--u))
+    );
+  }
+}
+
+@media (orientation: portrait) and (max-width: 389px) {
+  .touch-mode #ui[data-hud='dash'] .hud {
+    --speedo: calc(64 * var(--u));
+    --dial: calc(44 * var(--u));
+  }
+
+  .touch-mode #ui[data-hud='dash'] .inst-compass {
+    width: calc(100 * var(--u));
+    height: calc(27 * var(--u));
+  }
+}
+
+@media (orientation: landscape) {
+  .touch-mode #ui[data-hud='dash'] .hud {
+    --speedo: calc(78 * var(--u));
+    --dial: calc(50 * var(--u));
+  }
+
+  .touch-mode #ui[data-hud='dash'] .inst-compass {
+    top: max(calc(8 * var(--u)), env(safe-area-inset-top));
+    left: calc(50% - calc(56 * var(--u)));
+  }
+
+  .touch-mode #ui[data-hud='dash'] .hud-stack {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)));
+    left: calc(
+      max(calc(8 * var(--u)), env(safe-area-inset-left)) + calc(6 * var(--u)) * 2 + var(--speedo) +
+        var(--dial) * 3 + calc(30 * var(--u))
+    );
+    max-width: min(
+      calc(320 * var(--u)),
+      calc(100vw - 2 * (var(--speedo) + var(--dial) * 3) - calc(80 * var(--u)))
+    );
+  }
+
+  .touch-mode #ui[data-hud='dash'] .notices {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)));
+  }
+
+  .touch-mode #ui[data-hud='dash'] .gate-count,
+  .touch-mode #ui[data-hud='dash'] .crawl-run {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)) + calc(44 * var(--u)));
+    left: auto;
+    right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+    transform: none;
+  }
+}
+
+/* ---------- Shared skin: touch controls, menus and title ---------- */
+
+/* Thumb buttons in the style's glass. */
+#ui[data-hud] .touch-btn {
+  color: var(--hud-text);
+  background: var(--hud-button);
+  border: 1px solid var(--hud-button-line);
+  border-radius: calc(9 * var(--u));
+  box-shadow: none;
+  font-family: var(--hud-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+#ui[data-hud] .touch-btn.down {
+  transform: translateY(1px);
+  filter: brightness(1.3);
+}
+
+#ui[data-hud] .touch-btn[aria-pressed='true'] {
+  color: var(--hud-accent);
+  border-color: var(--hud-accent);
+  background: var(--hud-accent-fill);
+}
+
+#ui[data-hud] .touch-pile-toggle[aria-expanded='true'] {
+  background: var(--hud-line);
+  box-shadow: inset 0 0 0 1px var(--hud-text);
+}
+
+#ui[data-hud] .touch-pile-marks i {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--hud-soft);
+}
+
+#ui[data-hud] .touch-pile-marks i.on {
+  border-color: var(--hud-accent);
+  background: var(--hud-accent);
+  color: var(--hud-on-accent);
+}
+
+#ui[data-hud] .touch-stick-base {
+  border: calc(2 * var(--u)) solid rgba(255, 255, 255, 0.3);
+  background: rgba(12, 12, 11, 0.32);
+}
+
+#ui[data-hud] .touch-stick-knob {
+  background: radial-gradient(circle at 50% 40%, #3a3834, #121110);
+  border: calc(2 * var(--u)) solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 calc(2 * var(--u)) calc(6 * var(--u)) rgba(0, 0, 0, 0.4);
+}
+
+#ui[data-hud] .touch-stick-axis {
+  font-family: var(--hud-display);
+  letter-spacing: 0.08em;
+  color: rgba(239, 232, 214, 0.75);
+}
+
+#ui[data-hud] .touch-gas {
+  background: rgba(40, 70, 44, 0.78);
+}
+
+#ui[data-hud] .touch-brake {
+  background: rgba(96, 34, 22, 0.78);
+}
+
+/* Thumb buttons at least 44 px, as touch screens need; the top row slim but tappable. */
+.touch-mode #ui[data-hud] .touch-grid {
+  grid-template-columns: repeat(2, calc(56 * var(--u)));
+  gap: calc(6 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .touch-grid .touch-btn {
+  height: calc(46 * var(--u));
+  font-size: calc(12 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .touch-pile {
+  grid-template-columns: repeat(4, calc(50 * var(--u)));
+  gap: calc(5 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .touch-pile .touch-btn {
+  height: calc(44 * var(--u));
+  font-size: calc(11 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .touch-top .touch-btn,
+.touch-mode #ui[data-hud] .camera-help button {
+  height: calc(32 * var(--u));
+  min-width: calc(40 * var(--u));
+}
+
+/* The lights come on by themselves at dusk and are in Tools; the installed app is already full screen. */
+.touch-mode #ui[data-hud] .touch-top [data-tap='lights'] {
+  display: none;
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  #ui[data-hud] .touch-fullscreen {
+    display: none;
+  }
+}
+
+/* The pause menu: a panel on the right. */
+#ui[data-hud] .pause {
+  background: linear-gradient(90deg, rgba(8, 8, 7, 0.1), rgba(8, 8, 7, 0.55));
+}
+
+#ui[data-hud] .pause-card {
+  width: min(calc(420 * var(--u)), 92vw);
+  padding: calc(22 * var(--u)) calc(22 * var(--u)) calc(18 * var(--u));
+  background: var(--hud-panel);
+  border: 1px solid var(--hud-line);
+  border-radius: calc(16 * var(--u));
+  box-shadow: 0 calc(18 * var(--u)) calc(50 * var(--u)) rgba(0, 0, 0, 0.45);
+  font-family: var(--hud-display);
+}
+
+#ui[data-hud] .pause-card h2 {
+  text-align: left;
+  font: 700 calc(30 * var(--u))/1 var(--hud-display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+#ui[data-hud] .pause-episode {
+  order: -1;
+  margin: 0 0 calc(2 * var(--u));
+  text-align: left;
+  font: 700 calc(12 * var(--u)) var(--hud-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--hud-accent);
+}
+
+#ui[data-hud] .pause-card button {
+  font: 600 calc(17 * var(--u)) var(--hud-display);
+  letter-spacing: 0.03em;
+  color: var(--hud-text);
+  background: var(--hud-fill);
+  border: 1px solid var(--hud-line);
+  border-radius: calc(8 * var(--u));
+}
+
+#ui[data-hud] .pause-card button small {
+  font: 400 calc(12 * var(--u)) var(--hud-body);
+  color: var(--hud-soft);
+}
+
+#ui[data-hud] .pause-card button:hover,
+#ui[data-hud] .pause-card button.focused,
+#ui[data-hud] .pause-card input.focused {
+  outline: none;
+  border-color: var(--hud-accent);
+  box-shadow: inset calc(3 * var(--u)) 0 0 var(--hud-accent);
+}
+
+/* The highlight a keyboard or controller moves: a ring as well as the bar, so it reads from
+   the couch and is not mistaken for an option that is merely switched on (v1.84). */
+#ui[data-hud] .pause-card button.focused,
+#ui[data-hud] .pause-card input.focused {
+  box-shadow:
+    inset calc(4 * var(--u)) 0 0 var(--hud-accent),
+    0 0 0 calc(2 * var(--u)) var(--hud-accent);
+}
+
+#ui[data-hud] .setting-row.focused-row {
+  --row-band: var(--hud-accent-fill);
+}
+
+#ui[data-hud] .pause-card button.on {
+  color: var(--hud-accent);
+  border-color: var(--hud-accent);
+  background: var(--hud-accent-fill);
+}
+
+/* A big screen read from the couch has the height of a small one once everything on it is
+   drawn larger (576 units at 1080p): the pause pages use the width instead. The main page's
+   eight buttons stand two abreast under one row of readings, and all of it fits (v1.84). */
+:root[data-short] #ui .pause-card {
+  width: min(calc(520 * var(--u)), 92vw);
+  max-height: 94vh;
+}
+
+/* 600 units: clear of the dash cluster in the bottom left corner. */
+:root[data-short] #ui .pause-card.pause-main,
+:root[data-short] #ui .pause-card.pause-journal {
+  width: min(calc(600 * var(--u)), 92vw);
+}
+
+:root[data-short] #ui .pause-main .pause-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+:root[data-short] #ui .pause-status {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+:root[data-short] #ui .controller-setting {
+  display: flex;
+}
+
+:root[data-short] #ui .controller-setting .seg {
+  flex-wrap: nowrap;
+  margin-top: 0;
+}
+
+#ui[data-hud] .pause-card button.on small {
+  color: var(--hud-accent);
+}
+
+#ui[data-hud] .pause-card .setting-row {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+#ui[data-hud] .pause-card .menu-note,
+#ui[data-hud] .pause-card .build-label {
+  font-family: var(--hud-body);
+  color: var(--hud-soft);
+}
+
+#ui[data-hud] .pause-card table.controls {
+  font-family: var(--hud-body);
+}
+
+#ui[data-hud] .pause-card table.controls th,
+#ui[data-hud] .pause-card table.controls td {
+  border-bottom-color: var(--hud-line);
+}
+
+#ui[data-hud] .pause-status div {
+  background: var(--hud-fill);
+  border-radius: calc(8 * var(--u));
+}
+
+#ui[data-hud] .pause-status span,
+#ui[data-hud] .pause-status small {
+  color: var(--hud-soft);
+}
+
+#ui[data-hud] .pause-status b {
+  font-weight: 600;
+}
+
+/* End-of-run card. */
+#ui[data-hud] .result {
+  background: rgba(8, 8, 7, 0.5);
+}
+
+#ui[data-hud] .result-card {
+  background: var(--hud-panel);
+  border-radius: calc(16 * var(--u));
+}
+
+#ui[data-hud] .result-card h2 {
+  font: 700 calc(34 * var(--u)) var(--hud-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+#ui[data-hud] .result-card.failed h2 {
+  color: var(--hud-red);
+}
+
+#ui[data-hud] .result-card small,
+#ui[data-hud] .result-stats {
+  color: var(--hud-soft);
+}
+
+#ui[data-hud] .result-stats {
+  border-top-color: var(--hud-line);
+}
+
+#ui[data-hud] .result-buttons button {
+  font: 600 calc(17 * var(--u)) var(--hud-display);
+  color: var(--hud-text);
+  background: var(--hud-fill);
+  border: 1px solid var(--hud-line);
+  border-radius: calc(8 * var(--u));
+}
+
+#ui[data-hud] .result-buttons button:hover,
+#ui[data-hud] .result-buttons button.focused {
+  outline: none;
+  border-color: var(--hud-accent);
+  box-shadow: inset calc(3 * var(--u)) 0 0 var(--hud-accent);
+}
+
+/* Title, settings, journey and briefing: the camp at dusk stays, the type matches the HUD. */
+#ui[data-hud] .welcome,
+#ui[data-hud] .loading {
+  --title-gold: var(--hud-accent);
+  --title-white: #f6efdc;
+  --title-muted: var(--hud-soft);
+}
+
+#ui[data-hud] .welcome .title-logo h1 {
+  font-family: var(--hud-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 0.9;
+}
+
+#ui[data-hud] .title-menu button {
+  font-family: var(--hud-display);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+#ui[data-hud] .title-begin,
+#ui[data-hud] .title-back,
+#ui[data-hud] .title-version,
+#ui[data-hud] .title-input-hint {
+  font-family: var(--hud-display);
+}
+
+#ui[data-hud] .title-panel,
+#ui[data-hud] .loading .loading-card.paper {
+  background: var(--hud-panel);
+  border: 1px solid var(--hud-line);
+  border-radius: calc(14 * var(--u));
+}
+
+#ui[data-hud] .welcome .welcome-card h1,
+#ui[data-hud] .title-settings h2,
+#ui[data-hud] .welcome .welcome-section h2,
+#ui[data-hud] .loading .briefing h2 {
+  font-family: var(--hud-display);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+#ui[data-hud] .welcome .welcome-option {
+  font-family: var(--hud-display);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  font-size: calc(15 * var(--u));
+  background: var(--hud-fill);
+  border-color: var(--hud-line);
+  border-radius: calc(8 * var(--u));
+}
+
+#ui[data-hud] .welcome .welcome-option small {
+  font-family: var(--hud-body);
+  letter-spacing: 0;
+}
+
+#ui[data-hud] .welcome .welcome-option.on {
+  background: var(--hud-accent-fill);
+}
+
+#ui[data-hud] .welcome .welcome-drive,
+#ui[data-hud] .loading .welcome-drive {
+  font-family: var(--hud-display);
+  font-size: calc(17 * var(--u));
+  border-radius: calc(8 * var(--u));
+  color: var(--hud-on-accent);
+}
+
+#ui[data-hud] .welcome-card,
+#ui[data-hud] .title-settings,
+#ui[data-hud] .loading-card {
+  font-family: var(--hud-body);
+}
+
+#ui[data-hud] .welcome .welcome-trip {
+  border-color: var(--hud-line);
+}
+
+/* ---------- Edge lines (B): instruments ---------- */
+
+#ui[data-hud='edge'] .inst-cluster,
+#ui[data-hud='edge'] .inst-compass,
+#ui[data-hud='edge'] .hud-stack,
+#ui[data-hud='edge'] .camera-help {
+  color: var(--hud-text);
+  text-shadow: var(--hud-shadow);
+  font-family: var(--hud-body);
+}
+
+#ui[data-hud='edge'] .inst-group {
+  display: flex;
+  align-items: center;
+  gap: calc(14 * var(--u));
+}
+
+#ui[data-hud='edge'] .inst-figure {
+  font-size: calc(13 * var(--u));
+  color: var(--hud-soft);
+  white-space: nowrap;
+}
+
+#ui[data-hud='edge'] .inst-figure b {
+  margin-right: calc(3 * var(--u));
+  font-size: calc(24 * var(--u));
+  font-weight: 500;
+  color: var(--hud-text);
+  font-variant-numeric: tabular-nums;
+}
+
+#ui[data-hud='edge'] .inst-speed .gear {
+  font-size: calc(13 * var(--u));
+  letter-spacing: 0.06em;
+  color: var(--hud-soft);
+  white-space: nowrap;
+}
+
+#ui[data-hud='edge'] .inst-clock {
+  gap: calc(6 * var(--u));
+  font-size: calc(15 * var(--u));
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#ui[data-hud='edge'] .inst-clock .value {
+  font-size: calc(12 * var(--u));
+  font-weight: 400;
+  color: var(--hud-soft);
+}
+
+#ui[data-hud='edge'] .inst-clock .value.late {
+  color: var(--hud-accent);
+}
+
+#ui[data-hud='edge'] .inst-scale {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(5 * var(--u));
+}
+
+#ui[data-hud='edge'] .inst-scale .label {
+  font-size: calc(11 * var(--u));
+  letter-spacing: 0.1em;
+  color: var(--hud-soft);
+}
+
+#ui[data-hud='edge'] .inst-scale .value {
+  font-size: calc(12 * var(--u));
+  color: var(--hud-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#ui[data-hud='edge'] .inst-scale svg {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 1px calc(2 * var(--u)) rgba(0, 0, 0, 0.6));
+}
+
+/* The tape fades out at both ends. */
+#ui[data-hud='edge'] .inst-compass {
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+#ui[data-hud='edge'] .inst-compass svg {
+  display: block;
+  overflow: hidden;
+  filter: drop-shadow(0 1px calc(2 * var(--u)) rgba(0, 0, 0, 0.6));
+}
+
+#ui[data-hud='edge'] .inst-scale .end {
+  font: 500 calc(10 * var(--u)) var(--hud-body);
+  fill: var(--hud-soft);
+}
+
+#ui[data-hud='edge'] .inst-scale .base {
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 1.2;
+}
+
+#ui[data-hud='edge'] .inst-scale .danger {
+  stroke: var(--hud-red);
+  stroke-width: 2.2;
+}
+
+#ui[data-hud='edge'] .inst-scale .ticks line {
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 1;
+}
+
+#ui[data-hud='edge'] .inst-scale .mark {
+  fill: var(--hud-text);
+}
+
+#ui[data-hud='edge'] .inst-scale.hot .mark {
+  fill: var(--hud-red);
+}
+
+#ui[data-hud='edge'] .inst-scale.hot .label {
+  color: var(--hud-red);
+}
+
+#ui[data-hud='edge'] .inst-compass line {
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 1;
+}
+
+#ui[data-hud='edge'] .inst-compass .cmaj {
+  font: 600 calc(11 * var(--u)) var(--hud-body);
+  fill: var(--hud-text);
+}
+
+#ui[data-hud='edge'] .inst-compass .cmin {
+  font: 500 calc(9.5 * var(--u)) var(--hud-body);
+  fill: var(--hud-soft);
+}
+
+#ui[data-hud='edge'] .inst-compass .lubber,
+#ui[data-hud='edge'] .inst-compass .marks circle {
+  fill: var(--hud-accent);
+}
+
+/* Lamps: a lit dot and the word, no box. */
+#ui[data-hud='edge'] .lamp {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(5 * var(--u));
+  padding: calc(2 * var(--u)) 0;
+  border: 0;
+  background: none;
+  font: 600 calc(12 * var(--u))/1 var(--hud-body);
+  letter-spacing: 0.1em;
+  text-shadow:
+    0 0 calc(3 * var(--u)) rgba(0, 0, 0, 0.9),
+    0 1px calc(2 * var(--u)) rgba(0, 0, 0, 0.9);
+}
+
+#ui[data-hud='edge'] .lamp::before {
+  content: '';
+  width: calc(7 * var(--u));
+  height: calc(7 * var(--u));
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 calc(6 * var(--u)) currentColor;
+}
+
+#ui[data-hud='edge'] .lamp.red {
+  background: none;
+}
+
+#ui[data-hud='edge'] .inst-lamps {
+  gap: calc(6 * var(--u)) calc(12 * var(--u));
+}
+
+/* Panels are a light shade at most, so the view shows through. */
+#ui[data-hud='edge'] .hud .paper,
+#ui[data-hud='edge'] .touch-controls .paper {
+  border: 0;
+  border-radius: calc(6 * var(--u));
+  box-shadow: none;
+  text-shadow: var(--hud-shadow);
+}
+
+#ui[data-hud='edge'] .hud-stack .mission,
+#ui[data-hud='edge'] .hud-stack .course-hint.brief span {
+  background: none;
+  padding-left: 0;
+  padding-right: 0;
+  text-shadow: var(--hud-shadow);
+}
+
+#ui[data-hud='edge'] .history-card {
+  border-radius: calc(10 * var(--u));
+  text-shadow: none;
+}
+
+#ui[data-hud='edge'] .history-card strong {
+  font: 500 calc(19 * var(--u))/1.15 var(--hud-body);
+}
+
+#ui[data-hud='edge'] .history-card.reading {
+  border-radius: calc(16 * var(--u)) calc(16 * var(--u)) 0 0;
+}
+
+#ui[data-hud='edge'] .touch-btn {
+  text-shadow: var(--hud-shadow);
+  font-weight: 600;
+}
+
+#ui[data-hud='edge'] .crawl-gauges {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Computer: one band along the bottom edge, the compass tape along the top. */
+#ui[data-hud='edge'] .hud {
+  --edge-band: calc(66 * var(--u));
+}
+
+body:not(.touch-mode) #ui[data-hud='edge'] .inst-cluster {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--edge-band);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 calc(28 * var(--u)) calc(14 * var(--u));
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.45));
+}
+
+body:not(.touch-mode) #ui[data-hud='edge'] .inst-scales {
+  gap: calc(28 * var(--u));
+}
+
+body:not(.touch-mode) #ui[data-hud='edge'] .inst-compass {
+  top: calc(10 * var(--u));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+body:not(.touch-mode) #ui[data-hud='edge'] .hud-stack {
+  top: calc(58 * var(--u));
+  left: calc(24 * var(--u));
+  width: min(calc(420 * var(--u)), calc(100vw - calc(48 * var(--u))));
+}
+
+body:not(.touch-mode) #ui[data-hud='edge'] .camera-help {
+  top: calc(14 * var(--u));
+  left: calc(18 * var(--u));
+  right: auto;
+  bottom: auto;
+  display: flex;
+  gap: calc(6 * var(--u));
+  padding: 0;
+  background: none;
+}
+
+body:not(.touch-mode) #ui[data-hud='edge'] .crawl-gauges {
+  right: calc(24 * var(--u));
+  bottom: calc(var(--edge-band) + calc(14 * var(--u)));
+}
+
+body:not(.touch-mode) #ui[data-hud='edge'] .hud:not(.hidden) .prompts {
+  bottom: calc(var(--edge-band) + calc(14 * var(--u)));
+}
+
+/* Phones: the figures and scales in two lines under the top buttons, the tape between them. */
+.touch-mode #ui[data-hud='edge'] .inst-cluster {
+  top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(40 * var(--u)));
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  align-items: center;
+  row-gap: calc(4 * var(--u));
+  column-gap: calc(18 * var(--u));
+  padding: calc(6 * var(--u)) calc(12 * var(--u)) calc(10 * var(--u));
+  background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0));
+}
+
+.touch-mode #ui[data-hud='edge'] .inst-scales {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-content: space-between;
+  gap: calc(12 * var(--u));
+}
+
+.touch-mode #ui[data-hud='edge'] .inst-figure b {
+  font-size: calc(21 * var(--u));
+}
+
+.touch-mode #ui[data-hud='edge'] .inst-compass {
+  top: max(calc(10 * var(--u)), calc(env(safe-area-inset-top) + calc(10 * var(--u))));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+@media (orientation: portrait) {
+  .touch-mode #ui[data-hud='edge'] .inst-cluster {
+    left: 0;
+    right: 0;
+  }
+
+  /* Between the top-left buttons and the camera buttons, narrower on a small phone. */
+  .touch-mode #ui[data-hud='edge'] .inst-compass {
+    left: calc(max(calc(12 * var(--u)), env(safe-area-inset-left)) + calc(136 * var(--u)));
+    right: calc(max(calc(12 * var(--u)), env(safe-area-inset-right)) + calc(98 * var(--u)));
+    max-width: calc(112 * var(--u));
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    transform: none;
+  }
+
+  .touch-mode #ui[data-hud='edge'] .hud-stack {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(40 * var(--u)) + calc(76 * var(--u)));
+    left: max(calc(12 * var(--u)), env(safe-area-inset-left));
+    max-width: min(calc(300 * var(--u)), 64vw);
+  }
+
+  .touch-mode #ui[data-hud='edge'] .notices,
+  .touch-mode #ui[data-hud='edge'] .gate-count,
+  .touch-mode #ui[data-hud='edge'] .crawl-run,
+  .touch-mode #ui[data-hud='edge'] .crawl-gauges,
+  .touch-mode #ui[data-hud='edge'] .hud.cockpit .crawl-gauges {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(40 * var(--u)) + calc(76 * var(--u)));
+    right: max(calc(12 * var(--u)), env(safe-area-inset-right));
+    left: auto;
+    transform: none;
+  }
+
+  .touch-mode #ui[data-hud='edge'] .notices {
+    max-width: 34vw;
+  }
+}
+
+@media (orientation: landscape) {
+  .touch-mode #ui[data-hud='edge'] .inst-cluster {
+    left: max(calc(4 * var(--u)), env(safe-area-inset-left));
+    background: none;
+  }
+
+  .touch-mode #ui[data-hud='edge'] .hud-stack {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(44 * var(--u)));
+    left: calc(max(calc(4 * var(--u)), env(safe-area-inset-left)) + calc(330 * var(--u)));
+    max-width: min(calc(300 * var(--u)), calc(100vw - calc(330 * var(--u)) - calc(170 * var(--u))));
+  }
+
+  .touch-mode #ui[data-hud='edge'] .gate-count,
+  .touch-mode #ui[data-hud='edge'] .crawl-run {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(44 * var(--u)));
+    left: auto;
+    right: max(calc(12 * var(--u)), env(safe-area-inset-right));
+    transform: none;
+  }
+}
+
+/* Menus: a full-height column on the right, items divided by thin lines. */
+#ui[data-hud='edge'] .pause {
+  padding: 0;
+}
+
+#ui[data-hud='edge'] .pause-card {
+  align-self: stretch;
+  width: min(calc(400 * var(--u)), 100vw);
+  max-height: none;
+  padding: calc(56 * var(--u)) calc(28 * var(--u)) calc(26 * var(--u));
+  background: rgba(10, 10, 10, 0.82);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#ui[data-hud='edge'] .pause-card h2 {
+  font: 300 calc(34 * var(--u))/1 var(--hud-body);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+#ui[data-hud='edge'] .pause-episode {
+  color: var(--hud-soft);
+  font: 500 calc(12 * var(--u)) var(--hud-body);
+}
+
+#ui[data-hud='edge'] .pause-buttons {
+  gap: 0;
+}
+
+#ui[data-hud='edge'] .pause-card button {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0;
+  background: none;
+  font: 500 calc(18 * var(--u)) var(--hud-body);
+  letter-spacing: 0;
+}
+
+#ui[data-hud='edge'] .pause-card .seg button {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: calc(6 * var(--u));
+  font-size: calc(15 * var(--u));
+}
+
+#ui[data-hud='edge'] .pause-card button:hover,
+#ui[data-hud='edge'] .pause-card button.focused,
+#ui[data-hud='edge'] .pause-card input.focused {
+  color: var(--hud-accent);
+  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+#ui[data-hud='edge'] .pause-status div {
+  padding: calc(6 * var(--u)) 0;
+  background: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0;
+}
+
+#ui[data-hud='edge'] .pause-status b {
+  font-weight: 500;
+}
+
+@media (max-height: 640px) {
+  #ui[data-hud='edge'] .pause-card {
+    padding-top: calc(18 * var(--u));
+  }
+}
+
+@media (max-width: 720px) {
+  #ui[data-hud='edge'] .pause {
+    justify-items: end;
+  }
+}
+
+#ui[data-hud='edge'] .welcome .title-logo h1 {
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+#ui[data-hud='edge'] .title-menu button {
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-shadow: var(--hud-shadow);
+}
+
+#ui[data-hud='edge'] .title-panel,
+#ui[data-hud='edge'] .loading .loading-card.paper {
+  background: linear-gradient(90deg, rgba(10, 10, 10, 0.55), rgba(10, 10, 10, 0.82));
+  border: 0;
+  border-radius: 0;
+}
+
+#ui[data-hud='edge'] .welcome .welcome-card h1,
+#ui[data-hud='edge'] .title-settings h2,
+#ui[data-hud='edge'] .welcome .welcome-section h2,
+#ui[data-hud='edge'] .loading .briefing h2 {
+  font-weight: 300;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+#ui[data-hud='edge'] .welcome .welcome-option {
+  font-weight: 500;
+  border-radius: 0;
+  background: none;
+  border-width: 0 0 1px;
+}
+
+/* ---------- Field kit (C): instruments ---------- */
+
+#ui[data-hud='kit'] .hud {
+  --gauge: calc(92 * var(--u));
+  --brass: calc(104 * var(--u));
+  --watch: calc(128 * var(--u));
+}
+
+.touch-mode #ui[data-hud='kit'] .hud {
+  --gauge: calc(56 * var(--u));
+  --brass: calc(54 * var(--u));
+  --watch: calc(64 * var(--u));
+}
+
+#ui[data-hud='kit'] .inst-cluster,
+#ui[data-hud='kit'] .inst-compass {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4 * var(--u));
+}
+
+#ui[data-hud='kit'] .inst-cluster {
+  align-items: flex-start;
+}
+
+#ui[data-hud='kit'] .inst-compass {
+  align-items: flex-end;
+}
+
+#ui[data-hud='kit'] .inst-pair {
+  display: flex;
+  gap: calc(8 * var(--u));
+  align-items: flex-end;
+}
+
+#ui[data-hud='kit'] .inst-temp,
+#ui[data-hud='kit'] .inst-fuel {
+  width: var(--gauge);
+  height: var(--gauge);
+}
+
+#ui[data-hud='kit'] .inst-brass {
+  width: var(--brass);
+  height: var(--brass);
+}
+
+#ui[data-hud='kit'] .inst-clock {
+  width: var(--watch);
+  height: var(--watch);
+}
+
+#ui[data-hud='kit'] .inst-pair svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 calc(3 * var(--u)) calc(4 * var(--u)) rgba(0, 0, 0, 0.35));
+}
+
+#ui[data-hud='kit'] .inst-pair .face {
+  fill: #f1e8d2;
+}
+
+#ui[data-hud='kit'] .inst-pair .ticks {
+  stroke: var(--kit-ink);
+}
+
+#ui[data-hud='kit'] .inst-pair text {
+  fill: var(--kit-ink);
+  font-family: var(--hud-body);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+#ui[data-hud='kit'] .inst-pair .danger {
+  fill: none;
+  stroke: var(--kit-red);
+  stroke-width: 4.5;
+}
+
+#ui[data-hud='kit'] .inst-pair .needle {
+  stroke: var(--kit-ink);
+}
+
+#ui[data-hud='kit'] .inst-pair .hub {
+  fill: var(--kit-ink);
+}
+
+#ui[data-hud='kit'] .inst-pair .hot .needle {
+  stroke: var(--kit-red);
+}
+
+#ui[data-hud='kit'] .inst-pair .hot .label {
+  fill: var(--kit-red);
+}
+
+#ui[data-hud='kit'] .inst-clock .case {
+  fill: #b9b6ae;
+}
+
+#ui[data-hud='kit'] .inst-clock .bezel-ring {
+  fill: #1d1d1b;
+}
+
+#ui[data-hud='kit'] .inst-clock .dark {
+  fill: none;
+  stroke: var(--kit-red);
+  stroke-width: 9;
+}
+
+#ui[data-hud='kit'] .inst-clock .bezel {
+  fill: #fff;
+  letter-spacing: 0.06em;
+}
+
+#ui[data-hud='kit'] .inst-clock .face {
+  fill: #20211f;
+  stroke: #55534d;
+  stroke-width: 1;
+}
+
+#ui[data-hud='kit'] .inst-clock .ticks,
+#ui[data-hud='kit'] .inst-clock .hand {
+  stroke: #ede4cc;
+}
+
+#ui[data-hud='kit'] .inst-clock .pin {
+  fill: var(--kit-red);
+}
+
+#ui[data-hud='kit'] .inst-brass .face {
+  stroke: #7a5b1c;
+  stroke-width: 1;
+}
+
+#ui[data-hud='kit'] .inst-brass .cl.n,
+#ui[data-hud='kit'] .inst-brass .north,
+#ui[data-hud='kit'] .inst-brass .marks path {
+  fill: var(--kit-red);
+}
+
+#ui[data-hud='kit'] .inst-brass .south {
+  fill: var(--kit-ink);
+}
+
+#ui[data-hud='kit'] .inst-brass .lubber {
+  fill: #3b2a12;
+}
+
+#ui[data-hud='kit'] .inst-brass .pin {
+  fill: #7a5b1c;
+}
+
+/* Typed paper slips: the speed and gear, and the dark hours under the watch. */
+#ui[data-hud='kit'] .inst-slip {
+  padding: calc(3 * var(--u)) calc(8 * var(--u)) calc(2 * var(--u));
+  background: var(--kit-paper);
+  color: var(--kit-ink);
+  box-shadow: 0 calc(2 * var(--u)) calc(4 * var(--u)) rgba(0, 0, 0, 0.25);
+  font: 400 calc(13 * var(--u))/1.2 var(--hud-body);
+  white-space: nowrap;
+}
+
+#ui[data-hud='kit'] .inst-slip b {
+  font-size: calc(19 * var(--u));
+}
+
+#ui[data-hud='kit'] .inst-clocknote {
+  font-weight: 700;
+  font-size: calc(12 * var(--u));
+}
+
+#ui[data-hud='kit'] .inst-clocknote.late {
+  color: var(--kit-red);
+}
+
+#ui[data-hud='kit'] .inst-clocknote:empty {
+  display: none;
+}
+
+/* Lamps: Dymo tape. */
+#ui[data-hud='kit'] .lamp {
+  padding: calc(4 * var(--u)) calc(7 * var(--u));
+  border: 0;
+  border-radius: calc(2 * var(--u));
+  box-shadow: 0 1px calc(2 * var(--u)) rgba(0, 0, 0, 0.4);
+  font: 700 calc(12 * var(--u))/1 var(--hud-body);
+  letter-spacing: 0.12em;
+}
+
+#ui[data-hud='kit'] .lamp.amber {
+  color: #ffc04d;
+}
+
+#ui[data-hud='kit'] .lamp.green {
+  color: #8fe0a0;
+}
+
+#ui[data-hud='kit'] .lamp.blue {
+  color: #9cc4ff;
+}
+
+#ui[data-hud='kit'] .lamp.red {
+  color: #f4f4f0;
+}
+
+/* Paper slips for the place, the mission, prompts and messages. */
+#ui[data-hud='kit'] .hud .paper,
+#ui[data-hud='kit'] .touch-controls .paper,
+#ui[data-hud='kit'] .history-card {
+  border: 0;
+  border-radius: calc(2 * var(--u));
+  box-shadow: 0 calc(2 * var(--u)) calc(6 * var(--u)) rgba(0, 0, 0, 0.3);
+}
+
+#ui[data-hud='kit'] .hud-stack .course-hint strong {
+  padding: calc(5 * var(--u)) calc(9 * var(--u)) calc(4 * var(--u));
+  background: var(--kit-paper);
+  box-shadow: 0 calc(2 * var(--u)) calc(4 * var(--u)) rgba(0, 0, 0, 0.25);
+  text-shadow: none;
+  letter-spacing: 0.04em;
+}
+
+#ui[data-hud='kit'] .hud-stack .course-hint.brief span {
+  border-radius: calc(2 * var(--u));
+  border: 0;
+  border-left: calc(4 * var(--u)) solid var(--kit-ink);
+}
+
+#ui[data-hud='kit'] .hud-stack .mission strong {
+  font-family: var(--hud-serif);
+  font-weight: 600;
+}
+
+#ui[data-hud='kit'] .history-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(5 * var(--u));
+  background: repeating-linear-gradient(
+    90deg,
+    var(--kit-line) 0 calc(6 * var(--u)),
+    transparent calc(6 * var(--u)) calc(10 * var(--u))
+  );
+}
+
+#ui[data-hud='kit'] .history-card small {
+  color: var(--kit-red);
+}
+
+#ui[data-hud='kit'] .history-card p {
+  font-family: var(--hud-serif);
+}
+
+#ui[data-hud='kit'] .history-card .history-do {
+  padding: calc(6 * var(--u)) calc(8 * var(--u));
+  background: #efe6cc;
+  border-left: calc(4 * var(--u)) solid var(--kit-ink);
+  font-family: var(--hud-body);
+  font-weight: 700;
+}
+
+#ui[data-hud='kit'] .history-card .history-do kbd {
+  border-color: var(--kit-ink);
+  background: var(--kit-ink);
+  color: var(--kit-paper);
+}
+
+#ui[data-hud='kit'] .history-card.reading {
+  border-radius: calc(4 * var(--u)) calc(4 * var(--u)) 0 0;
+}
+
+#ui[data-hud='kit'] .prompt .key {
+  border-color: var(--kit-ink);
+  color: var(--kit-ink);
+}
+
+#ui[data-hud='kit'] .crawl-gauges {
+  background: var(--kit-paper);
+}
+
+#ui[data-hud='kit'] .touch-btn {
+  box-shadow: 0 calc(2 * var(--u)) calc(4 * var(--u)) rgba(0, 0, 0, 0.25);
+}
+
+#ui[data-hud='kit'] .touch-btn[aria-pressed='true'] {
+  color: var(--kit-paper);
+  background: var(--kit-ink);
+}
+
+#ui[data-hud='kit'] .touch-pile-marks i {
+  border-color: rgba(34, 32, 28, 0.4);
+}
+
+/* At night the paper is lit by the dash lamp, not the sun. */
+#ui[data-hud='kit'] .hud.night .inst-cluster,
+#ui[data-hud='kit'] .hud.night .inst-compass,
+#ui[data-hud='kit'] .hud.night .hud-stack,
+#ui[data-hud='kit'] .hud.night .crawl-gauges {
+  filter: brightness(0.8);
+}
+
+/* Computer: the gauges bottom left, the compass and watch bottom right, notes between them. */
+body:not(.touch-mode) #ui[data-hud='kit'] .inst-cluster {
+  left: calc(24 * var(--u));
+  bottom: calc(22 * var(--u));
+}
+
+body:not(.touch-mode) #ui[data-hud='kit'] .inst-compass {
+  right: calc(24 * var(--u));
+  bottom: calc(22 * var(--u));
+}
+
+body:not(.touch-mode) #ui[data-hud='kit'] .hud-stack {
+  left: calc(24 * var(--u));
+  bottom: calc(calc(22 * var(--u)) + var(--gauge) + calc(40 * var(--u)));
+  width: min(calc(520 * var(--u)), calc(100vw - calc(48 * var(--u))));
+  flex-direction: column-reverse;
+}
+
+body:not(.touch-mode) #ui[data-hud='kit'] .camera-help {
+  top: calc(14 * var(--u));
+  left: calc(18 * var(--u));
+  right: auto;
+  bottom: auto;
+  display: flex;
+  gap: calc(6 * var(--u));
+  padding: calc(4 * var(--u));
+}
+
+body:not(.touch-mode) #ui[data-hud='kit'] .crawl-gauges {
+  right: calc(24 * var(--u));
+  bottom: calc(calc(22 * var(--u)) + var(--watch) + calc(36 * var(--u)));
+}
+
+body:not(.touch-mode) #ui[data-hud='kit'] .hud.cockpit .inst-cluster,
+body:not(.touch-mode) #ui[data-hud='kit'] .hud.cockpit .inst-compass {
+  transform: scale(0.75);
+  opacity: 0.9;
+}
+
+body:not(.touch-mode) #ui[data-hud='kit'] .hud.cockpit .inst-cluster {
+  transform-origin: bottom left;
+}
+
+body:not(.touch-mode) #ui[data-hud='kit'] .hud.cockpit .inst-compass {
+  transform-origin: bottom right;
+}
+
+/* Phones: the gauges top left, the compass and watch top right, under the top buttons. */
+.touch-mode #ui[data-hud='kit'] .inst-cluster {
+  top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(44 * var(--u)));
+  left: max(calc(8 * var(--u)), env(safe-area-inset-left));
+  flex-direction: column-reverse;
+}
+
+.touch-mode #ui[data-hud='kit'] .inst-compass {
+  top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(44 * var(--u)));
+  right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+}
+
+.touch-mode #ui[data-hud='kit'] .inst-slip {
+  font-size: calc(12 * var(--u));
+}
+
+.touch-mode #ui[data-hud='kit'] .inst-slip b {
+  font-size: calc(16 * var(--u));
+}
+
+.touch-mode #ui[data-hud='kit'] .inst-clocknote {
+  font-size: calc(11 * var(--u));
+}
+
+.touch-mode #ui[data-hud='kit'] .lamp {
+  font-size: calc(11 * var(--u));
+  padding: calc(3 * var(--u)) calc(6 * var(--u));
+}
+
+@media (orientation: portrait) {
+  .touch-mode #ui[data-hud='kit'] .hud-stack {
+    top: calc(
+      max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(44 * var(--u)) + var(--gauge) +
+        calc(34 * var(--u))
+    );
+    left: max(calc(8 * var(--u)), env(safe-area-inset-left));
+    max-width: min(calc(300 * var(--u)), 64vw);
+  }
+
+  .touch-mode #ui[data-hud='kit'] .notices,
+  .touch-mode #ui[data-hud='kit'] .gate-count,
+  .touch-mode #ui[data-hud='kit'] .crawl-run,
+  .touch-mode #ui[data-hud='kit'] .crawl-gauges,
+  .touch-mode #ui[data-hud='kit'] .hud.cockpit .crawl-gauges {
+    top: calc(
+      max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(44 * var(--u)) + var(--watch) +
+        calc(30 * var(--u))
+    );
+    right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+    left: auto;
+    transform: none;
+  }
+
+  .touch-mode #ui[data-hud='kit'] .notices {
+    max-width: 34vw;
+  }
+}
+
+@media (orientation: landscape) {
+  .touch-mode #ui[data-hud='kit'] .hud-stack {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(44 * var(--u)));
+    left: calc(max(calc(8 * var(--u)), env(safe-area-inset-left)) + var(--gauge) * 2 + calc(32 * var(--u)));
+    max-width: min(
+      calc(300 * var(--u)),
+      calc(100vw - var(--gauge) * 2 - var(--brass) - var(--watch) - calc(90 * var(--u)))
+    );
+  }
+
+  .touch-mode #ui[data-hud='kit'] .gate-count,
+  .touch-mode #ui[data-hud='kit'] .crawl-run {
+    top: calc(
+      max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(44 * var(--u)) + var(--watch) +
+        calc(28 * var(--u))
+    );
+    left: auto;
+    right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+    transform: none;
+  }
+}
+
+/* Menus: a field notebook, ruled, with a leather spine. */
+#ui[data-hud='kit'] .pause {
+  background: linear-gradient(90deg, rgba(8, 8, 7, 0.1), rgba(8, 8, 7, 0.5));
+}
+
+#ui[data-hud='kit'] .pause-card,
+#ui[data-hud='kit'] .result-card {
+  background: repeating-linear-gradient(
+    var(--kit-paper) 0 calc(25 * var(--u)),
+    var(--kit-line) calc(25 * var(--u)) calc(26 * var(--u))
+  );
+  border: 0;
+  border-left: calc(22 * var(--u)) solid #6f5a38;
+  border-radius: calc(3 * var(--u));
+  box-shadow: 0 calc(10 * var(--u)) calc(30 * var(--u)) rgba(0, 0, 0, 0.4);
+  color: var(--kit-ink);
+}
+
+#ui[data-hud='kit'] .pause-card h2,
+#ui[data-hud='kit'] .result-card h2 {
+  font: 600 calc(30 * var(--u))/1 var(--hud-serif);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+#ui[data-hud='kit'] .pause-episode {
+  color: var(--kit-red);
+}
+
+#ui[data-hud='kit'] .pause-card button,
+#ui[data-hud='kit'] .result-buttons button {
+  font: 700 calc(16 * var(--u)) var(--hud-body);
+  letter-spacing: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: calc(2 * var(--u));
+}
+
+#ui[data-hud='kit'] .pause-card .seg button {
+  border-color: var(--kit-line);
+  font-size: calc(14 * var(--u));
+}
+
+#ui[data-hud='kit'] .pause-card button:hover,
+#ui[data-hud='kit'] .pause-card button.focused,
+#ui[data-hud='kit'] .pause-card input.focused,
+#ui[data-hud='kit'] .result-buttons button:hover,
+#ui[data-hud='kit'] .result-buttons button.focused {
+  border-color: var(--kit-ink);
+  box-shadow: inset calc(4 * var(--u)) 0 0 var(--kit-red);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+#ui[data-hud='kit'] .pause-card button.on {
+  background: var(--kit-ink);
+  color: var(--kit-paper);
+}
+
+#ui[data-hud='kit'] .pause-card button.on small {
+  color: var(--kit-paper);
+}
+
+#ui[data-hud='kit'] .pause-status div {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px dashed var(--kit-line);
+  border-radius: calc(2 * var(--u));
+}
+
+#ui[data-hud='kit'] .pause-status span {
+  color: var(--kit-red);
+  font-weight: 700;
+}
+
+/* Title: the type stays light on the photograph; the cards are paper. */
+#ui[data-hud='kit'] .welcome,
+#ui[data-hud='kit'] .loading {
+  --title-gold: #e8c977;
+  --title-white: #f8ebd4;
+  --title-muted: #d9d0bd;
+}
+
+#ui[data-hud='kit'] .welcome .title-logo h1 {
+  font-family: var(--hud-serif);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+#ui[data-hud='kit'] .title-panel,
+#ui[data-hud='kit'] .loading .loading-card.paper {
+  --title-gold: var(--kit-red);
+  --title-white: var(--kit-ink);
+  --title-muted: #5c5446;
+  background: var(--kit-paper);
+  border: 0;
+  border-left: calc(18 * var(--u)) solid #6f5a38;
+  border-radius: calc(3 * var(--u));
+  color: var(--kit-ink);
+}
+
+#ui[data-hud='kit'] .welcome .welcome-card h1,
+#ui[data-hud='kit'] .title-settings h2,
+#ui[data-hud='kit'] .welcome .welcome-section h2,
+#ui[data-hud='kit'] .loading .briefing h2 {
+  font-family: var(--hud-serif);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+#ui[data-hud='kit'] .welcome .welcome-option {
+  border-color: var(--kit-line);
+  border-radius: calc(2 * var(--u));
+}
+
+#ui[data-hud='kit'] .welcome .welcome-trip {
+  border-color: var(--kit-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #ui[data-hud] .history-card,
+  #ui[data-hud] .lamp.blink {
+    animation: none;
+  }
+
+  #ui[data-hud] .prompts {
+    transition: none;
+  }
+}
+
+/*
+ * A phone held upright (v1.75): the road ahead and the car fill the middle of the picture,
+ * so the action prompt and a history note keep to the band under the dials. The prompt is
+ * one line across the screen there and the panels under it move down a line; a note opens
+ * as its title only (a tap opens the rest).
+ */
+@media (orientation: portrait) {
+  .touch-mode #ui[data-hud='dash'] .hud .prompts {
+    top: calc(
+      max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)) + var(--speedo) +
+        calc(16 * var(--u))
+    );
+    right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+    bottom: auto;
+    left: max(calc(8 * var(--u)), env(safe-area-inset-left));
+    max-width: none;
+    align-items: flex-start;
+  }
+
+  .touch-mode #ui[data-hud='dash'] .hud .prompt {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: left;
+  }
+
+  .touch-mode #ui[data-hud='dash'] .hud.with-prompt .hud-stack,
+  .touch-mode #ui[data-hud='dash'] .hud.with-prompt .notices,
+  .touch-mode #ui[data-hud='dash'] .hud.with-prompt .crawl-gauges {
+    top: calc(
+      max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(50 * var(--u)) + var(--speedo) +
+        calc(18 * var(--u)) + calc(4 * var(--u)) + calc(33 * var(--u)) * var(--prompt-count, 1)
+    );
+  }
+
+  .touch-mode #ui[data-hud] .history-card.brief .history-kind,
+  .touch-mode #ui[data-hud] .history-card.brief .history-text {
+    display: none;
+  }
+
+  .touch-mode #ui[data-hud] .history-card.brief strong {
+    margin-top: 0;
+  }
+}
+
+/*
+ * Screens without touch (v1.75): the action prompt sits bottom right, clear of the car in the
+ * middle and the dials bottom left, and above the crawl gauges when they show.
+ */
+body:not(.touch-mode) #ui[data-hud] .prompts {
+  right: calc(24 * var(--u));
+  bottom: calc(24 * var(--u));
+  left: auto;
+  transform: none;
+  align-items: flex-end;
+  max-width: calc(50vw - calc(48 * var(--u)));
+}
+
+body:not(.touch-mode) #ui[data-hud] .hud.with-gauges .prompts {
+  bottom: calc(24 * var(--u) + 150 * var(--u) + 40 * var(--u));
+}
+
+/*
+ * Screens without touch (v1.75): the lines read from a couch at 1080p (src/ui/uiScale.ts) are
+ * drawn a little larger, so the road name, a note's text and the clock line reach 24 px there.
+ */
+body:not(.touch-mode) #ui[data-hud] .hud-stack .course-hint strong,
+body:not(.touch-mode) #ui[data-hud] .hud-stack .mission-clock {
+  font-size: calc(13 * var(--u));
+}
+
+body:not(.touch-mode) #ui[data-hud] .history-card p,
+body:not(.touch-mode) #ui[data-hud] .history-card.lesson .history-text,
+body:not(.touch-mode) #ui[data-hud] .history-card .history-hint {
+  font-size: calc(13 * var(--u));
+}
+
+/*
+ * Phones (v1.75): every button is at least 44 px on its short side, and no lettering is under
+ * 12 px. The top row of buttons grows from 32 to 44 px high, so the dash panels under it start
+ * 12 px lower (the "+ 50" offsets above, from "+ 38").
+ */
+.touch-mode #ui[data-hud='dash'] .touch-top .touch-btn,
+.touch-mode #ui[data-hud='dash'] .camera-help button {
+  height: calc(44 * var(--u));
+  min-width: calc(44 * var(--u));
+  font-size: calc(13 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .pause-card button {
+  min-height: calc(44 * var(--u));
+}
+
+.touch-mode #ui[data-hud] .touch-stick-axis span,
+.touch-mode #ui[data-hud] .history-card .history-hint,
+.touch-mode #ui[data-hud] .history-card small,
+.touch-mode #ui[data-hud] .history-card p,
+.touch-mode #ui[data-hud] .history-card.lesson .history-text,
+.touch-mode #ui[data-hud] .pause-status span,
+.touch-mode #ui[data-hud] .pause-card .build-label,
+.touch-mode .tool-menu .tool-family,
+.touch-mode .tool-menu .tool-hint,
+.touch-mode .tool-menu .tool-heading > span {
+  font-size: calc(12 * var(--u));
+}
+
+/* The 4WD button's L C F R marks: 12 px letters in slightly larger boxes. */
+.touch-mode #ui[data-hud] .touch-pile-marks i {
+  width: calc(15 * var(--u));
+  height: calc(15 * var(--u));
+  font-size: calc(12 * var(--u));
+  line-height: calc(13 * var(--u));
+}
+
+/* The close mark keeps clear of a note's title. */
+#ui[data-hud] .history-card strong {
+  padding-right: calc(16 * var(--u));
+}
+
+/*
+ * Phones (v1.76): the map's Close and the title pages' Back are 44 px on their short side, and
+ * the title, setup and briefing screens' small lines are 12 px. The title screens come before
+ * the touch controls (and body.touch-mode), so these follow the pointer.
+ */
+@media (pointer: coarse) {
+  .paper-map-close,
+  #ui[data-hud] .title-back {
+    min-width: calc(44 * var(--u));
+    min-height: calc(44 * var(--u));
+  }
+
+  #ui[data-hud] .welcome .title-version,
+  #ui[data-hud] .welcome .title-eyebrow,
+  #ui[data-hud] .welcome .welcome-option small,
+  #ui[data-hud] .loading .loading-brand,
+  #ui[data-hud] .build-label {
+    font-size: calc(12 * var(--u));
+  }
+}
+
+/*
+ * A phone held upright with a history note open (v1.80): the note narrows to its title and
+ * the road name and hint beside it narrow to the space left, so the note never covers them.
+ */
+@media (orientation: portrait) {
+  .touch-mode #ui[data-hud] .notices:has(.history-card:not(.hidden)) {
+    max-width: min(calc(200 * var(--u)), 44vw);
+  }
+
+  .touch-mode #ui[data-hud] .hud:has(.notices .history-card:not(.hidden)) .hud-stack {
+    max-width: calc(100vw - min(calc(200 * var(--u)), 44vw) - calc(40 * var(--u)));
+  }
+}
+
+/* The headset page (?vr, v2.02): a cover over the window while the headset is off. */
+.vr-enter {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 0;
+  background: rgba(24, 28, 22, 0.72);
+  cursor: pointer;
+}
+.vr-enter .paper {
+  display: grid;
+  gap: 10px;
+  max-width: 520px;
+  padding: 28px 36px;
+  text-align: center;
+  font:
+    400 20px/1.35 'Barlow',
+    system-ui,
+    sans-serif;
+  border: 2px solid rgba(84, 97, 75, 0.7);
+}
+.vr-enter strong {
+  font:
+    600 34px/1 'Barlow Condensed',
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.vr-enter.hidden {
+  display: none;
+}
+
+/* The winch chooser's arrow towards an anchor that is out of view (v2.19). */
+.anchor-arrow {
+  position: fixed;
+  z-index: 35;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #ffc247;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 6px rgba(0, 0, 0, 0.7);
+}
+.anchor-arrow.hidden {
+  display: none;
+}
+.anchor-arrow-head {
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-bottom: 26px solid #ffc247;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+  transform: rotate(var(--turn, 0rad));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .anchor-arrow-head {
+    animation: anchor-arrow-pulse 1s ease-in-out infinite;
+  }
+}
+@keyframes anchor-arrow-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}

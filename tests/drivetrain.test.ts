@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { vehicleTuning as t } from '../src/data/vehicle';
 import {
   createDrivetrainState,
+  engineBrakeForce,
   engineTorque,
   totalRatio,
   updateDrivetrain,
@@ -43,10 +44,44 @@ describe('drivetrain', () => {
     expect(f).toBeLessThan(0);
   });
 
+  it('a stalled engine drags the wheels in proportion to the gearing', () => {
+    const s = createDrivetrainState();
+    expect(engineBrakeForce(t, s)).toBe(0);
+    s.engineRunning = false;
+    s.gear = 0;
+    s.range = 'high';
+    const high = engineBrakeForce(t, s);
+    expect(high).toBeCloseTo((t.engine.engineBrake * totalRatio(t, 0, 'high')) / 2);
+    s.range = 'low';
+    expect(engineBrakeForce(t, s)).toBeCloseTo(high * t.ranges.low.ratio);
+    s.gear = 2;
+    expect(engineBrakeForce(t, s)).toBeLessThan(high * t.ranges.low.ratio);
+  });
+
   it('gives no drive when the engine is stalled', () => {
     const s = createDrivetrainState();
     s.engineRunning = false;
     expect(updateDrivetrain(t, s, { throttle: 1, reverse: false, speed: 0, enginePower: 1 }, 1 / 60)).toBe(0);
+    expect(s.fuelRate).toBe(0);
+  });
+
+  it('tank capacity does not change consumption or power, and a stationary hard pull burns more than idle', () => {
+    const largerTank = {
+      ...t,
+      engine: { ...t.engine, fuel: { ...t.engine.fuel, tankLitres: 180 } },
+    };
+    const normal = createDrivetrainState();
+    const large = createDrivetrainState();
+    const idle = createDrivetrainState();
+    for (let i = 0; i < 300; i++) {
+      const pull = { throttle: 1, reverse: false, speed: 0, enginePower: 1 };
+      expect(updateDrivetrain(t, normal, pull, 1 / 60)).toBe(
+        updateDrivetrain(largerTank, large, pull, 1 / 60),
+      );
+      updateDrivetrain(t, idle, { ...pull, throttle: 0 }, 1 / 60);
+    }
+    expect(large.fuelRate).toBe(normal.fuelRate);
+    expect(normal.fuelRate).toBeGreaterThan(idle.fuelRate * 8);
   });
 });
 
@@ -64,5 +99,9 @@ describe('input and surfaces', () => {
   it('wetness lowers grip', () => {
     expect(surfaceGrip(SurfaceId.Dirt, 1)).toBeLessThan(surfaceGrip(SurfaceId.Dirt, 0));
     expect(surfaceGrip(SurfaceId.Mud, 0)).toBeLessThan(surfaceGrip(SurfaceId.Gravel, 0));
+    // Red clay grips like dirt when dry and goes greasy after rain.
+    expect(surfaceGrip(SurfaceId.Clay, 0)).toBeGreaterThan(0.9);
+    expect(surfaceGrip(SurfaceId.Clay, 0.7)).toBeLessThan(surfaceGrip(SurfaceId.Dirt, 0.7) * 0.8);
+    expect(surfaceGrip(SurfaceId.Clay, 1)).toBeLessThan(surfaceGrip(SurfaceId.Gravel, 1) * 0.7);
   });
 });

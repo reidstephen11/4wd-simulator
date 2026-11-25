@@ -51,6 +51,13 @@ describe('engine flooding (M4)', () => {
     expect(f.stalled).toBe(false);
   });
 
+  it('floods faster when a bow wave throws water into the intake', () => {
+    const f = createCondition().flood;
+    for (let t = 0; t < 2; t += DT) updateFlood(f, true, 0, DT, 5);
+    expect(f.timer).toBeCloseTo(10, 0);
+    expect(f.stalled).toBe(true);
+  });
+
   it('counts back down slowly when the intake comes out of the water', () => {
     const f = createCondition().flood;
     for (let t = 0; t < 6; t += DT) updateFlood(f, true, 0, DT);
@@ -288,5 +295,75 @@ describe('jack, campsite return and light damage (M4)', () => {
     runSim(sim, 10, {});
     expect(v.condition.dirt.sides).toBeLessThan(0.8);
     expect(v.condition.dirt.sides).toBeGreaterThan(0.2);
+  });
+});
+
+describe('winching a bogged vehicle (v1.19)', () => {
+  it('holds the winching car still without putting it into reverse', async () => {
+    const R = await loadRapier();
+    const world = testWorld();
+    const sim = new Simulation(R, world, lateAfternoon);
+    const camp = world.pois.find((p) => p.id === 'river-flat-camp')!;
+    const v = sim.addVehicle('p', sim.poseAt(camp.x, camp.z, 0));
+    runSim(sim, 1, { handbrake: true });
+    // A bogged car 10 m ahead (north), nose towards us.
+    const stuck = sim.addStuckVehicle({
+      id: 'bogged',
+      name: 'Bogged ute',
+      x: camp.x,
+      z: camp.z - 10,
+      headingDeg: 180,
+      sink: 0.3,
+      freeAfter: 5,
+      breakout: 2500,
+      drag: 2000,
+    });
+    const anchor = sim.findAnchors('p').find((a) => a.id === 'stuck:bogged');
+    expect(anchor).toBeDefined();
+    sim.attachTo('p', anchor!);
+    const start = v.body.translation();
+    const p0 = { x: start.x, z: start.z };
+    let fastest = 0;
+    runSim(sim, 8, () => {
+      fastest = Math.max(fastest, Math.abs(v.speed));
+      expect(v.drivetrain.gear).toBeGreaterThanOrEqual(0);
+      expect(v.throttle).toBe(0);
+      return { winchIn: true };
+    });
+    expect(stuck.moved).toBeGreaterThan(0.5);
+    const p = v.body.translation();
+    expect(Math.hypot(p.x - p0.x, p.z - p0.z)).toBeLessThan(0.5);
+    expect(fastest).toBeLessThan(0.5);
+  });
+});
+
+describe('camp rest and the ground probe (v1.19)', () => {
+  it('cools a boiling engine at camp', async () => {
+    const R = await loadRapier();
+    const world = testWorld();
+    const sim = new Simulation(R, world, lateAfternoon);
+    const v = sim.addVehicle('p', sim.poseAt(100, 300, 90));
+    v.condition.engineHeat = 1.2;
+    sim.repairAtCamp('p');
+    expect(v.condition.engineHeat).toBe(0.5);
+  });
+
+  it('previews over a placed plank, not inside it', async () => {
+    const R = await loadRapier();
+    const world = testWorld();
+    const sim = new Simulation(R, world, lateAfternoon);
+    const v = sim.addVehicle('p', sim.poseAt(100, 300, 90));
+    runSim(sim, 1, { handbrake: true });
+    expect(sim.placePlanks('p')).toBe(true);
+    runSim(sim, 1, { handbrake: true });
+    const probe = sim.probeGroundFor('p');
+    for (const plank of sim.toolsOf('p').planks.placed) {
+      const c = plank.body.translation();
+      const ground = world.terrain.heightAt(c.x, c.z);
+      expect(probe(c.x, c.z, ground + 1)).toBeGreaterThan(ground + plankTuning.thickness * 0.5);
+    }
+    // Its own body is left out: the probe under the car reads the ground, not the roof.
+    const p = v.body.translation();
+    expect(probe(p.x, p.z, p.y + 1)).toBeLessThan(p.y);
   });
 });

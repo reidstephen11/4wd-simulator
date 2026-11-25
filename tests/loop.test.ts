@@ -1,68 +1,72 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GameLoop } from '../src/core/loop';
-import { CATCH_UP_SECONDS, MAX_STEPS_PER_FRAME, PHYSICS_DT } from '../src/core/config';
 
-/** A loop driven by hand: `frame(ms)` draws the next frame `ms` after the last one. */
-function drivenLoop() {
+/** Drives a GameLoop with fake screen refreshes `spacingMs` apart for `seconds`. */
+function run(spacingMs: number, seconds: number, setup: (loop: GameLoop) => void = () => {}) {
   let pending: FrameRequestCallback | null = null;
+  let clock = 0;
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
     pending = cb;
     return 1;
   });
   vi.stubGlobal('cancelAnimationFrame', () => {});
-  const seen = { steps: 0, frameDt: 0 };
+  vi.spyOn(performance, 'now').mockImplementation(() => clock);
+  let steps = 0;
+  const draws: number[] = [];
+  const dts: number[] = [];
   const loop = new GameLoop({
-    step: () => seen.steps++,
-    render: (_alpha, frameDt) => (seen.frameDt = frameDt),
+    step: () => steps++,
+    render: (_alpha, dt) => {
+      draws.push(clock);
+      dts.push(dt);
+    },
   });
-  let now = performance.now();
+  setup(loop);
   loop.start();
-  const frame = (ms: number) => {
-    now += ms;
-    pending!(now);
-  };
-  // Start from a frame boundary: the first frame's length depends on the clock.
-  frame(1);
-  seen.steps = 0;
-  return { loop, frame, seen };
+  const frames = Math.round((seconds * 1000) / spacingMs);
+  for (let i = 1; i <= frames; i++) {
+    clock = i * spacingMs;
+    const cb = pending!;
+    pending = null;
+    cb(clock);
+  }
+  loop.stop();
+  return { steps, draws, dts, frames };
 }
 
-afterEach(() => vi.unstubAllGlobals());
-
-describe('game loop pacing', () => {
-  it('simulates at most a few steps for a slow frame, so the game slows down', () => {
-    const { loop, frame, seen } = drivenLoop();
-    frame(5000);
-    expect(seen.steps).toBe(MAX_STEPS_PER_FRAME);
-    expect(seen.frameDt).toBe(0.25);
-    // The real frame time is kept for the fps shown in the debug overlay.
-    expect(loop.frameSeconds).toBeCloseTo(5, 6);
+describe('frame cap', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
-  it('simulates up to a second of each slow frame when catching up', () => {
-    const { loop, frame, seen } = drivenLoop();
-    loop.catchUp = true;
-    frame(5000);
-    expect(seen.steps).toBe(Math.round(CATCH_UP_SECONDS / PHYSICS_DT));
-    // Shorter frames are simulated in full: the game keeps up with real time.
-    seen.steps = 0;
-    let real = 0;
-    for (const ms of [400, 900, 650, 16]) {
-      frame(ms);
-      real += ms / 1000;
-    }
-    expect(Math.abs(seen.steps * PHYSICS_DT - real)).toBeLessThan(PHYSICS_DT * 1.01);
-    // Animations still take at most a quarter of a second per frame.
-    frame(900);
-    expect(seen.frameDt).toBe(0.25);
+  it('draws a 120 Hz screen about 60 times a second, once per physics step', () => {
+    const r = run(1000 / 120, 10);
+    expect(r.frames).toBe(1200);
+    expect(r.steps).toBeGreaterThanOrEqual(598);
+    expect(r.draws.length / 10).toBeGreaterThan(59);
+    expect(r.draws.length / 10).toBeLessThan(62);
+    // The frame time handed to the game covers the skipped refresh too, so clocks keep time.
+    const total = r.dts.reduce((s, x) => s + x, 0);
+    expect(total).toBeCloseTo(10, 1);
   });
 
-  it('steps once per frame at 60 fps either way', () => {
-    for (const catchUp of [false, true]) {
-      const { loop, frame, seen } = drivenLoop();
-      loop.catchUp = catchUp;
-      for (let i = 0; i < 120; i++) frame(1000 / 60);
-      expect(Math.abs(seen.steps - 120)).toBeLessThanOrEqual(1);
+  it('still draws every refresh of a 60 Hz screen', () => {
+    const r = run(1000 / 60, 5);
+    expect(r.draws.length).toBe(r.frames);
+  });
+
+  it('keeps every step drawn on 90 to 165 Hz screens', () => {
+    for (const hz of [90, 100, 144, 165]) {
+      const r = run(1000 / hz, 5);
+      expect(r.draws.length / 5).toBeGreaterThan(59);
+      expect(r.draws.length / 5).toBeLessThan(62);
     }
+  });
+
+  it('draws every refresh while paused, with fixed test steps, or with the cap off', () => {
+    expect(run(1000 / 120, 2, (l) => (l.paused = true)).draws.length).toBe(240);
+    expect(run(1000 / 120, 2, (l) => (l.fixedSteps = 2)).draws.length).toBe(240);
+    expect(run(1000 / 120, 2, (l) => (l.capFrameRate = false)).draws.length).toBe(240);
   });
 });

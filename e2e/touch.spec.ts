@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { collectErrors, shot, waitReady, waitSim } from './helpers';
+import { openJourney, collectErrors, lowGraphics, shot, waitReady, waitSim } from './helpers';
 
 /** Real touch points through Chrome's input pipeline, so fingers can be held down. */
 async function fingers(page: Page) {
@@ -71,40 +71,62 @@ function overlapping(page: Page, selector = '.touch-btn, .hud button'): Promise<
 test.describe('phone', () => {
   test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
+  test('the title Settings page offers Low and Medium graphics only (v1.23)', async ({ page }) => {
+    await page.goto('/?track=reopened');
+    await page.locator('[data-title-begin]').click();
+    await page.locator('[data-value="settings"]').click();
+    await expect(page.locator('[data-group="quality"]')).toHaveCount(2);
+    await expect(page.locator('[data-group="quality"][data-value="high"]')).toHaveCount(0);
+  });
+
   test('on-screen controls drive the car, and the layout works in landscape and portrait', async ({
     page,
   }) => {
     test.setTimeout(900_000);
     const errors = collectErrors(page);
-    await page.goto('/');
+    await page.goto('/?surprises=off&track=reopened');
+    await openJourney(page);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
+    await openJourney(page);
     await waitReady(page);
     const controls = page.locator('.touch-controls');
+    // The HUD style's instruments sit by the edge of the view. The mission line is filled in
+    // and folds away after a few seconds (on a slow machine it may be gone before this looks).
+    await expect(page.locator('.inst-cluster')).toBeVisible();
+    await expect(page.locator('.inst-compass')).toBeVisible();
+    await expect(page.locator('.mission strong')).not.toBeEmpty();
+    await expect(page.locator('.crawl-gauges')).toBeHidden();
+    await page.waitForTimeout(4800);
+    await expect(page.locator('.mission')).toBeHidden();
     await expect(controls).toBeVisible();
     // No saved settings: a phone starts on the low graphics preset.
     expect(await page.evaluate(() => window.__game!.quality())).toBe('low');
+    await expect(page.locator('.touch-controls')).toHaveClass(/stick-drive/);
+    await expect(page.locator('.touch-pedals.touch-drive')).toBeHidden();
     await shot(page, 'touch', 'landscape');
 
     const f = await fingers(page);
-    // Thumb on the stick pushed right, other thumb on GAS.
+    // Thumb on the stick: right to steer, forward to drive (Joystick only is the default).
     await f.press(1, '.touch-stick-base');
-    await f.move(1, '.touch-stick-base', 80, 0);
-    await f.press(2, '[data-hold="accelerate"]');
+    await f.move(1, '.touch-stick-base', 80, -80);
     await waitSim(page, 2);
     const moving = await page.evaluate(() => window.__game!.vehicle());
-    expect(moving.throttle).toBeGreaterThan(0.9);
+    expect(moving.throttle).toBeGreaterThan(0.5);
     expect(moving.speed).toBeGreaterThan(1);
     await shot(page, 'touch', 'landscape-driving');
-    await f.lift(2);
     await f.lift(1);
     await waitSim(page, 0.2);
     expect((await page.evaluate(() => window.__game!.vehicle())).throttle).toBe(0);
 
-    // HAND latches the park brake on and off.
+    // HAND latches the park brake on and off. Let it stop the car while it's on: range
+    // (below) only changes under 20 km/h.
     await f.tap('[data-tap="handbrake"]');
     await expect.poll(() => page.evaluate(() => window.__game!.parkBrake())).toBe(true);
     await expect(page.locator('[data-tap="handbrake"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect
+      .poll(async () => Math.abs((await page.evaluate(() => window.__game!.vehicle())).speed))
+      .toBeLessThan(0.5);
     await f.tap('[data-tap="handbrake"]');
     await expect.poll(() => page.evaluate(() => window.__game!.parkBrake())).toBe(false);
 
@@ -172,35 +194,142 @@ test.describe('phone', () => {
       await waitSim(page, 0.2);
       expect(await overlapping(page), `${size.width}×${size.height}`).toEqual([]);
     }
+
+    // Two warnings at once: short lines under the compass, off the road and the controls.
+    await f.tap('.touch-pile-toggle');
+    await expect(page.locator('.touch-pile')).toBeVisible();
+    await page.evaluate(() => window.__game!.pinHazards({ swept: true, flooded: true }));
+    await expect(page.locator('.alert')).toHaveCount(2);
+    const warned =
+      '.alert, .touch-btn, .touch-stick-base, .hud button, .inst-cluster, .inst-compass, .hud-stack > *, .camera-help, .crawl-gauges, .prompt';
+    for (const size of [
+      { width: 844, height: 390 },
+      { width: 915, height: 412 },
+      { width: 390, height: 844 },
+      { width: 740, height: 360 },
+      { width: 375, height: 667 },
+    ]) {
+      await page.setViewportSize(size);
+      await waitSim(page, 0.2);
+      const where = `warnings ${size.width}×${size.height}`;
+      expect(await overlapping(page, warned), where).toEqual([]);
+      const centre = await page.evaluate(() =>
+        [...document.querySelectorAll('.alert')].flatMap((el) => {
+          const r = el.getBoundingClientRect();
+          const hit =
+            r.width > 0 &&
+            r.left < innerWidth * 0.7 &&
+            innerWidth * 0.3 < r.right &&
+            r.top < innerHeight * 0.65 &&
+            innerHeight * 0.35 < r.bottom;
+          return hit ? [el.textContent?.trim() ?? 'alert'] : [];
+        }),
+      );
+      expect(centre, where).toEqual([]);
+    }
+    await page.evaluate(() => window.__game!.pinHazards(null));
+    expect(errors).toEqual([]);
+  });
+
+  test('Joystick only is the default; Steer and pedals still shows GAS and BRAKE', async ({ page }) => {
+    test.setTimeout(900_000);
+    const errors = collectErrors(page);
+    await lowGraphics(page);
+    await page.goto('/?surprises=off&track=reopened');
+    await waitReady(page);
+    await expect(page.locator('.touch-controls')).toHaveClass(/stick-drive/);
+    await expect(page.locator('.touch-pedals.touch-drive')).toBeHidden();
+    await expect(page.locator('.touch-stick-axis')).toBeVisible();
+    await shot(page, 'touch', 'stick-drive');
+
+    await page.evaluate(() => window.__game!.setTouchDrive('pedals'));
+    await expect(page.locator('.touch-controls')).not.toHaveClass(/stick-drive/);
+    await expect(page.locator('[data-hold="accelerate"]')).toBeVisible();
+    await expect(page.locator('.touch-stick-axis')).toBeHidden();
+    await shot(page, 'touch', 'pedals-drive');
+
+    await page.evaluate(() => window.__game!.setTouchDrive('stick'));
+    await expect(page.locator('.touch-controls')).toHaveClass(/stick-drive/);
+    await expect(page.locator('.touch-stick')).toHaveAttribute('aria-label', 'Steer, throttle and brake');
+
+    const f = await fingers(page);
+    await f.press(1, '.touch-stick-base');
+    await f.move(1, '.touch-stick-base', 0, -80);
+    await waitSim(page, 1);
+    const forward = await page.evaluate(() => window.__game!.vehicle());
+    expect(forward.throttle).toBeGreaterThan(0.5);
+    expect(forward.brake).toBe(0);
+    await f.lift(1);
+    await waitSim(page, 0.2);
+    expect((await page.evaluate(() => window.__game!.vehicle())).throttle).toBe(0);
+
+    await f.press(1, '.touch-stick-base');
+    await f.move(1, '.touch-stick-base', 0, 80);
+    await waitSim(page, 0.5);
+    const back = await page.evaluate(() => window.__game!.vehicle());
+    expect(back.throttle).toBe(0);
+    expect(back.brake).toBeGreaterThan(0.5);
+    await f.lift(1);
+    expect(errors).toEqual([]);
+  });
+
+  test('Joystick side swaps the stick and the buttons, and the stick still steers', async ({ page }) => {
+    test.setTimeout(900_000);
+    const errors = collectErrors(page);
+    await lowGraphics(page);
+    await page.goto('/?surprises=off&track=reopened');
+    await waitReady(page);
+    const centreX = async (sel: string) => {
+      const b = await page.locator(sel).first().boundingBox();
+      return b!.x + b!.width / 2;
+    };
+    const width = page.viewportSize()!.width;
+    expect(await centreX('.touch-stick-base')).toBeLessThan(width / 2);
+    expect(await centreX('[data-tap="handbrake"]')).toBeGreaterThan(width / 2);
+
+    await page.evaluate(() => window.__game!.setTouchStickSide('right'));
+    await expect(page.locator('.touch-controls')).toHaveClass(/stick-right/);
+    expect(await centreX('.touch-stick-base')).toBeGreaterThan(width / 2);
+    expect(await centreX('[data-tap="handbrake"]')).toBeLessThan(width / 2);
+    await shot(page, 'touch', 'stick-right');
+
+    const f = await fingers(page);
+    await f.press(1, '.touch-stick-base');
+    await f.move(1, '.touch-stick-base', 0, -80);
+    await waitSim(page, 1);
+    expect((await page.evaluate(() => window.__game!.vehicle())).throttle).toBeGreaterThan(0.5);
+    await f.lift(1);
+
+    await page.evaluate(() => window.__game!.setTouchStickSide('left'));
+    await expect(page.locator('.touch-controls')).not.toHaveClass(/stick-right/);
+    expect(await centreX('.touch-stick-base')).toBeLessThan(width / 2);
     expect(errors).toEqual([]);
   });
 });
 
-test.describe('phone on Crawler Creek', () => {
+test.describe('phone on the CREB', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
   test("the HUD's panels keep clear of each other and the buttons in every view", async ({ page }) => {
     test.setTimeout(900_000);
     const errors = collectErrors(page);
-    await page.goto('/');
+    await page.goto('/?surprises=off&track=reopened');
+    await openJourney(page);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    await page.getByRole('button', { name: /Crawler Creek/ }).click();
-    await page.getByRole('button', { name: /Camel Trophy 4WD/ }).click();
+    await openJourney(page);
     await waitReady(page);
     const f = await fingers(page);
-    // Low range brings up the crawl gauges beside the course hint; GAS against the
-    // handbrake brings up a prompt.
+    // Low range on the flat does not bring up pitch/roll; GAS against the handbrake still prompts.
     await f.tap('.touch-pile-toggle');
     await f.tap('[data-tap="range"]');
     await f.tap('[data-tap="handbrake"]');
     await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
-    await expect(page.locator('.prompt')).toContainText('Release the handbrake');
-    await expect(page.locator('.gate-count')).toBeVisible();
-    await expect(page.locator('.course-hint')).toBeVisible();
-    await expect(page.locator('.crawl-gauges')).toBeVisible();
+    await expect(page.locator('.prompt', { hasText: 'Release the handbrake' })).toBeVisible();
+    await expect(page.locator('.crawl-gauges')).toBeHidden();
+    await expect(page.locator('.inst-cluster')).toBeVisible();
     const panels =
-      '.touch-btn, .hud button, .compass, .gate-count, .status, .course-hint, .crawl-gauges, .camera-help, .prompt';
+      '.touch-btn, .touch-stick-base, .hud button, .inst-cluster, .inst-compass, .hud-stack > *, .camera-help, .prompt, .crawl-gauges';
     // With 4WD's pile open, then closed.
     for (const open of [true, false]) {
       if (!open) await f.tap('.touch-pile-toggle');
@@ -217,16 +346,38 @@ test.describe('phone on Crawler Creek', () => {
           await waitSim(page, 0.2);
           const where = `${open ? 'open' : 'closed'} ${view} ${size.width}×${size.height}`;
           expect(await overlapping(page, panels), where).toEqual([]);
-          // The status strip and camera buttons stay one row high (they once stretched down the screen).
-          for (const panel of ['.status', '.camera-help'])
-            expect((await page.locator(panel).boundingBox())!.height, `${where} ${panel}`).toBeLessThan(60);
+          // The camera buttons stay one row high (they once stretched down the screen).
+          expect((await page.locator('.camera-help').boundingBox())!.height, where).toBeLessThan(60);
         }
       }
       await page.evaluate(() => window.__game!.cameraPreset('follow'));
       await page.setViewportSize({ width: 390, height: 844 });
       await waitSim(page, 0.3);
-      await shot(page, 'touch', open ? 'portrait-4wd-open' : 'portrait-crawler-creek');
+      await shot(page, 'touch', open ? 'portrait-4wd-open' : 'portrait-creb');
     }
+    // A history note is a small card in the top right; driving carries on and the buttons
+    // stay. Tapping it closes it.
+    for (const size of [
+      { width: 390, height: 844 },
+      { width: 740, height: 360 },
+    ]) {
+      await page.setViewportSize(size);
+      await page.evaluate(() => window.__game!.showNote('knoll-top'));
+      await expect(page.locator('.history-card')).toBeVisible();
+      await expect(page.locator('.history-backdrop')).toBeHidden();
+      await expect(page.locator('.touch-controls')).toBeVisible();
+      expect(await page.evaluate(() => window.__game!.ui().paused)).toBe(false);
+      const box = await page.evaluate(() =>
+        document.querySelector<HTMLElement>('.history-card')!.getBoundingClientRect().toJSON(),
+      );
+      expect(box.right, `${size.width}×${size.height}`).toBeGreaterThan(size.width * 0.9);
+      expect(box.left, `${size.width}×${size.height}`).toBeGreaterThan(size.width * 0.4);
+      expect(box.top, `${size.width}×${size.height}`).toBeLessThan(size.height * 0.4);
+      await shot(page, 'touch', `history-${size.width}`);
+      await f.tap('.history-card');
+      await expect(page.locator('.history-card')).toBeHidden();
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => window.__game!.cameraPreset('cockpit'));
     await waitSim(page, 0.3);
     await shot(page, 'touch', 'portrait-driver');
@@ -237,8 +388,10 @@ test.describe('phone on Crawler Creek', () => {
 
 test('desktop shows no touch controls', async ({ page }) => {
   test.setTimeout(600_000);
-  await page.goto('/');
+  await lowGraphics(page);
+  await page.goto('/?surprises=off&track=reopened');
+  await openJourney(page);
   await waitReady(page);
   await expect(page.locator('.touch-controls')).toBeHidden();
-  await expect(page.locator('.status-drive').first()).toBeVisible();
+  await expect(page.locator('.inst-cluster')).toBeVisible();
 });

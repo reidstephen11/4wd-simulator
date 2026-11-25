@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { World } from '../sim/world/world';
 import type { PropDef } from '../sim/world/mapTypes';
 import { propBase, propDims, propYaw } from '../sim/world/props';
@@ -12,10 +11,27 @@ import { coursePoint } from '../sim/world/crawlCourse';
 import { trailPoint, staticLogMesh } from '../sim/world/crawlTrail';
 import { rockShape } from '../sim/world/rockShape';
 import { onBridge } from '../sim/world/bridges';
+import { followBody } from './followBody';
 
 const timber = () => pal('barkPale').clone().lerp(pal('barkOchre'), 0.35).multiplyScalar(0.82);
 const rust = () => pal('dirtDark').clone().lerp(pal('mud'), 0.3);
 const iron = () => pal('rockDark').clone().lerp(pal('dirtDark'), 0.35);
+
+/** A weatherproof roadside returns / survey box, with a paper label under its lid. */
+function noticeBox(b: MeshBuilder): void {
+  b.push().translate(0, 0.42, 0);
+  b.box(1, 0.84, 0.7, timber());
+  b.pop();
+  b.push().translate(0, 0.88, 0);
+  b.box(1.08, 0.08, 0.78, iron());
+  b.pop();
+  b.push().translate(0, 0.64, -0.356);
+  b.box(0.48, 0.22, 0.016, new THREE.Color('#E8D8B4'));
+  b.pop();
+  b.push().translate(0, 0.43, -0.37);
+  b.box(0.12, 0.12, 0.04, iron());
+  b.pop();
+}
 
 function hut(b: MeshBuilder): void {
   const d = propDims.hut;
@@ -308,16 +324,112 @@ function cattleGrid(b: MeshBuilder): void {
   }
 }
 
+/** An old powerline pole: a weathered timber pole with a crossarm and its insulators. */
+function powerPole(b: MeshBuilder): void {
+  const d = propDims.powerPole;
+  const grey = pal('barkPale').clone().lerp(pal('rock'), 0.45).multiplyScalar(0.85);
+  b.push().translate(0, d.h / 2, 0);
+  b.cylinder(d.r * 0.8, d.r, d.h, 7, grey);
+  b.pop();
+  b.push().translate(0, d.h - 0.45, 0);
+  b.box(d.arm, 0.12, 0.12, grey);
+  b.pop();
+  for (const x of [-0.9, 0, 0.9]) {
+    b.push().translate(x, d.h - (x === 0 ? 0.05 : 0.3), 0);
+    b.cylinder(0.05, 0.06, 0.18, 6, pal('rock'));
+    b.pop();
+  }
+}
+
+const stone = () => pal('rock').clone().lerp(pal('dirtTrack'), 0.3);
+const brick = () => pal('barkOchre').clone().lerp(pal('dirtDark'), 0.35);
+
+function bakerOven(b: MeshBuilder): void {
+  const d = propDims.bakerOven;
+  // Rubble-stone base, the brick dome on it, and the arched mouth and its hearth stone.
+  b.push().translate(0, d.base / 2, 0);
+  b.box(d.w, d.base, d.d, stone());
+  b.pop();
+  b.push().translate(0, d.base, 0.1);
+  b.blob(1.05, brick(), 0.08, 1, d.dome / 1.05);
+  b.pop();
+  b.push().translate(0, d.base + 0.25, -d.d / 2 + 0.02);
+  b.box(0.6, 0.45, 0.06, pal('vehicleTrim').clone().multiplyScalar(0.3));
+  b.pop();
+  b.push().translate(0, d.base - 0.05, -d.d / 2 - 0.15);
+  b.box(0.9, 0.1, 0.35, stone().multiplyScalar(0.9));
+  b.pop();
+  // A few fallen stones round the foot.
+  const rand = mulberry32(31);
+  for (let i = 0; i < 6; i++) {
+    b.push().translate((rand() - 0.5) * 3.6, 0.1, (rand() - 0.5) * 3.8);
+    b.blob(0.16 + rand() * 0.12, stone(), 0.25, 0, 0.7);
+    b.pop();
+  }
+}
+
+function chimney(b: MeshBuilder): void {
+  const d = propDims.chimney;
+  // Stepped in at the top like a bush chimney, with the fireplace opening on the front.
+  b.push().translate(0, d.h * 0.3, 0);
+  b.box(d.w, d.h * 0.6, d.d, stone());
+  b.pop();
+  b.push().translate(0, d.h * 0.8, 0.05);
+  b.box(d.w * 0.6, d.h * 0.4, d.d * 0.75, stone().multiplyScalar(0.95));
+  b.pop();
+  b.push().translate(0, 0.55, -d.d / 2 + 0.02);
+  b.box(0.8, 1.0, 0.06, pal('vehicleTrim').clone().multiplyScalar(0.3));
+  b.pop();
+}
+
+function headstone(b: MeshBuilder): void {
+  const d = propDims.headstone;
+  b.push().translate(0, d.h / 2, 0);
+  b.box(d.w, d.h, d.t, pal('barkPale').clone().lerp(pal('rock'), 0.4));
+  b.pop();
+  // The grave's low kerb in front of it.
+  for (const x of [-0.42, 0.42]) {
+    b.push().translate(x, 0.06, -1.0);
+    b.box(0.1, 0.12, 1.9, stone());
+    b.pop();
+  }
+  b.push().translate(0, 0.06, -1.95);
+  b.box(0.94, 0.12, 0.1, stone());
+  b.pop();
+}
+
+function stoneKerb(b: MeshBuilder): void {
+  const d = propDims.stoneKerb;
+  const rand = mulberry32(17);
+  // Rough-dressed kerbstones end to end along local x, some sunk or missing.
+  for (let x = -d.l / 2; x < d.l / 2; x += 0.6) {
+    if (rand() < 0.12) continue;
+    b.push().translate(x + 0.3, d.h / 2 - rand() * 0.06, 0);
+    b.box(0.56, d.h, d.w, stone().multiplyScalar(0.9 + rand() * 0.15));
+    b.pop();
+  }
+  // The stone-lined drain beside it.
+  b.push().translate(0, 0.01, 0.35);
+  b.box(d.l, 0.02, 0.35, stone().multiplyScalar(0.8));
+  b.pop();
+}
+
 const builders: Record<PropDef['kind'], (b: MeshBuilder) => void> = {
+  powerPole,
   hut,
   waterTank,
   fireRing,
   logSeat,
+  noticeBox,
   signpost,
   fireTower,
   oldUte,
   mineEntrance,
   cattleGrid,
+  bakerOven,
+  chimney,
+  headstone,
+  stoneKerb,
 };
 
 /**
@@ -344,58 +456,28 @@ export function signFaces(p: PropDef, base: number, material: THREE.Material): T
   return faces;
 }
 
-/** Pixel size of one sign's lettering in the shared sign texture. */
-const SIGN_PX = { w: 256, h: 64 };
-/** Signs side by side across the shared texture. */
-const SIGN_COLUMNS = 4;
-
-/**
- * Hand-lettered text for every sign, one cell each in a single canvas texture, so all the
- * sign faces draw together.
- */
-function signTexture(texts: string[]): THREE.CanvasTexture {
-  const { w, h } = SIGN_PX;
+/** Canvas texture with hand-lettered sign text. */
+function signTexture(text: string): THREE.CanvasTexture {
   const c = document.createElement('canvas');
-  c.width = w * SIGN_COLUMNS;
-  c.height = h * Math.ceil(texts.length / SIGN_COLUMNS);
+  c.width = 256;
+  c.height = 64;
   const ctx = c.getContext('2d') as CanvasRenderingContext2D;
-  texts.forEach((text, i) => {
-    ctx.save();
-    ctx.translate((i % SIGN_COLUMNS) * w, Math.floor(i / SIGN_COLUMNS) * h);
-    ctx.fillStyle = '#D8D0C0';
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = '#8E4B2B';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(4, 4, 248, 56);
-    ctx.fillStyle = '#3B2A1E';
-    let size = 30;
-    ctx.font = `${size}px "Patrick Hand", "Nunito", sans-serif`;
-    while (ctx.measureText(text).width > 230 && size > 12)
-      ctx.font = `${--size}px "Patrick Hand", "Nunito", sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 128, 34);
-    ctx.restore();
-  });
+  ctx.fillStyle = '#D8D0C0';
+  ctx.fillRect(0, 0, 256, 64);
+  ctx.strokeStyle = '#8E4B2B';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(4, 4, 248, 56);
+  ctx.fillStyle = '#3B2A1E';
+  let size = 30;
+  ctx.font = `${size}px "Patrick Hand", "Nunito", sans-serif`;
+  while (ctx.measureText(text).width > 230 && size > 12)
+    ctx.font = `${--size}px "Patrick Hand", "Nunito", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 34);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
-}
-
-/** The faces of sign `index` (see signFaces), moved into place and mapped to its cell. */
-export function placedSignFaces(faces: THREE.Mesh[], index: number, count: number): THREE.BufferGeometry[] {
-  const rows = Math.ceil(count / SIGN_COLUMNS);
-  const col = index % SIGN_COLUMNS;
-  const row = Math.floor(index / SIGN_COLUMNS);
-  return faces.map((face) => {
-    face.updateMatrix();
-    const g = face.geometry.clone().applyMatrix4(face.matrix);
-    const uv = g.getAttribute('uv') as THREE.BufferAttribute;
-    // The canvas's top row is v = 1.
-    for (let i = 0; i < uv.count; i++)
-      uv.setXY(i, (col + uv.getX(i)) / SIGN_COLUMNS, (rows - row - 1 + uv.getY(i)) / rows);
-    return g;
-  });
 }
 
 /**
@@ -411,15 +493,15 @@ export class WorldProps {
     this.material = patchFog(new THREE.MeshLambertMaterial({ vertexColors: true }));
     this.group.name = 'props';
     const b = new MeshBuilder(2024);
-    const signs: { p: PropDef; base: number }[] = [];
     for (const p of world.map.props) {
       const base = propBase(p, world.terrain);
       b.push().translate(p.x, base, p.z).rotate(0, propYaw(p.headingDeg), 0);
+      // Leaning towards its front (-z).
+      if (p.lean) b.rotate((-p.lean * Math.PI) / 180, 0, 0);
       builders[p.kind](b);
       b.pop();
-      if (p.kind === 'signpost' && p.text) signs.push({ p, base });
+      if (p.kind === 'signpost' && p.text) this.addSignFace(p, base);
     }
-    this.addSignFaces(signs);
     // Coloured timber markers bracket the entrance and exit of each practice line.
     for (const course of world.map.crawlCourses ?? [])
       for (const line of course.lines) {
@@ -568,8 +650,14 @@ export class WorldProps {
     this.group.add(mesh);
 
     for (const obj of dynamics) {
-      if (obj.kind !== 'fallenTree' || !obj.def) continue;
-      const m = new THREE.Mesh(this.buildFallenTree(obj.def.length, obj.def.radius), this.material);
+      const geometry =
+        obj.kind === 'fallenTree' && obj.def
+          ? this.buildFallenTree(obj.def.length, obj.def.radius)
+          : obj.kind === 'rock' && obj.shape
+            ? this.buildLooseRock(obj.shape, rand)
+            : null;
+      if (!geometry) continue;
+      const m = new THREE.Mesh(geometry, this.material);
       m.castShadow = true;
       m.receiveShadow = true;
       this.group.add(m);
@@ -577,20 +665,9 @@ export class WorldProps {
     }
   }
 
-  /** Every sign's lettered faces in one mesh. */
-  private addSignFaces(signs: { p: PropDef; base: number }[]): void {
-    if (signs.length === 0) return;
-    const mat = patchFog(
-      new THREE.MeshLambertMaterial({ map: signTexture(signs.map(({ p }) => p.text ?? '')) }),
-      'sign',
-    );
-    const faces = signs.flatMap(({ p, base }, i) =>
-      placedSignFaces(signFaces(p, base, mat), i, signs.length),
-    );
-    const mesh = new THREE.Mesh(mergeGeometries(faces), mat);
-    mesh.name = 'sign-faces';
-    mesh.matrixAutoUpdate = false;
-    this.group.add(mesh);
+  private addSignFace(p: PropDef, base: number): void {
+    const mat = patchFog(new THREE.MeshLambertMaterial({ map: signTexture(p.text ?? '') }), 'sign');
+    for (const face of signFaces(p, base, mat)) this.group.add(face);
   }
 
   private buildFallenTree(length: number, radius: number): THREE.BufferGeometry {
@@ -617,12 +694,25 @@ export class WorldProps {
     return b.build();
   }
 
-  update(): void {
-    for (const { obj, mesh } of this.dynamicMeshes) {
-      const p = obj.body.translation();
-      const q = obj.body.rotation();
-      mesh.position.set(p.x, p.y, p.z);
-      mesh.quaternion.set(q.x, q.y, q.z, q.w);
+  /** A rock come off a bank: fresh grey faces with clay on the underside. */
+  private buildLooseRock(shape: { vertices: Float32Array; indices: Uint32Array }, rand: () => number) {
+    const b = new MeshBuilder(405);
+    const c = pal('rock')
+      .clone()
+      .lerp(pal('rockDark'), 0.1 + rand() * 0.4);
+    const v = (i: number) => new THREE.Vector3().fromArray(shape.vertices, i * 3);
+    for (let i = 0; i < shape.indices.length; i += 3) {
+      const a = v(shape.indices[i]),
+        bb = v(shape.indices[i + 1]),
+        cc = v(shape.indices[i + 2]);
+      const low = (a.y + bb.y + cc.y) / 3 < 0;
+      b.tri(a, bb, cc, low ? c.clone().lerp(pal('dirtTrack'), 0.55) : c);
     }
+    return b.build();
+  }
+
+  /** Fallen trees and loose rocks follow their bodies (`alpha` 0 = before the last step, 1 = after). */
+  update(alpha: number): void {
+    for (const { obj, mesh } of this.dynamicMeshes) followBody(mesh, obj, alpha);
   }
 }

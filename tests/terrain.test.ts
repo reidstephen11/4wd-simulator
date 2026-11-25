@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { highCountryMap } from '../src/data/map';
+import { highCountryMap } from './fixtures/maps/map';
 import { SurfaceId } from '../src/data/surfaces';
 import { generateTerrain } from '../src/sim/world/terrainGen';
 import { Noise2D } from '../src/sim/world/noise';
@@ -29,9 +29,9 @@ describe('terrain generation', () => {
 
   it('heightAt matches grid samples and interpolates within triangles', () => {
     const t = testWorld().terrain;
-    expect(t.heightAt(10, 20)).toBeCloseTo(t.sample(10 + t.half, 20 + t.half), 4);
-    const h10 = t.sample(t.half + 1, t.half);
-    const h01 = t.sample(t.half, t.half + 1);
+    expect(t.heightAt(10, 20)).toBeCloseTo(t.sample(10 + t.halfX, 20 + t.halfZ), 4);
+    const h10 = t.sample(t.halfX + 1, t.halfZ);
+    const h01 = t.sample(t.halfX, t.halfZ + 1);
     expect(t.heightAt(0.5, 0.5)).toBeCloseTo((h10 + h01) / 2, 4);
   });
 
@@ -62,8 +62,8 @@ describe('terrain generation', () => {
   it('keeps every POI inside the playable area', () => {
     const w = testWorld();
     for (const p of w.pois) {
-      expect(Math.abs(p.x)).toBeLessThan(w.map.wallHalfExtent - 20);
-      expect(Math.abs(p.z)).toBeLessThan(w.map.wallHalfExtent - 20);
+      expect(Math.abs(p.x)).toBeLessThan(w.map.wall[0] - 20);
+      expect(Math.abs(p.z)).toBeLessThan(w.map.wall[1] - 20);
     }
   });
 
@@ -72,13 +72,13 @@ describe('terrain generation', () => {
     // 4.6 m; a taller jump is a seam between generation steps.
     const w = testWorld();
     const t = w.terrain;
-    const extent = w.map.wallHalfExtent;
+    const [wallX, wallZ] = w.map.wall;
     let worst = { jump: 0, x: 0, z: 0 };
-    for (let iz = t.half - extent; iz < t.half + extent; iz++)
-      for (let ix = t.half - extent; ix < t.half + extent; ix++) {
+    for (let iz = t.halfZ - wallZ; iz < t.halfZ + wallZ; iz++)
+      for (let ix = t.halfX - wallX; ix < t.halfX + wallX; ix++) {
         const h = t.sample(ix, iz);
         const jump = Math.max(Math.abs(t.sample(ix + 1, iz) - h), Math.abs(t.sample(ix, iz + 1) - h));
-        if (jump > worst.jump) worst = { jump, x: ix - t.half, z: iz - t.half };
+        if (jump > worst.jump) worst = { jump, x: ix - t.halfX, z: iz - t.halfZ };
       }
     expect(worst.jump, `jump at (${worst.x}, ${worst.z})`).toBeLessThan(5);
   });

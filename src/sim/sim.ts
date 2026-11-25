@@ -3,31 +3,45 @@ import type { EnvironmentConfig } from '../data/environment';
 import type { HeadlightMode } from '../data/headlights';
 import { damageTuning, type DamageMode } from '../data/damage';
 import { SurfaceId } from '../data/surfaces';
+import { pressurePsi, setPressure, tyrePressures } from './vehicle/tyrePressure';
 import { vehicleTuning, type VehicleTuning } from '../data/vehicle';
 import { Emitter } from '../core/events';
 import { Groups, groups, Physics, type GroundQuery, type Rapier } from './physics';
 import type { VehicleInput } from './input/vehicleInput';
 import { Vehicle, type SpawnPose } from './vehicle/vehicle';
+import type { GearboxMode } from './vehicle/drivetrain';
 import type { World } from './world/world';
 import { placedPropShapes } from './world/props';
 import { deckAt } from './world/bridges';
 import { StaticMeshBatcher } from './world/staticMesh';
 import type { FallenTreeDef } from './world/mapTypes';
+import { WaterCurrent } from './world/current';
+import { riseShare } from './world/flood';
 import { scatterTuning } from '../data/vegetation';
 import { winchTuning } from '../data/tools';
-import { VehicleTools, type ToolEvent } from './tools/tools';
-import type { Anchor } from './tools/anchors';
+import { VehicleTools, type RepairKind, type ToolEvent } from './tools/tools';
+import { anchorPoint, type Anchor } from './tools/anchors';
+import type { GroundProbe } from './tools/planks';
 import { updateWear } from './vehicle/wear';
-import { limitDamage, repairAll, updateDamage, worstTyre, type DamageEvent } from './vehicle/damage';
+import {
+  limitDamage,
+  mendTyre,
+  repairAll,
+  updateDamage,
+  worstTyre,
+  type DamageEvent,
+} from './vehicle/damage';
 import { emptyInput } from './input/vehicleInput';
 import { headingOf, rotate, v3 } from './vehicle/math';
-
-/** Branch stubs on the Fallen Tree: [position along the trunk (−1..1), offset x, offset z]. */
-export const FALLEN_TREE_STUBS: ReadonlyArray<readonly [number, number, number]> = [
-  [-0.4, 0.45, 0.2],
-  [0.1, -0.4, 0.35],
-  [0.55, 0.3, -0.4],
-];
+import { addTrunkColliders, Surprises, type DynamicObject, type SurpriseEvent } from './surprises';
+import { poseOf, snapshotPose } from './bodyPose';
+import type { SurprisePlan } from './world/surprisePlan';
+import { StuckVehicle, type StuckVehicleDef } from './stuckVehicle';
+import { ChurnMap } from './world/churn';
+import { poseBehind, Trailer, type TrailerEvent } from './trailer';
+import { DRUM, canCouple, trailers, trailerTuning, type TrailerTuning } from '../data/trailers';
+import { CargoDrum } from './cargoDrum';
+import type { DeliveryState } from './trailerState';
 
 /** Rotation that lays a +y capsule flat (90° about x) and then turns it `yaw` about y. */
 export function quatYawX(yaw: number): { x: number; y: number; z: number; w: number } {
@@ -39,17 +53,14 @@ export function quatYawX(yaw: number): { x: number; y: number; z: number; w: num
   return { w: cy * c, x: cy * sx, y: sy * c, z: -sy * sx };
 }
 
-/** A movable world object (the Fallen Tree; later, planks). */
-export interface DynamicObject {
-  id: string;
-  kind: 'fallenTree' | 'plank';
-  body: RAPIER.RigidBody;
-  def?: FallenTreeDef;
-}
+export { FALLEN_TREE_STUBS, type DynamicObject } from './surprises';
 
 export interface SimEvents extends Record<string, unknown> {
   vehicleSpawned: { id: string };
   rangeChanged: { id: string; range: 'high' | 'low' };
+  transferChanged: { id: string; mode: string };
+  transferBlocked: { id: string; reason: string };
+  windup: { id: string };
   diffChanged: { id: string; axle: 'front' | 'rear'; locked: boolean };
   diffBlocked: { id: string; axle: 'front' | 'rear' };
   precisionChanged: { id: string; enabled: boolean };
@@ -57,17 +68,32 @@ export interface SimEvents extends Record<string, unknown> {
   lightsChanged: { id: string; mode: HeadlightMode };
   tool: { id: string; event: ToolEvent };
   /** Flooding stalled or restarted the engine, or it is being started (start-up, a vehicle swap). */
-  engine: { id: string; event: 'stalled' | 'restarted' | 'starting' };
+  engine: {
+    id: string;
+    /**
+     * 'stalledLugged': stalled against the clutch (manual gearbox); 'clutchToStart': the
+     * pedal was pressed in gear with the clutch out, so the engine didn't turn over.
+     */
+    event: 'stalled' | 'restarted' | 'starting' | 'outOfFuel' | 'stalledLugged' | 'clutchToStart';
+  };
   dent: { id: string; impact: number };
   /** Mechanical damage: a tyre cut, a suspension corner bent or the engine hurt. */
   damage: { id: string } & DamageEvent;
-  /** Repaired: at the roadside (a field repair or the spare fitted) or back at camp. */
-  repaired: { id: string; kind: 'field' | 'spare' | 'camp' };
+  /** Repaired: at the roadside (a field repair, a spare fitted, a plug, fuel poured in) or at camp. */
+  repaired: { id: string; kind: RepairKind | 'camp' };
   /** A wheel hit something hard (suspension compressing fast). */
   wheelImpact: { id: string; wheel: number; speed: number };
   /** The chassis knocked into the ground or a rock (impulse, N·s). */
   bodyKnock: { id: string; impulse: number };
   returned: { id: string; campsite: string };
+  /** A one-off event on the way started (a tree or rocks coming down ahead) or is down. */
+  surprise: SurpriseEvent;
+  /** A bogged vehicle came free on the end of the winch line. */
+  rescued: { id: string };
+  /** A trailer was hitched or unhitched, came round against the car, tipped over or was put back up. */
+  trailer: { id: string; vehicle: string | null; event: TrailerEvent | { type: 'hitched' | 'unhitched' } };
+  /** A trailer's wheel hit something hard (spring compression speed, m/s). */
+  trailerBump: { id: string; vehicle: string | null; speed: number };
 }
 
 /** Plain-data snapshot of the simulation (SPEC §11: sim state must be serialisable). */
@@ -80,19 +106,23 @@ export interface SimState {
     linvel: { x: number; y: number; z: number };
     angvel: { x: number; y: number; z: number };
     range: 'high' | 'low';
+    transfer: import('./vehicle/transferCase').TransferState;
     gear: number;
     differentials: { front: boolean; rear: boolean };
     precisionCrawl: boolean;
     parkBrake: boolean;
     lights: HeadlightMode;
     engineRunning: boolean;
+    /** Switched off until the pedal is pressed. */
+    engineOff: boolean;
     /** Seconds of cranking left before the engine catches. */
     crank: number;
     flood: { timer: number; stalled: boolean; dryTime: number };
     dirt: { front: number; sides: number; rear: number; wheels: number };
     dents: number;
-    health: { engine: number; tyres: number[]; suspension: number[]; spare: boolean };
-    winch: { anchor: string | null; length: number };
+    health: { engine: number; tyres: number[]; suspension: number[] };
+    supplies: { fuel: number; jerryCans: number; spares: number; plugs: number };
+    winch: { anchor: string | null; length: number; doubleLine: boolean; treeProtector: boolean };
     planks: { carried: number; placed: { x: number; y: number; z: number }[] };
     jack: string;
   }>;
@@ -109,11 +139,32 @@ export class Simulation {
   readonly ground: GroundQuery;
   readonly dynamics = new Map<string, DynamicObject>();
   readonly tools = new Map<string, VehicleTools>();
-  /** Bodies of swapped-out vehicles, disabled until the next step removes them. */
-  private readonly retired: RAPIER.RigidBody[] = [];
+  /** This run's one-off events on the way (none unless the game adds them). */
+  surprises: Surprises | null = null;
+  /** Other people's vehicles bogged and waiting for a winch (an episode's stranded drivers), by id. */
+  readonly stuck = new Map<string, StuckVehicle>();
+  /** Clay and mud churned up by wheelspin over the run. */
+  readonly churn = new ChurnMap();
+  /** Trailers, hitched or standing on their jockey wheels, by id. */
+  readonly trailers = new Map<string, Trailer>();
+  readonly looseDrums = new Map<string, CargoDrum>();
+  private drumSerial = 0;
   time = 0;
   /** How harsh mechanical damage is (the settings choice; off unless the game sets it). */
   damage: DamageMode = 'off';
+  /** The gearbox setting every vehicle drives with (see Vehicle.setGearboxMode). */
+  gearboxMode: GearboxMode = 'automatic';
+  /**
+   * Fuel burnt per litre the engine really uses. An episode shortens the real distance,
+   * so it burns faster to match; 0 burns nothing (the tank never empties).
+   */
+  fuelScale = 0;
+  /**
+   * A storm raising the creeks (src/data/weatherTimeline.ts): metres above their own
+   * level, and their current as a multiple of its own, each creek by its share of the rise
+   * (`features.creekRise`). Puddles and mud holes stay as laid.
+   */
+  readonly creeks = { rise: 0, flowScale: 1 };
 
   constructor(
     readonly R: Rapier,
@@ -121,14 +172,28 @@ export class Simulation {
     readonly env: EnvironmentConfig,
   ) {
     const terrain = world.terrain;
+    const current = new WaterCurrent(world.features.creeks);
+    const creeks = this.creeks;
     this.ground = {
       surfaceAt: (x, z) => terrain.surfaceAt(x, z),
-      waterSurfaceAt: (x, z) => terrain.waterSurfaceAt(x, z),
+      waterSurfaceAt: (x, z) => {
+        const w = terrain.waterSurfaceAt(x, z);
+        return w === null || creeks.rise === 0 ? w : w + creeks.rise * riseShare(world, terrain.index(x, z));
+      },
       heightAt: (x, z) => terrain.heightAt(x, z),
+      waterFlowAt: (x, z, out) => {
+        current.at(x, z, out);
+        if (creeks.flowScale === 1) return out;
+        const k = 1 + (creeks.flowScale - 1) * riseShare(world, terrain.index(x, z));
+        out.x *= k;
+        out.z *= k;
+        return out;
+      },
+      holeAt: (x, z) => terrain.holeAt(x, z),
     };
     this.physics = new Physics(R, this.ground);
     this.physics.addTerrain(terrain);
-    this.physics.addWalls(world.map.wallHalfExtent);
+    this.physics.addWalls(...world.map.wall);
     for (const b of world.features.boxes)
       this.physics.addStaticBox(b, b.kind === 'ledge' ? SurfaceId.Rock : SurfaceId.Dirt);
     for (const r of world.features.rocks) this.physics.addStaticRock(r);
@@ -211,30 +276,304 @@ export class Simulation {
         .setLinearDamping(0.4)
         .setAngularDamping(1.2),
     );
-    const member = groups(Groups.DYNAMIC, 0xffff);
-    const half = f.length / 2 - f.radius;
-    const trunk = this.physics.world.createCollider(
-      R.ColliderDesc.capsule(half, f.radius)
-        .setMass(f.mass * 0.85)
-        .setFriction(0.8)
-        .setCollisionGroups(member),
-      body,
+    addTrunkColliders(R, this.physics, body, f.length, f.radius, f.mass);
+    this.dynamics.set(f.id, { id: f.id, kind: 'fallenTree', body, def: f, ...poseOf(body) });
+  }
+
+  /**
+   * Add a run's surprises (before the renderer is built, so it draws them). Those in
+   * `happened` are put down where they landed; the rest wait to start.
+   */
+  addSurprises(plans: readonly SurprisePlan[], happened: Iterable<string> = []): Surprises {
+    const s = new Surprises(
+      this.R,
+      this.physics,
+      (x, z) => this.world.terrain.heightAt(x, z),
+      plans,
+      this.world.features.tracks,
+      happened,
     );
-    this.physics.colliderSurface.set(trunk.handle, SurfaceId.Wood);
-    // Broken branch stubs stop it rolling like a pipe.
-    for (const [ay, ox, oz] of FALLEN_TREE_STUBS) {
-      const stub = this.physics.world.createCollider(
-        R.ColliderDesc.capsule(0.35, 0.09)
-          .setTranslation(ox, ay * half, oz)
-          .setRotation({ x: 0, y: 0, z: Math.sin(Math.PI / 4), w: Math.cos(Math.PI / 4) })
-          .setMass((f.mass * 0.15) / 3)
-          .setFriction(0.9)
-          .setCollisionGroups(member),
-        body,
+    for (const obj of s.objects()) this.dynamics.set(obj.id, obj);
+    this.surprises = s;
+    return s;
+  }
+
+  /** Put a bogged vehicle in the world (before the renderer is built), or out of the bog already. */
+  addStuckVehicle(def: StuckVehicleDef, freed = false): StuckVehicle {
+    const s = new StuckVehicle(this.R, this.physics, (x, z) => this.world.terrain.heightAt(x, z), def, freed);
+    this.stuck.set(def.id, s);
+    return s;
+  }
+
+  /** A trailer hitched straight behind a vehicle, or standing at a pose of its own. */
+  addTrailer(
+    id: string,
+    tuning: TrailerTuning,
+    at:
+      string | { x: number; y: number; z: number; rotation: { x: number; y: number; z: number; w: number } },
+  ): Trailer {
+    const behind = typeof at === 'string' ? this.vehicleOf(at) : null;
+    if (behind && !canCouple(tuning, behind.tuning))
+      throw new Error(
+        `The ${tuning.name}'s ring needs a pintle hook, and the ${behind.tuning.name} has none`,
       );
-      this.physics.colliderSurface.set(stub.handle, SurfaceId.Wood);
+    const pose = behind
+      ? poseBehind(behind, tuning, (x, z) => this.world.terrain.heightAt(x, z))
+      : (at as Exclude<typeof at, string>);
+    const env = this.env;
+    const t = new Trailer(id, this.physics, tuning, pose, {
+      get wetness() {
+        return env.wetness;
+      },
+      get waterLevelOffset() {
+        return env.waterLevelOffset;
+      },
+    });
+    this.trailers.set(id, t);
+    if (behind) t.hitch(behind);
+    // Rapier 0.21 leaves a new body frozen if anything is moved before a step has run (as
+    // in replaceVehicle): step once now, so a camp or a teleport straight after is safe.
+    this.physics.step();
+    return t;
+  }
+
+  /** Take a trailer out of the world. */
+  removeTrailer(id: string): void {
+    this.trailers.get(id)?.remove();
+    this.trailers.delete(id);
+  }
+
+  /** Cargo comes out beyond the box's side, with the trailer's current velocity. */
+  spillDrum(t: Trailer): CargoDrum | null {
+    if (t.drums <= 0) return null;
+    const up = rotate(t.body.rotation(), 0, 1, 0);
+    const side = up.x >= 0 ? -1 : 1;
+    const p = t.localToWorld(
+      side * (t.tuning.bed.hx + DRUM.radius + 0.12),
+      t.tuning.bed.y + DRUM.height / 2,
+      t.tuning.bed.cz,
+    );
+    p.y = Math.max(p.y, this.world.terrain.heightAt(p.x, p.z) + DRUM.height / 2 + 0.05);
+    let id: string;
+    do {
+      id = `drum-${++this.drumSerial}`;
+    } while (this.looseDrums.has(id));
+    const d = new CargoDrum(id, this.physics, p, t.body.rotation());
+    d.body.setLinvel(t.body.linvel(), true);
+    this.looseDrums.set(id, d);
+    t.loadDrums(t.drums - 1);
+    t.secureLoad();
+    return d;
+  }
+
+  /** The nearest trailer alongside the car, including while it is slowing to a stop. */
+  nearbyTrailer(id: string): Trailer | null {
+    const v = this.vehicleOf(id);
+    const p = v.body.translation();
+    let best: Trailer | null = null;
+    let distance = 12;
+    for (const t of this.trailers.values()) {
+      const q = t.body.translation();
+      const d = Math.hypot(q.x - p.x, q.z - p.z);
+      if (d <= distance) {
+        best = t;
+        distance = d;
+      }
     }
-    this.dynamics.set(f.id, { id: f.id, kind: 'fallenTree', body, def: f });
+    return best;
+  }
+
+  /** Actions still require both the car and the trailer to be stopped and upright. */
+  workTrailer(id: string): Trailer | null {
+    const v = this.vehicleOf(id);
+    if (Math.abs(v.speed) > 0.5 || v.tiltDeg() > 25) return null;
+    const t = this.nearbyTrailer(id);
+    if (!t || t.tiltDeg() >= 25) return null;
+    const speed = t.body.linvel();
+    return Math.hypot(speed.x, speed.y, speed.z) < 0.6 ? t : null;
+  }
+
+  secureTrailerLoad(id: string): boolean {
+    const t = this.workTrailer(id);
+    if (!t) return false;
+    t.secureLoad();
+    return true;
+  }
+
+  /** A loose delivery drum beside an upright trailer, close enough to load by hand. */
+  drumToLoad(id: string, stopped = true): CargoDrum | null {
+    const t = stopped ? this.workTrailer(id) : this.nearbyTrailer(id);
+    if (!t || t.drums >= 2) return null;
+    const p = t.body.translation();
+    const v = this.vehicleOf(id).body.translation();
+    for (const d of this.looseDrums.values()) {
+      const q = d.body.translation();
+      const speed = d.body.linvel();
+      if (
+        Math.hypot(p.x - q.x, p.z - q.z) < 8 &&
+        Math.hypot(v.x - q.x, v.z - q.z) < 12 &&
+        Math.abs(p.y - q.y) < 2 &&
+        (!stopped || Math.hypot(speed.x, speed.y, speed.z) < 1.2)
+      )
+        return d;
+    }
+    return null;
+  }
+
+  recoverDrum(id: string): boolean {
+    const d = this.drumToLoad(id);
+    const t = this.workTrailer(id);
+    if (!d || !t) return false;
+    d.remove();
+    this.looseDrums.delete(d.id);
+    t.loadDrums(t.drums + 1);
+    t.secureLoad();
+    return true;
+  }
+
+  repairTrailerTyre(id: string): boolean {
+    const t = this.workTrailer(id);
+    if (!t) return false;
+    const i = t.tyres.findIndex((h) => h < 1);
+    const c = this.vehicleOf(id).condition;
+    if (i < 0 || (c.plugs <= 0 && c.spares <= 0)) return false;
+    if (c.plugs > 0) c.plugs--;
+    else c.spares--;
+    t.tyres[i] = 1;
+    return true;
+  }
+
+  deliveryState(): DeliveryState {
+    const pose = (d: Trailer | CargoDrum) => ({
+      id: d.id,
+      position: { ...d.body.translation() },
+      rotation: { ...d.body.rotation() },
+    });
+    return {
+      trailers: [...this.trailers.values()].map((t) => ({
+        ...pose(t),
+        kind: t.tuning.id,
+        hitched: t.hitchedTo !== null,
+        drums: t.drums,
+        strain: t.strain,
+        tyres: [...t.tyres],
+      })),
+      looseDrums: [...this.looseDrums.values()].map(pose),
+    };
+  }
+
+  /** Restore the actual cargo, including trailers left behind; never refill from a mission definition. */
+  restoreDelivery(state: DeliveryState, vehicle: string): void {
+    for (const id of [...this.trailers.keys()]) this.removeTrailer(id);
+    for (const d of this.looseDrums.values()) d.remove();
+    this.looseDrums.clear();
+    let coupled = false;
+    for (const saved of state.trailers) {
+      const tuning = trailers[saved.kind];
+      const hitch: boolean = saved.hitched && !coupled && canCouple(tuning, this.vehicleOf(vehicle).tuning);
+      const t = this.addTrailer(
+        saved.id,
+        tuning,
+        hitch
+          ? vehicle
+          : {
+              ...saved.position,
+              rotation: saved.rotation,
+            },
+      );
+      coupled ||= hitch;
+      t.loadDrums(saved.drums);
+      t.strain = saved.strain;
+      t.tyres.splice(0, 2, ...saved.tyres);
+      t.tipped = t.tiltDeg() > trailerTuning.tippedDeg;
+    }
+    for (const d of state.looseDrums)
+      this.looseDrums.set(d.id, new CargoDrum(d.id, this.physics, d.position, d.rotation));
+    // Initialise Rapier's new bodies before a restart can move them again.
+    this.physics.step();
+  }
+
+  /** The trailer a vehicle is towing, if any. */
+  trailerOf(id: string): Trailer | null {
+    const v = this.vehicles.get(id);
+    for (const t of this.trailers.values()) if (v && t.hitchedTo === v) return t;
+    return null;
+  }
+
+  /**
+   * What the hitch could do now: hitch the nearest trailer whose coupling is in reach, or
+   * unhitch the one on the back. Null with nothing to hitch or unhitch.
+   */
+  hitchOption(
+    id: string,
+  ): { kind: 'hitch' | 'unhitch'; trailer: Trailer; possible: boolean; reason?: string } | null {
+    const v = this.vehicleOf(id);
+    const towing = this.trailerOf(id);
+    const stopped = Math.abs(v.speed) <= trailerTuning.stoppedSpeed;
+    if (towing)
+      return {
+        kind: 'unhitch',
+        trailer: towing,
+        possible: stopped,
+        reason: stopped ? undefined : 'Stop first',
+      };
+    let best: Trailer | null = null;
+    let near = trailerTuning.hitchReach;
+    for (const t of this.trailers.values()) {
+      if (t.hitchedTo || t.tipped || !canCouple(t.tuning, v.tuning)) continue;
+      const d = t.distanceToHitch(v);
+      if (d <= near) {
+        near = d;
+        best = t;
+      }
+    }
+    if (!best) return null;
+    return { kind: 'hitch', trailer: best, possible: stopped, reason: stopped ? undefined : 'Stop first' };
+  }
+
+  /** Hitch the trailer in reach onto a vehicle. False if there's none, or it isn't stopped. */
+  hitchTrailer(id: string): boolean {
+    const o = this.hitchOption(id);
+    if (!o || o.kind !== 'hitch' || !o.possible) return false;
+    o.trailer.hitch(this.vehicleOf(id));
+    this.events.emit('trailer', { id: o.trailer.id, vehicle: id, event: { type: 'hitched' } });
+    return true;
+  }
+
+  /** Unhitch a vehicle's trailer where it stands. False if it has none, or isn't stopped. */
+  unhitchTrailer(id: string): boolean {
+    const o = this.hitchOption(id);
+    if (!o || o.kind !== 'unhitch' || !o.possible) return false;
+    o.trailer.unhitch();
+    this.events.emit('trailer', { id: o.trailer.id, vehicle: null, event: { type: 'unhitched' } });
+    return true;
+  }
+
+  /**
+   * Bring a vehicle's trailer along after the vehicle has been moved: hitched straight behind
+   * it, or, if the vehicle has nothing it can couple to (a No. 5's ring behind a car with only
+   * a tow ball), standing unhitched behind it.
+   */
+  bringTrailer(id: string, trailer: Trailer | null = this.trailerOf(id)): void {
+    if (!trailer) return;
+    const v = this.vehicleOf(id);
+    trailer.unhitch();
+    const p = poseBehind(v, trailer.tuning, (x, z) => this.world.terrain.heightAt(x, z));
+    trailer.teleport(p.x, p.y, p.z, p.rotation);
+    if (canCouple(trailer.tuning, v.tuning)) trailer.hitch(v);
+    else this.events.emit('trailer', { id: trailer.id, vehicle: null, event: { type: 'unhitched' } });
+  }
+
+  /**
+   * Follow a change in the weather: how wet the ground is (the tyres' grip) and the rain,
+   * and how high and fast the creeks run. The creek level offset stays as the world was
+   * built with, since the puddles were laid for it.
+   */
+  setWeather(env: EnvironmentConfig, creekRise: number, flowScale: number): void {
+    this.env.wetness = env.wetness;
+    this.env.rain = env.rain;
+    this.creeks.rise = creekRise;
+    this.creeks.flowScale = flowScale;
   }
 
   /** Spawn pose on the ground (or a bridge deck) at (x, z) for wheels of this radius. */
@@ -260,7 +599,14 @@ export class Simulation {
       get waterLevelOffset() {
         return env.waterLevelOffset;
       },
+      churn: this.churn,
     });
+    // A vehicle arrives in neutral in the manual gearbox settings.
+    v.setGearboxMode(this.gearboxMode);
+    if (v.manualGearbox) {
+      v.drivetrain.gear = 0;
+      v.drivetrain.neutral = true;
+    }
     this.vehicles.set(id, v);
     this.tools.set(id, new VehicleTools());
     this.events.emit('vehicleSpawned', { id });
@@ -270,6 +616,11 @@ export class Simulation {
   /** Crank a vehicle's engine: it drives once the engine catches. */
   startEngine(id: string): void {
     if (this.vehicleOf(id).startEngine()) this.events.emit('engine', { id, event: 'starting' });
+  }
+
+  /** Switch a vehicle's engine off: pressing the pedal starts it. */
+  switchOffEngine(id: string): void {
+    this.vehicleOf(id).switchOff();
   }
 
   /**
@@ -282,6 +633,8 @@ export class Simulation {
     const tools = this.toolsOf(id);
     tools.winch.detach();
     tools.planks.recall(this.physics);
+    const towing = this.trailerOf(id);
+    towing?.unhitch();
     const p = old.body.translation();
     const f = old.forward();
     const ground = this.world.terrain.heightAt(p.x, p.z);
@@ -294,10 +647,14 @@ export class Simulation {
       headingDeg: headingOf(f.x, f.z),
     };
     old.retire();
-    this.retired.push(old.body);
     this.vehicles.delete(id);
     this.tools.delete(id);
     const v = this.addVehicle(id, pose, tuning);
+    // Rapier 0.21 leaves the new vehicle frozen in place if the old body is removed before
+    // a step has run, or if either is moved (to a camp, say) before one has. Step once now.
+    this.physics.step();
+    this.physics.world.removeRigidBody(old.body);
+    this.bringTrailer(id, towing);
     // The driver keeps the lights as they had them.
     v.lights = old.lights;
     return v;
@@ -320,6 +677,12 @@ export class Simulation {
   }
 
   step(inputs: ReadonlyMap<string, VehicleInput>, dt: number): void {
+    // Where everything else stood before this step, so the renderer can draw it between
+    // steps as it does the car (which remembers its own pose in Vehicle.step).
+    for (const tools of this.tools.values()) for (const pl of tools.planks.placed) snapshotPose(pl);
+    for (const obj of this.dynamics.values()) snapshotPose(obj);
+    for (const s of this.stuck.values()) snapshotPose(s);
+    for (const d of this.looseDrums.values()) snapshotPose(d);
     for (const [id, v] of this.vehicles) {
       let input = inputs.get(id);
       if (!input) continue;
@@ -341,15 +704,27 @@ export class Simulation {
       if (input.interact && tools.planks.inReach(v).length > 0) {
         const n = tools.planks.pickUp(v, this.physics);
         this.toolEvent(id, { type: 'planksPickedUp', count: n });
-      } else if (input.winchAttach) this.quickAttach(id);
+      } else if (input.interact && this.hitchOption(id)?.kind === 'hitch') this.hitchTrailer(id);
+      else if (input.winchAttach) this.quickAttach(id);
+      // Winching a bogged vehicle out, the handbrake holds this one where it stands (unless
+      // driving). Not the brake pedal: pressed at a standstill, that selects reverse.
+      if (tools.winch.anchor?.id.startsWith('stuck:') && input.throttle === 0 && !tools.repair)
+        input = { ...input, handbrake: true };
       tools.updateFreeRoll(v, input);
       const before = v.drivetrain.range;
+      const transferBefore = v.transfer.mode;
+      const strainBefore = v.transfer.windup;
       const frontBefore = v.differentials.front;
       const rearBefore = v.differentials.rear;
       const precisionBefore = v.precisionCrawl;
       const parkBefore = v.parkBrake;
       const lightsBefore = v.lights;
       v.step(input, dt);
+      if (v.transfer.mode !== transferBefore)
+        this.events.emit('transferChanged', { id, mode: v.transfer.mode });
+      else if (input.toggleRange)
+        this.events.emit('transferBlocked', { id, reason: v.rangeShiftReason() ?? 'Cannot shift now' });
+      if (strainBefore < 0.5 && v.transfer.windup >= 0.5) this.events.emit('windup', { id });
       if (v.parkBrake !== parkBefore) this.events.emit('parkBrakeChanged', { id, on: v.parkBrake });
       if (v.lights !== lightsBefore) this.events.emit('lightsChanged', { id, mode: v.lights });
       if (v.drivetrain.range !== before) this.events.emit('rangeChanged', { id, range: v.drivetrain.range });
@@ -363,12 +738,36 @@ export class Simulation {
       if (v.precisionCrawl !== precisionBefore)
         this.events.emit('precisionChanged', { id, enabled: v.precisionCrawl });
       if (v.floodEvent) this.events.emit('engine', { id, event: v.floodEvent });
+      if (v.startedByPedal) this.events.emit('engine', { id, event: 'starting' });
+      if (v.stalledLugged) this.events.emit('engine', { id, event: 'stalledLugged' });
+      if (v.startBlocked) this.events.emit('engine', { id, event: 'clutchToStart' });
       tools.winch.step(v, input.winchIn, input.winchOut, dt);
       v.externalLoad = tools.winch.tension;
+      const pulled = tools.winch.anchor?.id.startsWith('stuck:')
+        ? this.stuck.get(tools.winch.anchor.recoveryId ?? tools.winch.anchor.id.slice(6))
+        : undefined;
+      if (pulled?.pull(tools.winch.tension, tools.winch.mount, dt)) {
+        // Out: its driver unhooks the line.
+        tools.winch.detach();
+        this.toolEvent(id, { type: 'winchDetached' });
+        this.events.emit('rescued', { id: pulled.def.id });
+      }
       tools.jack.step(v, input.jack, dt, this.R, (x, z) => this.world.terrain.heightAt(x, z));
     }
+    if (this.surprises)
+      for (const e of this.surprises.update(this.vehicles.values().next().value, dt))
+        this.events.emit('surprise', e);
+    for (const d of this.looseDrums.values()) d.step(dt, this.env.waterLevelOffset);
+    for (const t of this.trailers.values()) t.step(dt);
     this.physics.step();
-    for (const body of this.retired.splice(0)) this.physics.world.removeRigidBody(body);
+    for (const t of this.trailers.values()) {
+      for (const event of t.postStep(dt, this.damage)) {
+        if (event.type === 'drumLoose') this.spillDrum(t);
+        this.events.emit('trailer', { id: t.id, vehicle: t.hitchedTo?.id ?? null, event });
+      }
+      if (t.bump > 0)
+        this.events.emit('trailerBump', { id: t.id, vehicle: t.hitchedTo?.id ?? null, speed: t.bump });
+    }
     for (const [id, v] of this.vehicles) {
       v.postStep(dt);
       for (let i = 0; i < v.wheelImpacts.length; i++)
@@ -377,6 +776,11 @@ export class Simulation {
       if (v.bodyContact.knock > 0) this.events.emit('bodyKnock', { id, impulse: v.bodyContact.knock });
       if (updateWear(v, dt)) this.events.emit('dent', { id, impact: v.lastImpact });
       for (const e of updateDamage(v, this.damage, dt)) this.events.emit('damage', { id, ...e });
+      const c = v.condition;
+      if (this.fuelScale > 0 && c.fuel > 0) {
+        c.fuel = Math.max(0, c.fuel - v.drivetrain.fuelRate * dt * this.fuelScale);
+        if (c.fuel === 0) this.events.emit('engine', { id, event: 'outOfFuel' });
+      }
     }
     this.time += dt;
   }
@@ -388,6 +792,7 @@ export class Simulation {
     const v = this.vehicleOf(id);
     const t = v.tuning;
     const m = v.localToWorld(t.winchMount.x, t.winchMount.y, t.winchMount.z);
+    if (this.toolsOf(id).winch.doubleLine) range = Math.min(range, (winchTuning.cableLength - 1) / 2);
     const out: Anchor[] = [];
     const within = (x: number, y: number, z: number) => Math.hypot(x - m.x, y - m.y, z - m.z) <= range;
     const trees = this.world.treeGrid.near(m.x, m.z, range);
@@ -412,10 +817,25 @@ export class Simulation {
         id: `rock:${r.x.toFixed(1)}:${r.z.toFixed(1)}`,
         point: v3(r.x, y, r.z),
         radius: 0.1,
-        label: 'Boulder',
+        label: r.label ?? 'Boulder',
       });
     }
     for (const obj of this.dynamics.values()) {
+      if (obj.kind === 'rock') {
+        // A strap round a fallen rock.
+        const p = obj.body.translation();
+        if (!within(p.x, p.y, p.z)) continue;
+        out.push({
+          kind: 'object',
+          id: `obj:${obj.id}`,
+          point: v3(p.x, p.y, p.z),
+          radius: obj.radius ?? 0.4,
+          body: obj.body,
+          local: v3(0, 0, 0),
+          label: 'Fallen rock',
+        });
+        continue;
+      }
       if (obj.kind !== 'fallenTree' || !obj.def) continue;
       // Hook the trunk at the point nearest the winch.
       const p = obj.body.translation();
@@ -425,23 +845,77 @@ export class Simulation {
         -half,
         Math.min(half, (m.x - p.x) * axis.x + (m.y - p.y) * axis.y + (m.z - p.z) * axis.z),
       );
-      const wx = p.x + axis.x * s;
-      const wy = p.y + axis.y * s;
-      const wz = p.z + axis.z * s;
-      if (!within(wx, wy, wz)) continue;
+      // A surprise's dead tree before it comes down is a fixed anchor like any tree.
+      const label = obj.body.isKinematic() ? 'Dead tree' : 'Fallen tree';
+      // Strapped where it's nearest, or near either end to swing it round.
+      const hooks: [number, string, string][] = [];
+      if (!obj.body.isKinematic())
+        for (const [end, name] of [
+          [-half, 'root'],
+          [half, 'crown'],
+        ] as const)
+          hooks.push([end, `${label} (${name} end)`, `:${name}`]);
+      if (hooks.every(([end]) => Math.abs(end - s) > 1.5)) hooks.push([s, label, '']);
+      for (const [at, name, suffix] of hooks) {
+        const wx = p.x + axis.x * at;
+        const wy = p.y + axis.y * at;
+        const wz = p.z + axis.z * at;
+        if (!within(wx, wy, wz)) continue;
+        out.push({
+          kind: 'object',
+          id: `obj:${obj.id}${suffix}`,
+          point: v3(wx, wy, wz),
+          radius: obj.def.radius,
+          body: obj.body,
+          local: v3(0, at, 0),
+          label: name,
+        });
+      }
+    }
+    for (const s of this.stuck.values()) {
+      if (s.freed) continue;
+      const forward = rotate(s.body.rotation(), 0, 0, -1);
+      const centre = s.body.translation();
+      const inFront = (m.x - centre.x) * forward.x + (m.z - centre.z) * forward.z >= 0;
+      // Use the end facing the winching car: no rope through the casualty's body.
+      const local = inFront ? s.hook : s.rearHook;
+      const p = anchorPoint(
+        { kind: 'vehicle', id: '', point: v3(), radius: 0, body: s.body, local, label: '' },
+        v3(),
+      );
+      if (!within(p.x, p.y, p.z)) continue;
+      out.push({
+        kind: 'vehicle',
+        id: `stuck:${s.def.id}`,
+        recoveryId: s.def.id,
+        point: p,
+        radius: 0.05,
+        body: s.body,
+        local: { ...local },
+        label: `${s.def.name} (${inFront ? 'front' : 'rear'} recovery point)`,
+      });
+    }
+    for (const t of this.trailers.values()) {
+      // A strap on the drawbar of a trailer standing on its own (tipped, or stuck in a bog).
+      if (t.hitchedTo) continue;
+      const c = t.tuning.coupling;
+      const p = t.couplingWorld();
+      if (!within(p.x, p.y, p.z)) continue;
       out.push({
         kind: 'object',
-        id: `obj:${obj.id}`,
-        point: v3(wx, wy, wz),
-        radius: obj.def.radius,
-        body: obj.body,
-        local: v3(0, s, 0),
-        label: 'Fallen tree',
+        id: `trailer:${t.id}`,
+        point: p,
+        radius: 0.05,
+        body: t.body,
+        local: { x: c.x, y: c.y, z: c.z + 0.3 },
+        label: 'Trailer drawbar',
       });
     }
     for (const other of this.vehicles.values()) {
       if (other === v) continue;
-      const tow = other.tuning.towPoint;
+      // Rated chassis eye beside/above the hitch, never the trailer's tow ball.
+      const hitch = other.tuning.towPoint;
+      const tow = { x: hitch.x + 0.35, y: hitch.y + 0.12, z: hitch.z - 0.15 };
       const p = other.localToWorld(tow.x, tow.y, tow.z);
       if (!within(p.x, p.y, p.z)) continue;
       out.push({
@@ -451,10 +925,10 @@ export class Simulation {
         radius: 0.05,
         body: other.body,
         local: { ...tow },
-        label: 'Vehicle',
+        label: 'Vehicle rear recovery point',
       });
     }
-    return out;
+    return out.filter((a) => !this.toolsOf(id).winch.doubleLine || a.kind === 'tree' || a.kind === 'rock');
   }
 
   /** E / RB: attach to the best anchor in range, or detach. */
@@ -471,13 +945,19 @@ export class Simulation {
       this.toolEvent(id, { type: 'noAnchor' });
       return;
     }
-    tools.winch.attach(v, best);
+    if (!tools.winch.attach(v, best)) {
+      this.toolEvent(id, { type: 'noAnchor' });
+      return;
+    }
     this.toolEvent(id, { type: 'winchAttached', anchor: best });
   }
 
   attachTo(id: string, anchor: Anchor): void {
     const tools = this.toolsOf(id);
-    tools.winch.attach(this.vehicleOf(id), anchor);
+    if (!tools.winch.attach(this.vehicleOf(id), anchor)) {
+      this.toolEvent(id, { type: 'noAnchor' });
+      return;
+    }
     this.toolEvent(id, { type: 'winchAttached', anchor });
   }
 
@@ -490,8 +970,11 @@ export class Simulation {
 
   // --- Planks ------------------------------------------------------------
 
-  /** Height of whatever static or dynamic thing is under (x, z). */
-  probeGround = (x: number, z: number, fromY: number): number => {
+  /**
+   * Height of whatever static or dynamic thing (a placed plank, a rock, a bogged car) is
+   * under (x, z), leaving out `exclude` (the car doing the probing).
+   */
+  probeGround = (x: number, z: number, fromY: number, exclude?: RAPIER.RigidBody): number => {
     const R = this.R;
     const ray = new R.Ray({ x, y: fromY + 3, z }, { x: 0, y: -1, z: 0 });
     const hit = this.physics.world.castRay(
@@ -499,15 +982,23 @@ export class Simulation {
       60,
       true,
       undefined,
-      groups(Groups.DYNAMIC, Groups.TERRAIN | Groups.STATIC),
+      groups(Groups.DYNAMIC, Groups.TERRAIN | Groups.STATIC | Groups.DYNAMIC),
+      undefined,
+      exclude,
     );
     return hit ? fromY + 3 - hit.timeOfImpact : this.world.terrain.heightAt(x, z);
   };
 
+  /** `probeGround` for a vehicle: it never lands on its own body. */
+  probeGroundFor(id: string): GroundProbe {
+    const body = this.vehicleOf(id).body;
+    return (x, z, fromY) => this.probeGround(x, z, fromY, body);
+  }
+
   placePlanks(id: string): boolean {
     const tools = this.toolsOf(id);
     const n = tools.planks.carried;
-    const ok = tools.planks.place(this.vehicleOf(id), this.physics, this.probeGround);
+    const ok = tools.planks.place(this.vehicleOf(id), this.physics, this.probeGroundFor(id));
     if (ok) this.toolEvent(id, { type: 'planksPlaced', count: n });
     return ok;
   }
@@ -519,39 +1010,138 @@ export class Simulation {
 
   // --- Damage and repairs -----------------------------------------------
 
+  /** Change the gearbox setting for every vehicle (and those added later). */
+  setGearboxMode(mode: GearboxMode): void {
+    this.gearboxMode = mode;
+    for (const v of this.vehicles.values()) v.setGearboxMode(mode);
+  }
+
   /** Change how harsh damage is; damage beyond what the new setting allows is put right. */
   setDamage(mode: DamageMode): void {
     this.damage = mode;
     for (const v of this.vehicles.values()) limitDamage(v.condition, mode);
+    if (mode !== 'realistic') for (const t of this.trailers.values()) t.tyres.fill(1);
   }
 
   /**
-   * What a roadside repair could do now: a field repair puts everything right with mild
-   * damage; with realistic damage only a cut tyre can be swapped for the spare.
+   * What a roadside repair could do now. Mild damage: a field repair puts everything right.
+   * Realistic: a puncture takes a plug from the kit, a torn sidewall or a tyre off its rim
+   * (or a puncture with no plugs left) a spare wheel; nothing else can be mended at the roadside.
    */
-  repairOption(id: string): { kind: 'field' | 'spare'; possible: boolean; reason?: string } | null {
+  repairOption(id: string): { kind: RepairKind; possible: boolean; reason?: string } | null {
     const v = this.vehicleOf(id);
     const c = v.condition;
     if (this.damage === 'off') return null;
-    const kind = this.damage === 'mild' ? 'field' : 'spare';
-    const needed =
-      kind === 'field'
-        ? c.engine < 1 || c.tyreTarget.some((h) => h < 1) || c.suspension.some((h) => h < 1)
-        : worstTyre(c) >= 0;
-    if (!needed) return null;
-    if (kind === 'spare' && !c.spare) return { kind, possible: false, reason: 'The spare is already on' };
+    let kind: RepairKind;
+    if (this.damage === 'mild') {
+      if (!(c.engine < 1 || c.tyreTarget.some((h) => h < 1) || c.suspension.some((h) => h < 1))) return null;
+      kind = 'field';
+    } else {
+      const i = worstTyre(c);
+      if (i < 0) return null;
+      kind = c.tyreFault[i] === 'puncture' && c.plugs > 0 ? 'plug' : 'spare';
+      if (kind === 'spare' && c.spares === 0)
+        return {
+          kind,
+          possible: false,
+          reason: c.tyreFault[i] === 'puncture' ? 'No plugs or spares left' : 'No spares left',
+        };
+    }
+    return this.canWork(v, kind);
+  }
+
+  /** Pour a jerry can into the tank: possible stopped, with a can left and room for it. */
+  refuelOption(id: string): { kind: RepairKind; possible: boolean; reason?: string } | null {
+    const v = this.vehicleOf(id);
+    const c = v.condition;
+    if (c.jerryCans === 0) return null;
+    if (c.fuel > v.tuning.engine.fuel.tankLitres - damageTuning.jerryCanLitres)
+      return { kind: 'refuel', possible: false, reason: 'The tank’s too full for a whole can' };
+    return this.canWork(v, 'refuel');
+  }
+
+  private canWork(v: Vehicle, kind: RepairKind): { kind: RepairKind; possible: boolean; reason?: string } {
     if (Math.abs(v.speed) > 0.5) return { kind, possible: false, reason: 'Stop first' };
     if (v.tiltDeg() > 30) return { kind, possible: false, reason: 'Too steep to work on it here' };
     return { kind, possible: true };
   }
 
-  /** Start a roadside repair (tool menu). False if there's nothing it can do here. */
-  startRepair(id: string): boolean {
-    const option = this.repairOption(id);
+  startHubs(id: string): boolean {
+    const v = this.vehicleOf(id);
+    const tools = this.toolsOf(id);
+    if (
+      v.tuning.transfer !== 'partTime' ||
+      v.tuning.autoHubs ||
+      v.transfer.mode !== '2H' ||
+      tools.repair ||
+      !this.canWork(v, 'hubs').possible
+    )
+      return false;
+    tools.repair = { kind: 'hubs', remaining: 20, total: 20 };
+    return true;
+  }
+
+  /** Pump let-down tyres back up with the compressor: a roadside job like a repair. */
+  startPump(id: string): boolean {
+    return this.startPressure(id, 36);
+  }
+
+  startPressure(id: string, psi: number): boolean {
+    const v = this.vehicleOf(id);
+    const tools = this.toolsOf(id);
+    const from = pressurePsi(v.condition);
+    const speed = v.body.linvel();
+    if (
+      !tyrePressures.some((p) => p === psi) ||
+      from === psi ||
+      tools.repair ||
+      !this.canWork(v, 'pump').possible ||
+      Math.hypot(speed.x, speed.y, speed.z) > 0.5
+    )
+      return false;
+    const total = ((psi > from ? damageTuning.repair.pumpSeconds : 12) * Math.abs(psi - from)) / 18;
+    tools.repair = { kind: 'pump', remaining: total, total, targetPsi: psi };
+    return true;
+  }
+
+  /** Digging helps shallow mud and sand; it cannot remove a deep bog or its water. */
+  canDig(id: string): boolean {
+    const v = this.vehicleOf(id);
+    const speed = v.body.linvel();
+    return (
+      !this.toolsOf(id).repair &&
+      this.canWork(v, 'dig').possible &&
+      Math.hypot(speed.x, speed.y, speed.z) < 0.5 &&
+      v.wheels.some(
+        (w) =>
+          w.contact &&
+          w.water < 0.2 &&
+          ([SurfaceId.Mud, SurfaceId.BlackSoil, SurfaceId.Sand] as number[]).includes(w.surface),
+      )
+    );
+  }
+
+  startDig(id: string): boolean {
+    if (!this.canDig(id)) return false;
+    this.toolsOf(id).repair = { kind: 'dig', remaining: 20, total: 20 };
+    return true;
+  }
+
+  /** Start a roadside job (tool menu). False if there's nothing it can do here. */
+  startRepair(id: string, refuel = false): boolean {
+    const option = refuel ? this.refuelOption(id) : this.repairOption(id);
     const tools = this.toolsOf(id);
     if (!option?.possible || tools.repair) return false;
     const R = damageTuning.repair;
-    const total = option.kind === 'field' ? R.fieldSeconds : R.spareSeconds;
+    const total = {
+      field: R.fieldSeconds,
+      spare: R.spareSeconds,
+      plug: R.plugSeconds,
+      refuel: R.refuelSeconds,
+      pump: R.pumpSeconds,
+      hubs: 20,
+      dig: 20,
+    }[option.kind];
     tools.repair = { kind: option.kind, remaining: total, total };
     return true;
   }
@@ -561,34 +1151,62 @@ export class Simulation {
     const job = tools.repair;
     tools.repair = null;
     if (!job) return;
-    const c = this.vehicleOf(id).condition;
-    if (job.kind === 'field') {
-      const spare = c.spare;
-      repairAll(c);
-      c.spare = spare;
+    const v = this.vehicleOf(id);
+    const c = v.condition;
+    if (job.kind === 'field') repairAll(c);
+    else if (job.kind === 'pump') setPressure(c, job.targetPsi ?? 36);
+    else if (job.kind === 'dig') {
+      const p = v.body.translation();
+      v.dugGround = { x: p.x, z: p.z, relief: 1 };
+    } else if (job.kind === 'hubs') v.transfer.hubsLocked = !v.transfer.hubsLocked;
+    else if (job.kind === 'refuel') {
+      if (c.jerryCans === 0) return;
+      c.jerryCans--;
+      const empty = c.fuel === 0;
+      c.fuel = Math.min(v.tuning.engine.fuel.tankLitres, c.fuel + damageTuning.jerryCanLitres);
+      // A dry engine needs the starter again.
+      if (empty) this.startEngine(id);
     } else {
       const i = worstTyre(c);
-      if (i >= 0 && c.spare) {
-        c.tyres[i] = 1;
-        c.tyreTarget[i] = 1;
-        c.spare = false;
-      }
+      if (i < 0) return;
+      if (job.kind === 'plug' && c.plugs > 0) c.plugs--;
+      else if (job.kind === 'spare' && c.spares > 0) c.spares--;
+      else return;
+      mendTyre(c, i);
     }
     this.events.emit('repaired', { id, kind: job.kind });
   }
 
-  /** Put everything right (a campsite's workshop, or being brought back to camp). */
+  /**
+   * A campsite's rest: the engine and suspension are put right and punctures properly
+   * patched. A torn sidewall stays torn, and spares, plugs and fuel aren't replaced.
+   */
   repairAtCamp(id: string): void {
-    const v = this.vehicleOf(id);
-    const c = v.condition;
-    const was =
-      c.engine < 1 ||
-      c.tyres.some((h) => h < 1) ||
-      c.tyreTarget.some((h) => h < 1) ||
-      c.suspension.some((h) => h < 1) ||
-      !c.spare;
-    repairAll(c);
-    if (was) this.events.emit('repaired', { id, kind: 'camp' });
+    const c = this.vehicleOf(id).condition;
+    let mended =
+      c.engine < 1 || c.engineHeat > damageTuning.engine.heatWarn || c.suspension.some((h) => h < 1);
+    c.engine = 1;
+    // A boiling engine cools over the rest, so it isn't still boiling (and losing health) at camp.
+    c.engineHeat = 0.5;
+    c.suspension.fill(1);
+    for (let i = 0; i < 4; i++)
+      if (
+        c.tyreFault[i] !== 'sidewall' &&
+        (c.tyres[i] < 1 || c.tyreTarget[i] < 1 || c.tyreFault[i] !== 'none')
+      ) {
+        mendTyre(c, i);
+        mended = true;
+      }
+    if (mended) this.events.emit('repaired', { id, kind: 'camp' });
+    // Arrival is recorded as soon as the car enters camp. Patch a nearby trailer before
+    // that checkpoint is taken, including when the driver is still rolling to a stop.
+    const p = this.vehicleOf(id).body.translation();
+    for (const trailer of this.trailers.values()) {
+      const q = trailer.body.translation();
+      if (Math.hypot(p.x - q.x, p.z - q.z) > 12) continue;
+      trailer.tyres.fill(1);
+      if (trailer.tiltDeg() < 25) trailer.secureLoad();
+    }
   }
 
   // --- Campsites ---------------------------------------------------------
@@ -606,7 +1224,9 @@ export class Simulation {
     tools.jack.waitTime = 0;
     tools.repair = null;
     this.repairAtCamp(id);
+    const towing = this.trailerOf(id);
     v.teleport(this.campsitePose(campsiteId, v.tuning.wheelRadius));
+    this.bringTrailer(id, towing);
     const f = v.condition.flood;
     f.timer = 0;
     f.stalled = false;
@@ -648,12 +1268,14 @@ export class Simulation {
           linvel: { x: lv.x, y: lv.y, z: lv.z },
           angvel: { x: av.x, y: av.y, z: av.z },
           range: v.drivetrain.range,
+          transfer: { ...v.transfer },
           gear: v.drivetrain.gear,
           differentials: { ...v.differentials },
           precisionCrawl: v.precisionCrawl,
           parkBrake: v.parkBrake,
           lights: v.lights,
           engineRunning: v.drivetrain.engineRunning,
+          engineOff: v.engineOff,
           crank: v.crank,
           flood: {
             timer: v.condition.flood.timer,
@@ -666,9 +1288,19 @@ export class Simulation {
             engine: v.condition.engine,
             tyres: [...v.condition.tyres],
             suspension: [...v.condition.suspension],
-            spare: v.condition.spare,
           },
-          winch: { anchor: tools.winch.anchor?.id ?? null, length: tools.winch.length },
+          supplies: {
+            fuel: v.condition.fuel,
+            jerryCans: v.condition.jerryCans,
+            spares: v.condition.spares,
+            plugs: v.condition.plugs,
+          },
+          winch: {
+            anchor: tools.winch.anchor?.id ?? null,
+            length: tools.winch.length,
+            doubleLine: tools.winch.doubleLine,
+            treeProtector: tools.winch.treeProtector,
+          },
           jack: tools.jack.state,
           planks: {
             carried: tools.planks.carried,

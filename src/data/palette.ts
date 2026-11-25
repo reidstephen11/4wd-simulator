@@ -11,14 +11,26 @@ export const palette = {
   rock: '#9A948A',
   rockDark: '#6F6A63',
   mud: '#6B4A33',
+  /** Dry river sand. */
+  sand: '#D2BF97',
   waterDeep: '#3D686A',
   waterShallow: '#799A8F',
+  /** The open sea beyond the coast. */
+  sea: '#2F6377',
   vehicleBody: '#D9C6A0',
   vehicleRoof: '#EDE8DC',
   vehicleTrim: '#3A3A38',
-} as const;
+  /** Tropical rainforest: glossy broad-leaf canopy, its shadowed underside, palms and ferns. */
+  rainforest: '#4C7341',
+  rainforestDark: '#2D4A30',
+  palmLeaf: '#5C8442',
+  fernLeaf: '#6B9446',
+  barkGrey: '#9C9688',
+};
 
 export type PaletteToken = keyof typeof palette;
+/** A map can repaint any token (a tropical map's greener grass and redder clay). */
+export type PaletteOverrides = Partial<Record<PaletteToken, string>>;
 
 /** Per-vertex / per-instance variation (SPEC §4: ±4% brightness, small hue shift). */
 export const colourVariation = {

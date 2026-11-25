@@ -1,0 +1,335 @@
+/* Expedition: dark sectors and amber selection, independent of the driving HUD. */
+#ui .tool-menu[data-style] {
+  position: fixed;
+  inset: 0;
+  --tool-bg: #171d1bee;
+  --tool-text: #f3eedf;
+  --tool-muted: #a5aaa0;
+  --tool-line: #63736b;
+  --tool-accent: #efb65a;
+  --tool-on: #201c14;
+  z-index: 30;
+  background: radial-gradient(ellipse at center, #111b19a8, #080e10d9);
+  backdrop-filter: blur(calc(5 * var(--u)));
+  color: var(--tool-text);
+  font-family: 'Barlow', sans-serif;
+}
+.tool-heading {
+  position: absolute;
+  top: calc(23 * var(--u));
+  left: calc(32 * var(--u));
+  pointer-events: none;
+}
+.tool-heading > span,
+.tool-eyebrow {
+  font:
+    600 calc(10 * var(--u)) 'Barlow',
+    sans-serif;
+  letter-spacing: 0.18em;
+}
+.tool-heading > span {
+  color: var(--tool-muted);
+}
+.tool-heading h2 {
+  font:
+    600 calc(28 * var(--u)) 'Barlow Condensed',
+    sans-serif;
+  margin: calc(5 * var(--u)) 0;
+}
+.tool-stage {
+  position: absolute;
+  width: calc(600 * var(--u));
+  height: calc(600 * var(--u));
+  top: 50%;
+  left: 50%;
+}
+.tool-sectors {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.tool-sector {
+  fill: var(--tool-bg);
+  stroke: var(--tool-line);
+  stroke-width: 0.8;
+  cursor: pointer;
+}
+.tool-sector[data-group='drive'] {
+  stroke: #b19c6a;
+}
+.tool-sector[data-group='recovery'] {
+  stroke: #c78360;
+}
+.tool-sector[data-group='service'] {
+  stroke: #7f9c89;
+}
+.tool-sector.selected {
+  fill: var(--tool-accent);
+  stroke: var(--tool-accent);
+}
+.tool-sector.disabled {
+  fill-opacity: 0.65;
+  stroke-opacity: 0.4;
+  cursor: default;
+}
+#ui .tool-menu[data-style] .tool-option {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: calc(100 * var(--u));
+  height: calc(94 * var(--u));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  gap: calc(5 * var(--u));
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+  color: var(--tool-text);
+  font:
+    600 calc(15 * var(--u)) 'Barlow Condensed',
+    sans-serif;
+  cursor: pointer;
+}
+#ui .tool-menu[data-style] .tool-option.selected {
+  color: var(--tool-on);
+  background: none;
+}
+#ui .tool-menu[data-style] .tool-option.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+#ui .tool-menu[data-style] .tool-option:focus-visible {
+  outline: calc(2 * var(--u)) solid var(--tool-accent);
+  outline-offset: calc(5 * var(--u));
+}
+.tool-family {
+  font:
+    500 calc(8 * var(--u)) 'Barlow',
+    sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.65;
+}
+.tool-menu .tool-icon {
+  display: block;
+  width: calc(29 * var(--u));
+  height: calc(29 * var(--u));
+}
+.tool-menu .tool-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+#ui .tool-menu[data-style] .tool-centre {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(196 * var(--u));
+  height: calc(196 * var(--u));
+  padding: calc(18 * var(--u));
+  border: 1px solid var(--tool-line);
+  border-radius: 50%;
+  background: var(--tool-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: calc(12 * var(--u));
+  pointer-events: none;
+  font-family: 'Barlow', sans-serif;
+}
+.tool-eyebrow {
+  color: var(--tool-accent);
+  font-size: calc(9 * var(--u));
+}
+.tool-centre strong {
+  font:
+    600 calc(26 * var(--u))/1.05 'Barlow Condensed',
+    sans-serif;
+}
+.tool-centre small {
+  color: var(--tool-muted);
+  font-size: calc(12 * var(--u));
+  line-height: 1.5;
+}
+.tool-centre.unavailable strong {
+  color: var(--tool-muted);
+}
+.tool-legend {
+  position: absolute;
+  bottom: calc(57 * var(--u));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: calc(22 * var(--u));
+  font-size: calc(10 * var(--u));
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+.tool-legend span::before {
+  content: '';
+  display: inline-block;
+  width: calc(5 * var(--u));
+  height: calc(5 * var(--u));
+  margin-right: calc(7 * var(--u));
+  background: #b19c6a;
+}
+.tool-legend span:nth-child(2)::before {
+  background: #c78360;
+}
+.tool-legend span:nth-child(3)::before {
+  background: #7f9c89;
+}
+.tool-legend span:nth-child(4)::before {
+  background: #a5aaa0;
+}
+.tool-hint {
+  position: absolute;
+  left: calc(16 * var(--u));
+  right: calc(16 * var(--u));
+  bottom: calc(18 * var(--u));
+  margin: 0;
+  text-align: center;
+  color: var(--tool-muted);
+  font-size: calc(13 * var(--u));
+}
+/* Touch uses full-size targets instead of shrinking a wheel below legibility. */
+#ui .tool-menu.tool-grid[data-style]:not(.hidden) {
+  display: block;
+  padding: 0;
+  overflow-y: auto;
+}
+.tool-grid .tool-heading {
+  position: static;
+  margin: calc(18 * var(--u)) calc(16 * var(--u));
+}
+.tool-grid .tool-heading h2 {
+  font-size: calc(24 * var(--u));
+}
+.tool-grid .tool-stage {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0 calc(16 * var(--u)) calc(90 * var(--u));
+  display: grid;
+  /* Three across at least, so a phone held upright shows every tool above the hint bar
+     without scrolling, even at UI size Large. */
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(calc(104 * var(--u)), calc((100% - 16 * var(--u)) / 3)), 1fr)
+  );
+  gap: calc(8 * var(--u));
+}
+.tool-grid .tool-sectors,
+#ui .tool-grid[data-style] .tool-centre {
+  display: none;
+}
+#ui .tool-menu.tool-grid[data-style] .tool-option {
+  position: static;
+  transform: none;
+  width: 100%;
+  height: calc(94 * var(--u));
+  border: 1px solid var(--tool-line);
+  border-radius: calc(4 * var(--u));
+  background: var(--tool-bg);
+}
+#ui .tool-menu.tool-grid[data-style] .tool-option.selected {
+  background: var(--tool-accent);
+}
+.tool-grid .tool-legend {
+  display: none;
+}
+.tool-grid .tool-hint {
+  position: fixed;
+  bottom: 0;
+  padding: calc(14 * var(--u));
+  left: 0;
+  right: 0;
+  background: #111e1cf2;
+}
+@media (max-height: 500px) {
+  .tool-heading {
+    top: calc(12 * var(--u));
+    left: calc(16 * var(--u));
+  }
+  .tool-heading h2 {
+    font-size: calc(22 * var(--u));
+  }
+  .tool-heading > span {
+    display: none;
+  }
+  .tool-legend {
+    bottom: calc(40 * var(--u));
+  }
+  .tool-hint {
+    bottom: calc(10 * var(--u));
+    font-size: calc(11 * var(--u));
+  }
+}
+
+#ui .tool-menu.tool-dense[data-style]:not(.tool-grid) .tool-option {
+  width: calc(76 * var(--u));
+  height: calc(66 * var(--u));
+  gap: calc(3 * var(--u));
+  font-size: calc(14 * var(--u));
+}
+.tool-menu.tool-dense[data-style]:not(.tool-grid) .tool-icon {
+  width: calc(23 * var(--u));
+  height: calc(23 * var(--u));
+}
+.tool-menu.tool-dense[data-style]:not(.tool-grid) .tool-family {
+  font-size: calc(7 * var(--u));
+}
+
+#ui .tool-menu.tool-crowded[data-style]:not(.tool-grid) .tool-option {
+  width: calc(64 * var(--u));
+  height: calc(58 * var(--u));
+  gap: calc(2 * var(--u));
+  font-size: calc(12 * var(--u));
+}
+.tool-menu.tool-crowded[data-style]:not(.tool-grid) .tool-icon {
+  width: calc(22 * var(--u));
+  height: calc(22 * var(--u));
+}
+
+/*
+ * Screens without touch (v1.75): the wheel shrinks to fit a television's height (about 0.7 of
+ * its drawn size at 1080p), so its lettering is drawn larger to read from the couch: names
+ * 24 px and the small labels 18 px or more on screen there.
+ */
+body:not(.touch-mode) #ui .tool-menu[data-style]:not(.tool-grid) .tool-option {
+  width: calc(110 * var(--u));
+  font-size: calc(18.5 * var(--u));
+}
+body:not(.touch-mode) #ui .tool-menu.tool-dense[data-style]:not(.tool-grid) .tool-option {
+  width: calc(96 * var(--u));
+  height: calc(76 * var(--u));
+  font-size: calc(18.5 * var(--u));
+}
+body:not(.touch-mode) #ui .tool-menu.tool-crowded[data-style]:not(.tool-grid) .tool-option {
+  width: calc(84 * var(--u));
+  height: calc(70 * var(--u));
+  font-size: calc(17 * var(--u));
+}
+body:not(.touch-mode) .tool-menu[data-style]:not(.tool-grid) .tool-family {
+  font-size: calc(14 * var(--u));
+  letter-spacing: 0.06em;
+}
+body:not(.touch-mode) .tool-menu.tool-crowded[data-style]:not(.tool-grid) .tool-family {
+  font-size: calc(13 * var(--u));
+}
+body:not(.touch-mode) .tool-menu .tool-centre .tool-eyebrow {
+  font-size: calc(14 * var(--u));
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+body:not(.touch-mode) .tool-menu .tool-centre small {
+  font-size: calc(14 * var(--u));
+}

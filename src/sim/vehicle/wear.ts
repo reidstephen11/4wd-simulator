@@ -26,7 +26,7 @@ export function updateWear(v: Vehicle, dt: number): boolean {
     const s = surfaces[w.surface];
     // Spinning wheels throw dirt and mud even when the car isn't going anywhere.
     if (s.dirtRate > 0) rate += s.dirtRate * Math.max(speedF, w.spin * 2.5);
-    if (w.surface === SurfaceId.Mud) mud++;
+    if (w.surface === SurfaceId.Mud || w.surface === SurfaceId.BlackSoil) mud++;
   }
   if (contacts > 0) rate /= contacts;
   const forward = v.speed >= 0;

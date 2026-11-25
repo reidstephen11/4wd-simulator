@@ -14,6 +14,7 @@ import { VehicleModel } from '../src/render/vehicleModel';
 import { DIAL_START, DIAL_SWEEP } from '../src/render/vehicleInstruments';
 import { vehicles } from '../src/data/vehicles';
 import { vehicleTuning } from '../src/data/vehicle';
+import { damageTuning } from '../src/data/damage';
 import { createCondition } from '../src/sim/vehicle/condition';
 import { makeScene } from './helpers/scenes';
 
@@ -28,6 +29,7 @@ function fixture(): Terrain {
       tint[z * res + x] = x < 128 ? GroundTint.DirtTrack : GroundTint.GrassDry;
     }
   return new Terrain(
+    size,
     size,
     heights,
     new Uint8Array(res * res),
@@ -72,11 +74,13 @@ describe('graphics geometry regression', () => {
     const mesh = new TerrainMesh(terrain, 1);
     const geometry = mesh.buildGeometry(120, 120, 8, 1);
     const p = geometry.getAttribute('position');
+    const index = geometry.getIndex()!;
     // Surface triangles precede the skirts. Their barycentres must meet physics exactly.
-    for (let i = 0; i < 8 * 8 * 6; i += 3) {
-      const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3;
-      const z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-      const y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3;
+    for (let k = 0; k < 8 * 8 * 6; k += 3) {
+      const [a, b, c] = [index.getX(k), index.getX(k + 1), index.getX(k + 2)];
+      const x = (p.getX(a) + p.getX(b) + p.getX(c)) / 3;
+      const z = (p.getZ(a) + p.getZ(b) + p.getZ(c)) / 3;
+      const y = (p.getY(a) + p.getY(b) + p.getY(c)) / 3;
       expect(y).toBeCloseTo(terrain.heightAt(x, z), 5);
     }
     geometry.dispose();
@@ -146,6 +150,40 @@ describe('graphics geometry regression', () => {
     const position = scene.vehicle.body.translation();
     expect(model.root.position.toArray()).toEqual([position.x, position.y, position.z]);
     expect(model.suspension.axles.every((axle) => axle.position.toArray().every(Number.isFinite))).toBe(true);
+    scene.physics.world.free();
+  });
+
+  it('draws a flat tyre squashed flat where it meets the ground, bulging out, and the rim round', async () => {
+    const scene = await makeScene({});
+    const model = new VehicleModel(vehicleTuning);
+    scene.vehicle.condition.tyres[0] = 0;
+    scene.run(1, {});
+    model.update(scene.vehicle, 1, 1 / 60);
+    const [flat, round] = [model.wheels[0], model.wheels[1]];
+    expect(flat.mesh.geometry).not.toBe(round.mesh.geometry);
+    // In the wheel's own frame (spun back), the lowest point of the tyre is the ground.
+    const lowest = (w: (typeof model.wheels)[number]) => {
+      w.spin.updateMatrix();
+      const pos = w.mesh.geometry.getAttribute('position');
+      let y = Infinity;
+      let x = 0;
+      const v = new Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(w.spin.matrix);
+        y = Math.min(y, v.y);
+        // How wide the tyre is down by the ground.
+        if (v.y < -0.24) x = Math.max(x, Math.abs(v.x));
+      }
+      return { y, x };
+    };
+    const drop = damageTuning.tyre.flatDrop;
+    expect(lowest(flat).y).toBeGreaterThan(-(vehicleTuning.wheelRadius - drop) - 0.05);
+    expect(lowest(round).y).toBeLessThan(-vehicleTuning.wheelRadius + 0.02);
+    expect(lowest(flat).x).toBeGreaterThan(lowest(round).x + 0.02);
+    // Pumped up again, it is round.
+    scene.vehicle.condition.tyres[0] = 1;
+    model.update(scene.vehicle, 1, 1 / 60);
+    expect(flat.mesh.geometry).toBe(round.mesh.geometry);
     scene.physics.world.free();
   });
 

@@ -1,6 +1,9 @@
 import { keyBindings, padBindings, padTuning, Pad, type Action } from '../../data/controls';
+import { defaultTouchDrive, throttleBrakeFromStick, type TouchDriveScheme } from '../../data/touch';
 import { vehicleTuning, type VehicleTuning } from '../../data/vehicle';
+import type { GearboxMode } from '../vehicle/drivetrain';
 import { emptyInput, SteeringSmoother, type VehicleInput } from './vehicleInput';
+import { MenuStick } from './touchStick';
 
 export type Device = 'keyboard' | 'gamepad' | 'touch';
 
@@ -13,11 +16,28 @@ export class InputManager {
   activeDevice: Device = 'keyboard';
   /** When false, vehicleInput() returns a neutral command (menus open, tool modes). */
   vehicleEnabled = true;
+  /**
+   * The gearbox the game is running (set by the game). In the manual settings D-pad
+   * left/right shift gears instead of zooming the camera.
+   */
+  gearboxMode: GearboxMode = 'automatic';
+  /** A gamepad was connected at the last poll(). */
+  gamepadConnected = false;
+  /**
+   * The headset's hand controllers as a standard pad (v1.98), read in place of any gamepad
+   * while a headset is on; null otherwise.
+   */
+  headsetPad:
+    | (() => { buttons: readonly { pressed: boolean; value: number }[]; axes: readonly number[] } | null)
+    | null = null;
   private readonly keys = new Set<string>();
   private readonly vehicleEdges = new Set<Action>();
   /** UI presses since the last frame, counted so quick taps in one slow frame aren't lost. */
   private readonly uiEdges = new Map<Action, number>();
   private readonly padPrev: boolean[] = [];
+  /** The first poll records what is held without counting it as pressed (the Drive press). */
+  private polled = false;
+  private readonly padMenuStick = new MenuStick();
   private padButtons: boolean[] = [];
   private padAxes: number[] = [0, 0, 0, 0];
   private padTriggers = { lt: 0, rt: 0 };
@@ -31,6 +51,7 @@ export class InputManager {
   /** Touch buttons held down, and the touch joystick (-1..1, y down). */
   private readonly touchHeld = new Set<Action>();
   private touchStick = { x: 0, y: 0 };
+  private touchDriveScheme: TouchDriveScheme = defaultTouchDrive;
   private deviceListeners: Array<(d: Device) => void> = [];
 
   constructor(target: Window = window) {
@@ -67,7 +88,7 @@ export class InputManager {
     this.deviceListeners.push(fn);
   }
 
-  requestDriveAction(action: 'frontDiff' | 'rearDiff' | 'precision' | 'lights'): void {
+  requestDriveAction(action: 'range' | 'frontDiff' | 'rearDiff' | 'precision' | 'lights'): void {
     this.vehicleEdges.add(action);
   }
 
@@ -88,6 +109,11 @@ export class InputManager {
       this.touchHeld.add(a);
       this.touchPress(a);
     } else this.touchHeld.delete(a);
+  }
+
+  /** Pedals (GAS/BRAKE buttons) or Joystick only (forward/back on the stick). */
+  setTouchDrive(scheme: TouchDriveScheme): void {
+    this.touchDriveScheme = scheme;
   }
 
   /** The touch joystick moved (-1..1, y down); `presses` are menu steps it crossed. */
@@ -130,10 +156,19 @@ export class InputManager {
     return this.keyDown(a) || this.padDown(a);
   }
 
+  /** Forget presses made before the game started (Space or Enter on the briefing). */
+  clearEdges(): void {
+    this.vehicleEdges.clear();
+    this.uiEdges.clear();
+  }
+
   /** Poll the gamepad once per rendered frame. */
   poll(): void {
+    const first = !this.polled;
+    this.polled = true;
     const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
-    const pad = [...pads].find((p) => p && p.connected) ?? null;
+    const pad = this.headsetPad?.() ?? [...pads].find((p) => p && p.connected) ?? null;
+    this.gamepadConnected = !!pad;
     if (!pad) {
       this.padButtons = [];
       this.padAxes = [0, 0, 0, 0];
@@ -156,13 +191,16 @@ export class InputManager {
     let any = this.padAxes.some((a) => a !== 0) || this.padTriggers.lt > 0 || this.padTriggers.rt > 0;
     for (let i = 0; i < this.padButtons.length; i++) {
       if (this.padButtons[i]) any = true;
-      if (this.padButtons[i] && !this.padPrev[i]) {
+      if (this.padButtons[i] && !this.padPrev[i] && !first) {
         for (const [a, list] of Object.entries(padBindings) as [Action, readonly number[]][]) {
           if (list.includes(i)) this.press(a);
         }
       }
       this.padPrev[i] = this.padButtons[i];
     }
+    // Stepped even on the first poll, so a stick already held latches without counting.
+    const menuPress = this.padMenuStick.step(this.padAxes[0], this.padAxes[1]);
+    if (menuPress && !first) this.press(menuPress);
     if (any) this.setDevice('gamepad');
   }
 
@@ -176,8 +214,15 @@ export class InputManager {
       inp.brake = 0;
       return inp;
     }
-    inp.throttle = Math.max(this.keyDown('accelerate') ? 1 : 0, this.padTriggers.rt);
-    inp.brake = Math.max(this.keyDown('brake') ? 1 : 0, this.padTriggers.lt);
+    let throttle = Math.max(this.keyDown('accelerate') ? 1 : 0, this.padTriggers.rt);
+    let brake = Math.max(this.keyDown('brake') ? 1 : 0, this.padTriggers.lt);
+    if (this.touchDriveScheme === 'stick') {
+      const drive = throttleBrakeFromStick(this.touchStick.y);
+      throttle = Math.max(throttle, drive.throttle);
+      brake = Math.max(brake, drive.brake);
+    }
+    inp.throttle = throttle;
+    inp.brake = brake;
     const keySteer = (this.keyDown('steerRight') ? 1 : 0) - (this.keyDown('steerLeft') ? 1 : 0);
     const kb = this.steering.update(keySteer, dt);
     const padTarget =
@@ -198,6 +243,11 @@ export class InputManager {
     inp.cycleLights = edges.has('lights');
     inp.winchAttach = edges.has('winch');
     inp.interact = edges.has('interact');
+    // The manual gearbox is gamepad only; the keyboard and touch never shift.
+    if (this.gearboxMode !== 'automatic' && this.gamepadConnected) {
+      inp.shiftUp = edges.has('shiftUp');
+      inp.shiftDown = edges.has('shiftDown');
+    }
     edges.clear();
     return inp;
   }
@@ -222,7 +272,9 @@ export class InputManager {
   takeZoom(dt: number, allowPad = true): number {
     const d = this.wheelDelta;
     this.wheelDelta = 0;
-    const pad = allowPad ? (this.padButtons[Pad.Right] ? 1 : 0) - (this.padButtons[Pad.Left] ? 1 : 0) : 0;
+    // In the manual gearbox settings D-pad left/right shift gears instead.
+    const padZoom = allowPad && this.gearboxMode === 'automatic';
+    const pad = padZoom ? (this.padButtons[Pad.Right] ? 1 : 0) - (this.padButtons[Pad.Left] ? 1 : 0) : 0;
     return d + pad * padTuning.cameraZoomRate * dt;
   }
 
@@ -234,7 +286,12 @@ export class InputManager {
     return { yaw: -(this.padAxes[2] + horizontal) * rate, pitch: (this.padAxes[3] + vertical) * rate };
   }
 
-  /** Raw stick (for radial menus and placing planks): the gamepad or the touch joystick. */
+  /** Right stick is reserved for choosing radial tools; steering cannot select one. */
+  toolStick(): { x: number; y: number } {
+    return { x: this.padAxes[2], y: this.padAxes[3] };
+  }
+
+  /** Raw stick (for placing planks): the gamepad or the touch joystick. */
   stick(): { x: number; y: number } {
     const t = this.touchStick;
     return t.x !== 0 || t.y !== 0 ? { ...t } : { x: this.padAxes[0], y: this.padAxes[1] };

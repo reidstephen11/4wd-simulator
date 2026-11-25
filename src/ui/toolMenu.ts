@@ -1,4 +1,7 @@
+import './toolMenu.css';
 import { icons } from './icons';
+import { uiScale } from './uiScale';
+import { orderTools, toolGroup, toolGroupLabels, toolShortLabels } from '../data/toolMenu';
 
 export interface ToolOption {
   id: string;
@@ -7,96 +10,154 @@ export interface ToolOption {
   enabled: boolean;
 }
 
-/**
- * Radial tool menu (SPEC §9): held open with Q / LB. Point with the mouse, the steering
- * keys or the left stick; letting go of Q/LB picks the highlighted option. Opened from the
- * touch TOOLS button it stays open until an option or the space around it is tapped.
- */
+/** Hold Q / L1, aim with the mouse, keys or right stick, then release to use. */
 export class ToolMenu {
   readonly el: HTMLElement;
   private options: ToolOption[] = [];
   private selected = -1;
+  private scale = 1;
   isOpen = false;
-  /** Opened by a tap: stays open without a held button. */
   sticky = false;
   onPick: ((id: string) => void) | null = null;
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div');
     this.el.className = 'tool-menu hidden';
+    this.el.setAttribute('role', 'dialog');
+    this.el.setAttribute('aria-label', 'Vehicle tools');
     root.appendChild(this.el);
     this.el.addEventListener('mousemove', (e) => {
-      // Over an option, that option; on the oval, a corner of one can lie in the
-      // direction of its neighbour.
-      const over = (e.target as HTMLElement).closest('.tool-option');
+      const over = (e.target as HTMLElement).closest<HTMLElement>('[data-tool-index]');
       if (over) {
-        this.setSelected([...this.el.querySelectorAll('.tool-option')].indexOf(over));
+        this.setSelected(Number(over.dataset.toolIndex));
         return;
       }
       const r = this.el.getBoundingClientRect();
-      this.pointAt(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2), 30);
+      this.pointAt(
+        e.clientX - (r.left + r.width / 2),
+        e.clientY - (r.top + r.height / 2),
+        92 * uiScale() * this.scale,
+      );
     });
     this.el.addEventListener('click', (e) => {
-      if (this.sticky && !(e.target as HTMLElement).closest('.tool-option')) this.close(false);
+      const over = (e.target as HTMLElement).closest<HTMLElement>('[data-tool-index]');
+      if (over) {
+        this.setSelected(Number(over.dataset.toolIndex));
+        if (this.options[this.selected]?.enabled) this.close(true);
+      } else if (this.sticky) this.close(false);
+    });
+    window.addEventListener('resize', () => {
+      if (this.isOpen) this.layout();
     });
   }
 
-  open(options: ToolOption[], sticky = false): void {
-    this.options = options;
+  open(
+    options: ToolOption[],
+    sticky = false,
+    hint = 'Hold Q · Point to select · Release Q to use · Esc to cancel',
+  ): void {
+    this.options = orderTools(options);
     this.sticky = sticky;
     this.selected = -1;
     this.isOpen = true;
-    this.el.innerHTML = '<div class="tool-ring"></div><div class="tool-centre paper">Tools</div>';
+    this.el.dataset.style = 'expedition';
+    this.el.classList.toggle('tool-dense', options.length > 10);
+    this.el.classList.toggle('tool-crowded', options.length > 13);
     this.el.classList.remove('hidden');
-    const n = options.length;
-    const buttons = options.map((o, i) => {
+    this.el.innerHTML = `<div class="tool-heading"><span>OVER THE CAPE / FIELD CONTROLS</span><h2>Vehicle tools</h2></div>
+      <div class="tool-stage"><svg class="tool-sectors" viewBox="-300 -300 600 600" aria-hidden="true"></svg>
+      <div class="tool-centre"><span class="tool-eyebrow">READY WHEN YOU ARE</span><strong>Choose a tool</strong><small>Return to centre<br>to cancel</small></div></div>
+      <div class="tool-legend"><span>Traction</span><span>Recovery</span><span>Vehicle</span>${options.some((o) => toolGroup(o.id) === 'cargo') ? '<span>Trailer</span>' : ''}</div>
+      <p class="tool-hint"></p>`;
+    this.el.querySelector('.tool-hint')!.textContent = sticky
+      ? 'Tap a tool to use · Tap outside to cancel'
+      : hint;
+    const stage = this.el.querySelector('.tool-stage')!;
+    const svg = this.el.querySelector('.tool-sectors')!;
+    this.options.forEach((o, i) => {
+      const group = toolGroup(o.id);
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', sectorPath(i, this.options.length));
+      path.dataset.toolIndex = String(i);
+      path.dataset.group = group;
+      path.classList.add('tool-sector');
+      if (!o.enabled) path.classList.add('disabled');
+      svg.appendChild(path);
       const b = document.createElement('button');
-      b.className = `tool-option paper${o.enabled ? '' : ' disabled'}`;
-      b.innerHTML = `<span class="tool-icon">${icons[o.icon]}</span><span>${o.label}</span>`;
-      b.addEventListener('click', () => {
-        if (!o.enabled) return;
-        this.selected = i;
-        this.close(true);
-      });
-      this.el.appendChild(b);
-      return b;
+      b.type = 'button';
+      b.className = `tool-option${o.enabled ? '' : ' disabled'}`;
+      b.dataset.toolIndex = String(i);
+      b.dataset.group = group;
+      b.setAttribute('aria-label', o.label);
+      b.setAttribute('aria-disabled', String(!o.enabled));
+      b.innerHTML = `<span class="tool-family">${toolGroupLabels[group]}</span><span class="tool-icon">${icons[o.icon]}</span><span>${toolShortLabels[o.id] ?? o.label}</span>`;
+      b.addEventListener('focus', () => this.setSelected(i));
+      stage.appendChild(b);
     });
-    const w = Math.max(...buttons.map((b) => b.offsetWidth)),
-      h = Math.max(...buttons.map((b) => b.offsetHeight));
-    const { rx, ry } = ringRadii(
-      n,
-      w,
-      h,
-      this.el.clientWidth || innerWidth,
-      this.el.clientHeight || innerHeight,
-    );
-    buttons.forEach((b, i) => {
-      const p = ringPoint(i, n, rx, ry);
-      b.style.left = `calc(50% + ${p.x}px)`;
-      b.style.top = `calc(50% + ${p.y}px)`;
-    });
-    const ring = this.el.querySelector('.tool-ring') as HTMLElement;
-    ring.style.width = `${rx * 2}px`;
-    ring.style.height = `${ry * 2}px`;
-    ring.style.margin = `${-ry}px 0 0 ${-rx}px`;
+    this.layout();
   }
 
-  /** Highlight the option in a screen direction (dx right, dy down). */
+  private layout(): void {
+    // The wheel is drawn 600 × --u across (src/ui/uiScale.ts); shrink it to fit the screen.
+    const u = uiScale();
+    this.scale = Math.min(
+      1,
+      (this.el.clientWidth - 32 * u) / (600 * u),
+      (this.el.clientHeight - 152 * u) / (600 * u),
+    );
+    const grid = this.sticky && this.scale < 0.72;
+    this.el.classList.toggle('tool-grid', grid);
+    const stage = this.el.querySelector<HTMLElement>('.tool-stage')!;
+    stage.style.transform = grid ? '' : `translate(-50%, -50%) scale(${Math.max(0.25, this.scale)})`;
+    this.el.querySelectorAll<HTMLElement>('.tool-option').forEach((b, i) => {
+      const radius = this.options.length > 10 ? 234 : 211;
+      const p = ringPoint(i, this.options.length, radius, radius);
+      b.style.left = `calc(50% + ${p.x} * var(--u))`;
+      b.style.top = `calc(50% + ${p.y} * var(--u))`;
+    });
+  }
+
+  /** Screen directions: right-stick neutral explicitly cancels the highlight. */
   pointAt(dx: number, dy: number, deadzone: number): void {
-    if (!this.isOpen || Math.hypot(dx, dy) < deadzone) return;
+    if (!this.isOpen) return;
+    if (Math.hypot(dx, dy) < deadzone) {
+      this.setSelected(-1);
+      return;
+    }
     const n = this.options.length;
-    let ang = Math.atan2(dy, dx) + Math.PI / 2;
-    ang = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    const i = Math.round(ang / ((Math.PI * 2) / n)) % n;
-    this.setSelected(i);
+    if (!n) return;
+    const angle = (Math.atan2(dy, dx) + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+    this.setSelected(Math.round(angle / ((Math.PI * 2) / n)) % n);
   }
 
   private setSelected(i: number): void {
+    if (i === this.selected) return;
     this.selected = i;
-    this.el.querySelectorAll('.tool-option').forEach((b, k) => b.classList.toggle('selected', k === i));
+    this.el.querySelectorAll<HTMLElement | SVGElement>('[data-tool-index]').forEach((b) => {
+      const selected = Number(b.dataset.toolIndex) === i;
+      b.classList.toggle('selected', selected);
+      if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', String(selected));
+    });
+    const o = this.options[i];
+    this.el.querySelector('.tool-eyebrow')!.textContent = o
+      ? toolGroupLabels[toolGroup(o.id)]
+      : 'READY WHEN YOU ARE';
+    this.el.querySelector('.tool-centre strong')!.textContent = o?.label ?? 'Choose a tool';
+    this.el.querySelector('.tool-centre small')!.textContent = o
+      ? o.enabled
+        ? this.sticky
+          ? 'Tap to use'
+          : 'Release to use'
+        : 'Unavailable right now'
+      : 'Return to centre to cancel';
+    this.el.querySelector('.tool-centre')!.classList.toggle('unavailable', !!o && !o.enabled);
   }
 
-  /** Close; when `pick` is true the highlighted, enabled option is chosen. */
+  /** What is on offer and what is highlighted (the headset's dash panel draws it, v1.98). */
+  get view(): { options: readonly ToolOption[]; selected: number } | null {
+    return this.isOpen ? { options: this.options, selected: this.selected } : null;
+  }
+
   close(pick: boolean): void {
     if (!this.isOpen) return;
     this.isOpen = false;
@@ -107,44 +168,16 @@ export class ToolMenu {
   }
 }
 
+/** Annular sectors use the same angular boundaries as stick selection. */
+export function sectorPath(i: number, n: number): string {
+  const a = -Math.PI / 2 + ((i - 0.5) / n) * Math.PI * 2 + 0.012;
+  const b = -Math.PI / 2 + ((i + 0.5) / n) * Math.PI * 2 - 0.012;
+  const p = (r: number, t: number) => `${Math.cos(t) * r},${Math.sin(t) * r}`;
+  return `M${p(116, a)} L${p(288, a)} A288,288 0 0 1 ${p(288, b)} L${p(116, b)} A116,116 0 0 0 ${p(116, a)} Z`;
+}
+
 /** Where option i of n sits on an oval of radii rx × ry (clockwise from the top). */
 export function ringPoint(i: number, n: number, rx: number, ry: number): { x: number; y: number } {
   const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
   return { x: Math.cos(a) * rx, y: Math.sin(a) * ry };
-}
-
-/** Do any two of n options (w × h px) on this oval overlap? */
-export function ringOverlaps(n: number, rx: number, ry: number, w: number, h: number): boolean {
-  for (let i = 0; i < n; i++)
-    for (let j = i + 1; j < n; j++) {
-      const a = ringPoint(i, n, rx, ry),
-        b = ringPoint(j, n, rx, ry);
-      if (Math.abs(a.x - b.x) < w + 4 && Math.abs(a.y - b.y) < h + 4) return true;
-    }
-  return false;
-}
-
-/**
- * Radii of the oval the options sit on: from a circle of 120 px (less on a small screen,
- * scaled from its shorter side), wider until neighbouring options (w × h px) no longer
- * overlap, then taller if the screen (vw × vh) is too narrow for that (a phone held
- * upright). Always on the screen.
- */
-export function ringRadii(
-  n: number,
-  w: number,
-  h: number,
-  vw: number,
-  vh: number,
-): { rx: number; ry: number } {
-  const start = Math.min(120, 0.25 * Math.min(vw, vh));
-  const fitX = Math.max(start, vw / 2 - w / 2 - 6),
-    fitY = Math.max(start, vh / 2 - h / 2 - 6);
-  let rx = start,
-    ry = start;
-  while (ringOverlaps(n, rx, ry, w, h) && (rx < fitX || ry < fitY)) {
-    if (rx < fitX) rx = Math.min(fitX, rx + 4);
-    else ry = Math.min(fitY, ry + 4);
-  }
-  return { rx, ry };
 }

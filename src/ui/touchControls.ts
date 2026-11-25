@@ -1,4 +1,5 @@
 import type { Action } from '../data/controls';
+import type { TouchDriveScheme, TouchStickSide } from '../data/touch';
 import type { InputManager } from '../sim/input/inputManager';
 import { TouchStick } from '../sim/input/touchStick';
 import type { ToolMode } from '../core/toolController';
@@ -15,6 +16,7 @@ export interface TouchControlsState {
   covered: boolean;
   mode: ToolMode;
   lowRange: boolean;
+  transferMode?: string;
   parkBrake: boolean;
   frontLocked: boolean;
   rearLocked: boolean;
@@ -26,11 +28,11 @@ export interface TouchControlsState {
 }
 
 /**
- * On-screen controls for phones and tablets (SPEC §10): a joystick for steering under the
- * left thumb, GAS and BRAKE pedals under the right, and buttons for everything else. They
- * show on touch screens and whenever the screen is touched, and hide again when a key or
- * a gamepad is used. They feed the same InputManager as the keyboard, so driving behaves
- * the same.
+ * On-screen controls for phones and tablets (SPEC §10): a joystick under the left thumb,
+ * GAS and BRAKE pedals under the right (or Joystick only, where the stick's forward/back
+ * axis is throttle and brake), and buttons for everything else. They show on touch screens
+ * and whenever the screen is touched, and hide again when a key or a gamepad is used. They
+ * feed the same InputManager as the keyboard, so driving behaves the same.
  */
 export class TouchControls {
   readonly el: HTMLElement;
@@ -59,7 +61,7 @@ export class TouchControls {
         <button type="button" class="touch-btn" data-tap="lights" data-state="lightsOn" title="Headlights: off, low beam, high beam">LIGHTS</button>
         <button type="button" class="touch-btn touch-fullscreen" aria-label="Full screen" hidden>⛶</button>
       </div>
-      <div class="touch-stick" aria-label="Steering"><div class="touch-stick-base"><div class="touch-stick-knob"></div></div></div>
+      <div class="touch-stick" aria-label="Steering"><div class="touch-stick-base"><p class="touch-stick-axis" aria-hidden="true"><span>GAS</span><span>BRAKE</span></p><div class="touch-stick-knob"></div></div></div>
       <div class="touch-right">
         <div class="touch-pile touch-drive">
           <button type="button" class="touch-btn" data-tap="range" data-state="lowRange">LOW</button>
@@ -167,6 +169,29 @@ export class TouchControls {
     input.onDeviceChange((d) => this.setActive(d === 'touch'));
   }
 
+  /** Pedals (default) or Joystick only. Hides GAS/BRAKE in the stick scheme. */
+  setDriveScheme(scheme: TouchDriveScheme): void {
+    this.el.classList.toggle('stick-drive', scheme === 'stick');
+    const stick = this.el.querySelector('.touch-stick');
+    stick?.setAttribute('aria-label', scheme === 'stick' ? 'Steer, throttle and brake' : 'Steering');
+    if (scheme === 'stick') {
+      for (const b of [...this.holds.keys()]) {
+        if (b.dataset.hold === 'accelerate' || b.dataset.hold === 'brake') this.release(b);
+      }
+    }
+    this.measure();
+  }
+
+  /**
+   * Left (default) or Right. On the right the stick and the buttons trade places; the body
+   * class moves the HUD prompts that sit above the buttons to match.
+   */
+  setStickSide(side: TouchStickSide): void {
+    this.el.classList.toggle('stick-right', side === 'right');
+    document.body.classList.toggle('touch-swap', side === 'right');
+    this.measure();
+  }
+
   get visible(): boolean {
     return this.active && !this.covered;
   }
@@ -188,6 +213,9 @@ export class TouchControls {
     const key = JSON.stringify(s);
     if (key === this.lastKey) return;
     this.lastKey = key;
+    const rangeButton = this.el.querySelector('[data-tap="range"]')!;
+    rangeButton.textContent = s.transferMode ?? 'LOW';
+    rangeButton.setAttribute('aria-label', `Change transfer case (${s.transferMode ?? 'range'})`);
     const tool = s.mode !== 'drive';
     this.el.classList.toggle('tool-mode', tool);
     for (const b of this.el.querySelectorAll<HTMLElement>('[data-state]'))

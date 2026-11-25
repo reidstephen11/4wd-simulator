@@ -3,7 +3,7 @@
  * behaves (time, speed spread, throttle and rpm swings, wheel loads, body contact).
  * Usage: npx vite-node scripts/crawl-lab.ts [trailId] [open|rear|both|high] [crawl|manual] [throttle]
  */
-import { challengeTrails } from '../src/data/challenges';
+import { challengeTrails } from '../tests/fixtures/maps/challenges';
 import { lateAfternoon } from '../src/data/environment';
 import { Autopilot } from '../src/sim/input/autopilot';
 import { emptyInput } from '../src/sim/input/vehicleInput';

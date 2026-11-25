@@ -1,26 +1,63 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
-import { SurfaceId, surfaceGrip, surfaces, tyreLock, waterDrag } from '../../data/surfaces';
+import { solidAxlePose } from './solidAxle';
+import {
+  SurfaceId,
+  surfaceGrip,
+  surfaces,
+  sweptTuning,
+  tyreLock,
+  waterDrag,
+  waterLift,
+} from '../../data/surfaces';
 import { crashTuning, type VehicleTuning } from '../../data/vehicle';
 import { nextHeadlightMode, type HeadlightMode } from '../../data/headlights';
 import { damageTuning } from '../../data/damage';
+import { floodTuning } from '../../data/tools';
+import { carriedKg, type PackWeights } from '../../data/packing';
+import type { ChurnMap } from '../world/churn';
 import { Groups, groups, type Physics } from '../physics';
 import type { VehicleInput } from '../input/vehicleInput';
 import {
   createCondition,
   enginePowerMultiplier,
   suspensionStiffnessMultiplier,
+  tyreDrop,
   tyreGripMultiplier,
+  tyreSideGripMultiplier,
 } from './condition';
-import { createDrivetrainState, engineBrakeForce, updateDrivetrain } from './drivetrain';
+import {
+  coupledRpm,
+  createDrivetrainState,
+  engineBrakeForce,
+  shiftGear,
+  updateDrivetrain,
+  type GearboxMode,
+} from './drivetrain';
 import { floodPower, updateFlood, type FloodEvent } from './flooding';
+import { sandPressure } from './tyrePressure';
 import { mulberry32 } from '../world/rng';
 import { type Quat, type Vec3, dot, headingToYaw, rotate, v3, yawQuat } from './math';
-import { WheelContacts } from './wheelContacts';
+import { WALL_SPEED, WallSide, WheelContacts } from './wheelContacts';
 import { axleDriveCapacity } from './differential';
+import {
+  createTransferState,
+  frontDriven,
+  shiftTransfer,
+  transferShiftReason,
+  transferDrive,
+  updateWindup,
+} from './transferCase';
+
+/** Sand, dry or under water: low tyre pressures cut its sink and drag. */
+const isSand = (surface: SurfaceId): boolean => surface === SurfaceId.Sand || surface === SurfaceId.SoftBed;
 
 /** How readily each surface lets a stuck wheel spin (visual, dirt and sound only). */
 const LOOSENESS: Partial<Record<SurfaceId, number>> = {
   [SurfaceId.Mud]: 1,
+  [SurfaceId.BlackSoil]: 1,
+  [SurfaceId.Clay]: 0.8,
+  [SurfaceId.Sand]: 0.85,
+  [SurfaceId.SoftBed]: 0.7,
   [SurfaceId.Gravel]: 0.6,
   [SurfaceId.Water]: 0.4,
   [SurfaceId.Grass]: 0.35,
@@ -32,6 +69,14 @@ const SLIP_BACK = 1.5;
 
 /** Rapier's positive steering turns left; our input is + = right. */
 const STEER_SIGN = -1;
+
+/**
+ * World-space axle of a wheel steered by `steer`: Rapier turns the axle (1, 0, 0) about +y,
+ * which takes it to (cos s, 0, −sin s). Its side impulse acts along this.
+ */
+export function steeredAxle(q: Quat, steer: number): Vec3 {
+  return rotate(q, Math.cos(steer), 0, -Math.sin(steer));
+}
 
 export interface WheelState {
   contact: boolean;
@@ -70,6 +115,8 @@ export interface SpawnPose {
 export interface VehicleEnv {
   wetness: number;
   waterLevelOffset: number;
+  /** Churned-up clay and mud, worse where wheels have spun (absent: none). */
+  churn?: ChurnMap;
 }
 
 const WHEEL_FILTER = groups(Groups.VEHICLE, Groups.TERRAIN | Groups.STATIC | Groups.DYNAMIC | Groups.VEHICLE);
@@ -83,7 +130,16 @@ export class Vehicle {
   readonly controller: RAPIER.DynamicRayCastVehicleController;
   readonly colliders: RAPIER.Collider[] = [];
   readonly drivetrain = createDrivetrainState();
+  readonly transfer = createTransferState();
   readonly condition = createCondition();
+  /**
+   * What the packing weighs against the standard load the tuned mass carries (null: no
+   * packing, the tuned mass as it is). Fuel burnt and cans emptied lighten the car again.
+   */
+  packing: PackWeights | null = null;
+  /** Weight on board beyond the standard load (kg, negative when packed light). */
+  payload = 0;
+  private massPayload = 0;
   readonly differentials = { front: false, rear: false };
   precisionCrawl = false;
   readonly wheels: WheelState[];
@@ -102,13 +158,43 @@ export class Vehicle {
   freeRoll = false;
   /** External pull this step (winch), for audio/UI. */
   externalLoad = 0;
+  /** Water lifting the body this step, as a share of the vehicle's weight. */
+  afloat = 0;
+  /** The water's velocity at the vehicle this step (m/s, horizontal). */
+  readonly current = { x: 0, z: 0 };
+  /** Seconds the current has been carrying the vehicle off (see sweptTuning). */
+  swept = 0;
   /** Set when flooding stalls or restarts the engine this step. */
   floodEvent: FloodEvent = null;
+  /** How high the bow wave stands above the water in front of the car (m). */
+  bowWave = 0;
   /**
    * Seconds of cranking left: the starter turns the engine over and nothing drives
    * until it catches. Starting up, after a vehicle swap and after a flooded stall.
    */
   crank = 0;
+  /**
+   * The engine is switched off, as on arriving at the start of a run: silent until the
+   * pedal is pressed, which turns it over on the starter.
+   */
+  engineOff = false;
+  /** Set when pressing the pedal turned the switched-off engine over this step. */
+  startedByPedal = false;
+  /**
+   * The gearbox setting this vehicle drives with (Automatic unless the game sets a manual
+   * mode). See `setGearboxMode`.
+   */
+  gearboxMode: GearboxMode = 'automatic';
+  /**
+   * Set for the first step of a pedal press that couldn't start the engine: in the
+   * sim-level 'clutch' mode it starts only in neutral or with the clutch pressed.
+   */
+  startBlocked = false;
+  private startBlockHeld = false;
+  /** Set for the step in which the engine stalled against the clutch. */
+  stalledLugged = false;
+  /** The engine is off because it stalled against the clutch (the HUD lights STALLED). */
+  clutchStalled = false;
   /** Engine power multiplier applied this step (dips while flooding sputters). */
   enginePower = 1;
   /**
@@ -125,6 +211,13 @@ export class Vehicle {
    * rising under a slowly rolling wheel: only a corner that was falling counts.
    */
   readonly wheelLandings = [0, 0, 0, 0];
+  /**
+   * How hard each wheel dropped into a pothole or washout this step: the vehicle's speed
+   * (m/s) times the hole's depth (m), give or take a quarter for how squarely it hit, once
+   * per hole; 0 otherwise.
+   */
+  readonly wheelStrikes = [0, 0, 0, 0];
+  private readonly inHole = [false, false, false, false];
   /** Each corner's downward speed after the last step. */
   private readonly cornerFall = [0, 0, 0, 0];
   private readonly impactCooldown = [0.5, 0.5, 0.5, 0.5];
@@ -132,7 +225,8 @@ export class Vehicle {
   readonly intakePos = v3();
   private sputterRand = 0;
   /** Seeded so the simulation stays deterministic. */
-  private readonly rand: () => number;
+  /** This vehicle's own random numbers (seeded by its id, so a run repeats). */
+  readonly rand: () => number;
   readonly prevPosition = v3();
   readonly prevRotation: Quat = { x: 0, y: 0, z: 0, w: 1 };
   /** Biggest velocity change in the last step (m/s), for impacts/dents. */
@@ -142,13 +236,20 @@ export class Vehicle {
   private readonly tmpFwd = v3();
   private readonly tmpUp = v3();
   private readonly tmpRight = v3();
+  private readonly liftPoint = v3();
   private caps = [0, 0, 0, 0];
   private requests = [0, 0, 0, 0];
   private preload = [0, 0, 0, 0];
+  /** Sideways grip kept by each tyre in running water or going flat (1 = all of it). */
+  private readonly sideCreep = [1, 1, 1, 1];
   private readonly wheelContacts: WheelContacts;
   private readonly rawWheelRotation = [0, 0, 0, 0];
   private readonly wheelRotationDelta = [0, 0, 0, 0];
   private articulationBlend = 0;
+  /** Ground cleared with the shovel: local, temporary, and lost to wheelspin. */
+  dugGround: { x: number; z: number; relief: number } | null = null;
+  /** Lateral hub positions on the rigid beams (the track narrows in projection as they roll). */
+  readonly wheelX: number[];
   /** Seconds the hill-start assist has held the brakes for this pull-away. */
   private hillHold = 0;
 
@@ -161,6 +262,7 @@ export class Vehicle {
   ) {
     const R = physics.R;
     const t = tuning;
+    this.condition.fuel = t.engine.fuel.tankLitres;
     let h = 0;
     for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) | 0;
     this.rand = mulberry32(h);
@@ -215,6 +317,7 @@ export class Vehicle {
       );
     });
     this.applyTuning();
+    this.wheelX = t.wheels.map((w) => w.x);
     this.wheelContacts = new WheelContacts(physics, tuning);
     this.wheels = t.wheels.map(() => ({
       contact: false,
@@ -244,7 +347,28 @@ export class Vehicle {
       this.controller.setWheelMaxSuspensionForce(i, t.maxSuspensionForce);
       this.controller.setWheelSideFrictionStiffness(i, 1);
     }
-    this.body.setAdditionalMassProperties(t.mass, t.com, t.inertia, { x: 0, y: 0, z: 0, w: 1 }, true);
+    this.setMass();
+  }
+
+  /** The tuned mass plus the payload. */
+  get mass(): number {
+    return this.tuning.mass + this.payload;
+  }
+
+  private setMass(): void {
+    const t = this.tuning;
+    const k = this.mass / t.mass;
+    const inertia = { x: t.inertia.x * k, y: t.inertia.y * k, z: t.inertia.z * k };
+    this.body.setAdditionalMassProperties(this.mass, t.com, inertia, { x: 0, y: 0, z: 0, w: 1 }, true);
+    this.massPayload = this.payload;
+  }
+
+  /** Weigh what's on board now, and give the body that mass once it has changed by a kilo. */
+  private weighLoad(): void {
+    const c = this.condition;
+    const p = this.packing;
+    this.payload = p ? carriedKg(c, p.spareKg) - p.baseKg : 0;
+    if (Math.abs(this.payload - this.massPayload) >= 1) this.setMass();
   }
 
   get position(): Vec3 {
@@ -270,6 +394,54 @@ export class Vehicle {
   }
 
   /** World position of a local point. */
+  /**
+   * A tyre against a wall (the far edge of a hole it dropped into, `WheelContacts.walls`):
+   * stop that corner moving into it, as the tyre's face against the edge would. Only the
+   * part of the corner's velocity along the tyre's rolling direction, into the wall, is
+   * taken away; the car can still back out, or be winched or driven sideways.
+   */
+  private meetWalls(q: Quat): void {
+    const walls = this.wheelContacts.walls;
+    const t = this.tuning;
+    const com = this.body.worldCom();
+    for (let i = 0; i < t.wheels.length; i++) {
+      const sides = walls[i];
+      if (sides === 0) continue;
+      const w = t.wheels[i];
+      const hub = this.localToWorld(w.x, w.y - this.wheels[i].suspension, w.z, this.wallHub);
+      const sx = this.wheelContacts.steerSin[i];
+      const sz = this.wheelContacts.steerCos[i];
+      for (const [bit, lx, lz] of [
+        [WallSide.Ahead, sx, sz],
+        [WallSide.Behind, -sx, -sz],
+        [WallSide.Right, sz, -sx],
+        [WallSide.Left, -sz, sx],
+      ] as const) {
+        if (!(sides & bit)) continue;
+        // Towards the wall, level.
+        const d = rotate(q, lx, 0, lz, this.wallDir);
+        const len = Math.hypot(d.x, d.z) || 1;
+        const dx = d.x / len,
+          dz = d.z / len;
+        // Velocity of the hub point, recomputed as each push changes it.
+        const v = this.body.linvel();
+        const o = this.body.angvel();
+        const rx = hub.x - com.x,
+          ry = hub.y - com.y,
+          rz = hub.z - com.z;
+        const vx = v.x + o.y * rz - o.z * ry;
+        const vz = v.z + o.x * ry - o.y * rx;
+        const into = vx * dx + vz * dz;
+        if (into <= 0) continue;
+        // Enough to stop the corner: the whole car's mass, since its other wheels push it on.
+        const j = into * this.mass;
+        this.body.applyImpulseAtPoint({ x: -dx * j, y: 0, z: -dz * j }, hub, true);
+      }
+    }
+  }
+  private readonly wallHub = v3();
+  private readonly wallDir = v3();
+
   localToWorld(x: number, y: number, z: number, out: Vec3 = v3()): Vec3 {
     const p = this.body.translation();
     rotate(this.body.rotation(), x, y, z, out);
@@ -282,16 +454,83 @@ export class Vehicle {
   /** Turn the engine over on the starter; it drives once it catches. False if it's already starting. */
   startEngine(): boolean {
     if (this.crank > 0) return false;
+    this.engineOff = false;
+    this.clutchStalled = false;
     this.crank = this.tuning.engine.crankSeconds;
     this.drivetrain.engineRunning = false;
     this.drivetrain.rpm = this.tuning.engine.crankRpm;
     return true;
   }
 
+  /** Switch the engine off: it stays off until the pedal is pressed. */
+  switchOff(): void {
+    this.engineOff = true;
+    this.crank = 0;
+    this.drivetrain.engineRunning = false;
+    this.drivetrain.rpm = 0;
+  }
+
+  /** A manual gearbox setting: the player picks the gear (reverse is a gear). */
+  get manualGearbox(): boolean {
+    return this.gearboxMode !== 'automatic';
+  }
+
+  /** A manual gearbox setting on a vehicle with a real clutch (not the 40 Series' automatic). */
+  get clutchGearbox(): boolean {
+    return this.manualGearbox && this.tuning.gearbox.kind === 'manual';
+  }
+
+  /**
+   * Change the gearbox setting. Into a manual mode with the engine off, the box goes to
+   * neutral so the pedal can start it; back to Automatic, neutral is dropped.
+   */
+  setGearboxMode(mode: GearboxMode): void {
+    if (mode === this.gearboxMode) return;
+    this.gearboxMode = mode;
+    const d = this.drivetrain;
+    if (mode === 'automatic') {
+      if (d.neutral) d.gear = 0;
+      d.neutral = false;
+      d.clutch = 1;
+    } else if (!d.engineRunning || this.engineOff) {
+      d.gear = 0;
+      d.neutral = true;
+    }
+  }
+
+  rangeShiftReason(): string | null {
+    return transferShiftReason(this.tuning, this.transfer, this.speed);
+  }
+
+  toggleCentre(): boolean {
+    if (this.tuning.transfer !== 'fullTime' || (!this.transfer.centreLocked && Math.abs(this.speed) > 0.5))
+      return false;
+    this.transfer.centreLocked = !this.transfer.centreLocked;
+    if (!this.transfer.centreLocked) this.transfer.windup = 0;
+    return true;
+  }
+
   toggleRange(): boolean {
-    if (Math.abs(this.speed) > 20 / 3.6) return false;
-    this.drivetrain.range = this.drivetrain.range === 'high' ? 'low' : 'high';
-    this.drivetrain.shiftTimer = Math.max(this.drivetrain.shiftTimer, 0.5);
+    // Direct range assignments in headless labs remain supported.
+    if (this.drivetrain.range === 'low') this.transfer.mode = '4L';
+    if (!shiftTransfer(this.tuning, this.transfer, this.speed)) return false;
+    const d = this.drivetrain;
+    d.range = this.transfer.mode === '4L' ? 'low' : 'high';
+    d.shiftTimer = Math.max(d.shiftTimer, 0.5);
+    // In the manual settings the player keeps the gear they picked.
+    if (this.manualGearbox) return true;
+    // Changing range on the move, pick the gear that suits the new range, so the engine
+    // neither labours nor overruns (the Unimog's road and field gears are far apart).
+    const g = this.tuning.gearbox;
+    if (d.gear > 0) {
+      while (d.gear > 0 && coupledRpm(this.tuning, this.speed, d.gear, d.range) < g.downshiftRpm.full)
+        d.gear--;
+      while (
+        d.gear < g.ratios.length - 1 &&
+        coupledRpm(this.tuning, this.speed, d.gear, d.range) > g.upshiftRpm.full
+      )
+        d.gear++;
+    }
     return true;
   }
 
@@ -312,6 +551,8 @@ export class Vehicle {
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     for (const w of this.wheels) w.sink = 0;
+    this.dugGround = null;
+    this.swept = 0;
     this.cornerFall.fill(0);
     // Settling onto the ground after a teleport isn't a hit.
     this.impactCooldown.fill(0.5);
@@ -323,8 +564,8 @@ export class Vehicle {
 
   /**
    * Stop simulating this vehicle: drop the wheel controller and disable the body. The
-   * caller removes the body after the next physics step; removing it straight away
-   * leaves a vehicle added in the same step frozen in place (Rapier 0.21).
+   * caller removes the body after a physics step; removing it straight away leaves a
+   * vehicle added in the same step frozen in place (Rapier 0.21).
    */
   retire(): void {
     this.physics.world.removeVehicleController(this.controller);
@@ -347,6 +588,7 @@ export class Vehicle {
   /** Apply one step of driver input. Call before the physics world steps. */
   step(input: VehicleInput, dt: number): void {
     this.snapshot();
+    this.weighLoad();
     const t = this.tuning;
     const c = this.controller;
     const q = this.body.rotation();
@@ -363,6 +605,10 @@ export class Vehicle {
     if (input.toggleRearDiff) this.toggleDiff('rear');
     if (input.togglePrecision) this.precisionCrawl = !this.precisionCrawl;
     if (input.cycleLights) this.lights = nextHeadlightMode(this.lights);
+    if (this.manualGearbox) {
+      if (input.shiftUp) shiftGear(t, this.drivetrain, 1);
+      if (input.shiftDown) shiftGear(t, this.drivetrain, -1);
+    }
 
     // Throttle / brake / reverse, automatic-style. Accelerating against the way the
     // car is rolling brakes it, unless it is rolling back against the selected gear
@@ -373,7 +619,11 @@ export class Vehicle {
     let reverse = inReverse;
     const f = input.throttle;
     const b = input.brake;
-    if (f > 0.02 && b > 0.02) brake = Math.max(f, b);
+    if (this.manualGearbox) {
+      // Manual settings: the pedal is throttle in the selected gear, the brake only brakes.
+      if (f > 0.02) throttle = f;
+      if (b > 0.02) brake = b;
+    } else if (f > 0.02 && b > 0.02) brake = Math.max(f, b);
     else if (f > 0.02) {
       if (this.speed < -0.5 && (inReverse || this.speed < -SLIP_BACK)) brake = f;
       else {
@@ -387,6 +637,15 @@ export class Vehicle {
         reverse = true;
       }
     }
+    // Pressing the pedal (either way) with the engine switched off turns it over first.
+    // In the 'clutch' mode it only starts in neutral or with the clutch pressed; Manual has
+    // no clutch button, so it starts in any gear (the clutch is worked for the player).
+    const canStart =
+      !this.clutchGearbox || this.gearboxMode === 'manual' || this.drivetrain.neutral || input.clutch > 0.5;
+    const blocked = this.engineOff && throttle > 0 && !canStart;
+    this.startBlocked = blocked && !this.startBlockHeld;
+    this.startBlockHeld = blocked;
+    this.startedByPedal = this.engineOff && throttle > 0 && canStart && this.startEngine();
     if (this.precisionCrawl && throttle > 0) {
       const crawl = t.crawling;
       const target = (throttle * (reverse ? crawl.reverseKmh : crawl.forwardKmh)) / 3.6;
@@ -403,8 +662,26 @@ export class Vehicle {
     // Engine flooding: is the air intake under the water surface?
     this.localToWorld(t.intake.x, t.intake.y, t.intake.z, this.intakePos);
     const ws = this.physics.ground.waterSurfaceAt(this.intakePos.x, this.intakePos.z);
-    const submerged = ws !== null && this.intakePos.y < ws + this.env.waterLevelOffset;
-    this.floodEvent = updateFlood(this.condition.flood, submerged, f, dt);
+    const bed = this.physics.ground.heightAt?.(this.intakePos.x, this.intakePos.z);
+    const wading = ws !== null && bed !== undefined ? ws + this.env.waterLevelOffset - bed : 0;
+    const F = floodTuning;
+    this.bowWave =
+      wading > F.bowFromDepth
+        ? Math.min(
+            wading * F.bowMaxOfDepth,
+            Math.max(0, Math.abs(this.speed) - F.bowFromSpeed) * F.bowPerSpeed,
+          )
+        : 0;
+    const still = ws !== null && this.intakePos.y < ws + this.env.waterLevelOffset;
+    const submerged =
+      still || (ws !== null && this.intakePos.y < ws + this.env.waterLevelOffset + this.bowWave);
+    this.floodEvent = updateFlood(
+      this.condition.flood,
+      submerged,
+      f,
+      dt,
+      still ? 1 : 1 + F.bowFloodPerSpeed2 * Math.max(0, Math.abs(this.speed) - F.bowFromSpeed) ** 2,
+    );
     // A flooded engine that's dried out restarts on the starter like any other.
     if (this.floodEvent === 'restarted') this.crank = t.engine.crankSeconds;
     const cranking = this.crank > 0;
@@ -413,8 +690,13 @@ export class Vehicle {
       // It catches straight to idle.
       if (this.crank === 0) this.drivetrain.rpm = t.engine.idleRpm;
     }
-    // A wrecked engine (realistic damage) turns over on the starter but never runs.
-    this.drivetrain.engineRunning = !this.condition.flood.stalled && !cranking && this.condition.engine > 0;
+    // A wrecked engine (realistic damage) or an empty tank turns over on the starter but never runs.
+    this.drivetrain.engineRunning =
+      !this.engineOff &&
+      !this.condition.flood.stalled &&
+      !cranking &&
+      this.condition.engine > 0 &&
+      this.condition.fuel > 0;
     if (this.rand() < dt * 6) this.sputterRand = this.rand();
     this.enginePower =
       enginePowerMultiplier(this.condition) * floodPower(this.condition.flood, this.sputterRand);
@@ -422,29 +704,71 @@ export class Vehicle {
     let drive = updateDrivetrain(
       t,
       this.drivetrain,
-      { throttle, reverse, speed: this.speed, enginePower: this.enginePower },
+      {
+        throttle,
+        reverse,
+        speed: this.speed,
+        enginePower: this.enginePower,
+        mode: this.gearboxMode,
+        clutchPedal: input.clutch,
+        autoClutch: this.precisionCrawl,
+      },
       dt,
     );
+    // Stalled against the clutch: the engine is off until the pedal cranks it again.
+    this.stalledLugged = this.drivetrain.stalled;
+    if (this.stalledLugged) {
+      this.switchOff();
+      this.clutchStalled = true;
+    }
     // Off the throttle while the winch pulls, the gearbox sits in neutral so the car
     // neither creeps on the cable nor drags against it.
     if (this.freeRoll && throttle === 0) drive = 0;
     if (cranking) this.drivetrain.rpm = t.engine.crankRpm;
 
-    // Grip available at each wheel.
+    // Grip available at each wheel. In running water the tyres creep sideways on the
+    // washed bed, so the current pushes the vehicle downstream before it breaks loose;
+    // rolling tyres creep more than standing ones.
+    const running =
+      Math.min(1, Math.hypot(this.current.x, this.current.z) / waterLift.creepFlow) *
+      (waterLift.standingCreep + (1 - waterLift.standingCreep) * Math.min(1, Math.abs(this.speed) / 1.5));
     for (let i = 0; i < 4; i++) {
       const w = this.wheels[i];
-      const grip = surfaceGrip(w.surface, this.env.wetness) * tyreGripMultiplier(this.condition, i);
+      const churn = this.env.churn;
+      if (churn && w.contact) {
+        const p = w.contactPoint;
+        churn.work(p.x, p.z, w.surface, w.spin, this.speed, this.env.wetness, dt);
+      }
+      const grip =
+        surfaceGrip(w.surface, this.env.wetness) *
+        tyreGripMultiplier(this.condition, i) *
+        (churn && w.contact ? churn.grip(w.contactPoint.x, w.contactPoint.z, w.surface) : 1);
       this.caps[i] = w.contact ? t.longitudinalGrip * grip * w.load : 0;
       c.setWheelFrictionSlip(i, t.lateralGrip * grip);
-      c.setWheelSideFrictionStiffness(i, handbrake && !t.wheels[i].front ? t.handbrakeSideGrip : 1);
+      const deep = Math.min(1, Math.max(0, (w.water - 0.15) / (t.wheelRadius + 0.05)));
+      this.sideCreep[i] =
+        (1 - waterLift.creep * running * deep * deep * (3 - 2 * deep)) *
+        tyreSideGripMultiplier(this.condition, i);
+      c.setWheelSideFrictionStiffness(
+        i,
+        (handbrake && !t.wheels[i].front ? t.handbrakeSideGrip : 1) * this.sideCreep[i],
+      );
     }
 
     // Open axles are limited by the weak tyre; locked axles can use both tyres' grip.
-    const perAxle = drive / 2;
+    const axleCaps = [
+      axleDriveCapacity(this.caps[0], this.caps[1], this.differentials.front, t.openDiffLeak),
+      axleDriveCapacity(this.caps[2], this.caps[3], this.differentials.rear, t.openDiffLeak),
+    ];
+    const axleRequests = transferDrive(t, this.transfer, drive, axleCaps[0], axleCaps[1]);
+    updateWindup(t, this.transfer, this.wheels, this.speed, input.steer, dt);
+    // With the engine stopped (empty tank, cranking, flooded) the pedal turns nothing.
+    const driving = this.drivetrain.engineRunning ? throttle : 0;
     for (const [i, j] of [
       [0, 1],
       [2, 3],
     ]) {
+      const perAxle = axleRequests[i < 2 ? 0 : 1];
       const a = this.caps[i];
       const bb = this.caps[j];
       const locked = this.differentials[t.wheels[i].front ? 'front' : 'rear'];
@@ -456,12 +780,17 @@ export class Vehicle {
       const want = Math.abs(perAxle) / 2;
       for (const k of [i, j]) {
         const got = Math.abs(this.requests[k]);
-        let spin = want > 1 && throttle > 0.05 ? Math.max(0, 1 - got / want) : 0;
+        let spin = want > 1 && driving > 0.05 ? Math.max(0, 1 - got / want) : 0;
         // Bogged down on loose ground with the throttle in: the wheels dig and spin.
         const w = this.wheels[k];
-        if (w.contact && throttle > 0.3 && Math.abs(this.speed) < 1.2) {
+        if (
+          (i >= 2 || frontDriven(t, this.transfer)) &&
+          w.contact &&
+          driving > 0.3 &&
+          Math.abs(this.speed) < 1.2
+        ) {
           const loose = LOOSENESS[w.surface] ?? 0;
-          spin = Math.max(spin, loose * throttle * (1 - Math.abs(this.speed) / 1.2));
+          spin = Math.max(spin, loose * driving * (1 - Math.abs(this.speed) / 1.2));
         }
         w.spin += (spin - w.spin) * Math.min(1, dt * 8);
       }
@@ -479,7 +808,7 @@ export class Vehicle {
       (throttle === 0 || cranking) && brake === 0 && stopped && !this.freeRoll ? t.holdBrakeForce : 0;
     // Hill-start assist: pulling away on a slope, the brakes stay on while the engine
     // and converter build up enough drive to hold the car (for at most a moment).
-    const pull = 9.81 * t.mass * fwd.y * (reverse ? -1 : 1);
+    const pull = 9.81 * this.mass * fwd.y * (reverse ? -1 : 1);
     if (
       throttle > 0 &&
       Math.abs(this.speed) < 0.3 &&
@@ -494,7 +823,7 @@ export class Vehicle {
     for (let i = 0; i < 4; i++) {
       const front = t.wheels[i].front;
       let bf = (brake * t.brakeForce * (front ? t.brakeFrontBias : 1 - t.brakeFrontBias)) / 2;
-      bf += (engineBrake + hold) / 4;
+      bf += hold / 4 + (frontDriven(t, this.transfer) ? engineBrake / 4 : front ? 0 : engineBrake / 2);
       const w = this.wheels[i];
       const grounded = w.contact && w.load > 0;
       const moving = Math.abs(this.speed) > tyreLock.minSpeed;
@@ -507,7 +836,7 @@ export class Vehicle {
       const lockedUp = grounded && moving && bf > cap;
       if (grounded) bf = Math.min(bf, lockedUp ? cap * tyreLock.slideGrip : cap);
       w.skid = lockedUp ? Math.abs(this.speed) : 0;
-      if (lockedUp) c.setWheelSideFrictionStiffness(i, tyreLock.sideGrip);
+      if (lockedUp) c.setWheelSideFrictionStiffness(i, tyreLock.sideGrip * this.sideCreep[i]);
       if (bf > 0 && (holding || !(throttle > 0 && !handbrake))) {
         c.setWheelEngineForce(i, 0);
         c.setWheelBrake(i, bf * dt);
@@ -526,12 +855,17 @@ export class Vehicle {
     // A locked front axle resists the different wheel speeds needed for a tight turn.
     // A bent front corner knocks its wheel out of line, pulling the car towards that side.
     const susp = this.condition.suspension;
+    // A flat front tyre drags its wheel back, steering the car towards it.
+    const tyres = this.condition.tyres;
     const toe =
       ((damageTuning.suspension.toeDeg * Math.PI) / 180) *
-      (frontHealth(t, susp, -1) - frontHealth(t, susp, 1));
+        (frontHealth(t, susp, -1) - frontHealth(t, susp, 1)) +
+      ((damageTuning.tyre.flatToeDeg * Math.PI) / 180) *
+        (frontHealth(t, tyres, -1) - frontHealth(t, tyres, 1));
     const angle =
       Math.max(-1, Math.min(1, input.steer)) *
         maxA *
+        (1 - this.transfer.windup * 0.22) *
         (this.differentials.front ? t.crawling.frontLockSteering : 1) +
       toe;
     const wb = Math.abs(t.wheels[0].z - t.wheels[2].z);
@@ -555,8 +889,20 @@ export class Vehicle {
     const flex = this.articulationBlend;
     const extraDroop = t.crawling.extraDroop * flex;
     const parkedSag = 9.81 / (4 * t.springStiffness);
-    const stiffness = t.springStiffness / (1 + extraDroop / parkedSag);
+    // Rapier scales the springs with the body's mass: hold them at the tuned mass's, so a
+    // heavy load squats the car.
+    const stiffness = (t.springStiffness * (t.mass / this.mass)) / (1 + extraDroop / parkedSag);
+    // A heavier car presses its tyres deeper into the mud.
+    const loadSink = Math.min(1.6, Math.max(0.7, (this.mass / t.mass) ** 3));
     const barScale = 1 + (t.crawling.antiRollScale - 1) * flex;
+
+    const dug = this.dugGround;
+    if (dug) {
+      const p = this.body.translation();
+      if (Math.hypot(p.x - dug.x, p.z - dug.z) > 3) this.dugGround = null;
+      else dug.relief = Math.max(0, dug.relief - (Math.max(...this.wheels.map((w) => w.spin)) * dt) / 12);
+    }
+    const relief = this.dugGround?.relief ?? 0;
 
     // Suspension: condition multiplier, mud sink and anti-roll bars. A bar shifts load
     // from the less compressed wheel to the more compressed one on the same axle; we do
@@ -569,17 +915,29 @@ export class Vehicle {
       const wj = this.wheels[j];
       let shift = 0;
       if (wi.contact && wj.contact) {
-        const springRate = stiffness * t.mass;
+        const springRate = stiffness * this.mass;
         shift = (k * barScale * (wj.suspension - wi.suspension)) / springRate;
         shift = Math.max(-0.08, Math.min(0.08, shift));
       }
       this.preload[i] = shift;
       this.preload[j] = -shift;
+      const left = t.wheels[i],
+        right = t.wheels[j];
+      const axle = solidAxlePose(right.x - left.x, left.y - wi.suspension, right.y - wj.suspension);
+      const mid = (left.x + right.x) / 2;
+      this.wheelX[i] = mid + (left.x - mid) * axle.cos;
+      this.wheelX[j] = mid + (right.x - mid) * axle.cos;
+      // Contact forces stay tangent to the ground. Camber belongs to the rigid beam,
+      // not a vertical component added to Rapier's calibrated lateral tyre impulses.
     }
     for (let i = 0; i < 4; i++) {
       const w = this.wheels[i];
       const sinkTarget = w.contact
-        ? surfaces[w.surface].sink * Math.min(1, 0.4 + w.spin + (Math.abs(this.speed) < 2 ? 0.4 : 0))
+        ? surfaces[w.surface].sink *
+          (isSand(w.surface) ? sandPressure(this.condition).sink : 1) *
+          (1 - 0.65 * relief) *
+          loadSink *
+          Math.min(1, 0.4 + w.spin + (Math.abs(this.speed) < 2 ? 0.4 : 0))
         : 0;
       w.sink += (sinkTarget - w.sink) * Math.min(1, dt * (sinkTarget > w.sink ? 0.8 : 2.5));
       c.setWheelMaxSuspensionTravel(i, t.suspensionTravel + extraDroop);
@@ -594,11 +952,23 @@ export class Vehicle {
       c.setWheelSuspensionRestLength(i, t.suspensionRestLength + extraDroop + w.sink + this.preload[i]);
       c.setWheelSuspensionStiffness(i, stiffness * suspensionStiffnessMultiplier(this.condition, i));
       // A tyre going down rolls on a smaller radius, dropping that corner.
-      c.setWheelRadius(i, t.wheelRadius - damageTuning.tyre.flatDrop * (1 - this.condition.tyres[i]));
+      c.setWheelRadius(i, t.wheelRadius - tyreDrop(this.condition, i, w.rotation));
     }
 
-    this.wheelContacts.update(this.body, c, WHEEL_FILTER);
+    // At a crawl, with the car on at least two wheels, a tyre meets the far edge of a hole
+    // as a wall (v2.01) rather than climbing it.
+    const grounded = this.wheels.reduce((n, w) => n + (w.contact ? 1 : 0), 0);
+    const lookForWalls = Math.abs(this.speed) < WALL_SPEED && grounded >= 2;
+    this.wheelContacts.update(
+      this.body,
+      c,
+      WHEEL_FILTER,
+      this.wheelX,
+      lookForWalls,
+      this.wheels.map((w) => w.contact),
+    );
     c.updateVehicle(dt, this.physics.R.QueryFilterFlags.EXCLUDE_SENSORS, WHEEL_FILTER);
+    this.meetWalls(q);
     this.addRollTorque(q);
     this.pushDynamicGround(q, dt);
 
@@ -608,7 +978,13 @@ export class Vehicle {
     for (let i = 0; i < 4; i++) {
       const w = this.wheels[i];
       if (!w.contact) continue;
-      rr += surfaces[w.surface].rollingResistance * w.load;
+      const softGround =
+        w.surface === SurfaceId.Mud || w.surface === SurfaceId.BlackSoil || isSand(w.surface);
+      rr +=
+        surfaces[w.surface].rollingResistance *
+        w.load *
+        (softGround ? 1 - 0.65 * relief : 1) *
+        (isSand(w.surface) ? sandPressure(this.condition).drag : 1);
       // A soft or flat tyre drags at its own corner, which also pulls the car that way.
       const drag = damageTuning.tyre.flatDrag * (1 - this.condition.tyres[i]) * w.load * sv * dt;
       if (drag !== 0)
@@ -618,6 +994,11 @@ export class Vehicle {
           true,
         );
     }
+    if (this.transfer.mode === '2H') {
+      rr *= 0.97;
+      this.drivetrain.fuelRate *= 0.98;
+    }
+    rr += this.mass * 9.81 * 0.025 * this.transfer.windup * Math.abs(input.steer);
     let fx = -fwd.x * rr * sv;
     let fy = -fwd.y * rr * sv;
     let fz = -fwd.z * rr * sv;
@@ -627,15 +1008,72 @@ export class Vehicle {
     fy -= aero * vel.y;
     fz -= aero * vel.z;
     const depth = this.bodyWaterDepth();
+    const flow = this.current;
+    flow.x = flow.z = 0;
     if (depth > 0) {
+      // Drag against the water, which may be running: then the current pushes the car.
+      const at = this.body.translation();
+      this.physics.ground.waterFlowAt?.(at.x, at.z, flow);
+      const rx = vel.x - flow.x;
+      const rz = vel.z - flow.z;
       const d = Math.min(depth, waterDrag.maxDepth);
-      const k = d * (waterDrag.quadratic * vmag + waterDrag.linear);
-      fx -= k * vel.x;
-      fy -= k * vel.y;
-      fz -= k * vel.z;
+      const k = d * (waterDrag.quadratic * Math.hypot(rx, vel.y, rz) + waterDrag.linear);
+      // Across the vehicle the water meets its whole side.
+      const across = (waterDrag.side - 1) * (rx * right.x + vel.y * right.y + rz * right.z);
+      fx -= k * (rx + across * right.x);
+      fy -= k * (vel.y + across * right.y);
+      fz -= k * (rz + across * right.z);
     }
     this.body.applyImpulse({ x: fx * dt, y: fy * dt, z: fz * dt }, true);
-    void right;
+    this.afloat = depth > 0 ? this.applyLift(q, fwd, right, dt) / (this.mass * 9.81) : 0;
+    // Lifted off its tyres and drifting downstream: the current has the vehicle.
+    const flowSpeed = Math.hypot(flow.x, flow.z);
+    const downstream = flowSpeed > 0.1 ? (vel.x * flow.x + vel.z * flow.z) / flowSpeed : 0;
+    if (this.afloat >= sweptTuning.lift && downstream > sweptTuning.speed) this.swept += dt;
+    else this.swept = Math.max(0, this.swept - 2 * dt);
+  }
+
+  /**
+   * Deep water lifts each part of the body by a share of the water it displaces, pushing
+   * up at the middle of the part under water, and the tyres by all of theirs. Returns the
+   * total lift (N).
+   */
+  private applyLift(q: Quat, fwd: Vec3, right: Vec3, dt: number): number {
+    const ground = this.physics.ground;
+    const p = this.liftPoint;
+    const upY = rotate(q, 0, 1, 0, this.tmpUp).y;
+    let lift = 0;
+    for (const b of this.tuning.bodyBoxes) {
+      this.localToWorld(b.cx, b.cy, b.cz, p);
+      const ws = ground.waterSurfaceAt(p.x, p.z);
+      if (ws === null) continue;
+      // Half the box's height as it lies now.
+      const e = Math.abs(right.y) * b.hx + Math.abs(upY) * b.hy + Math.abs(fwd.y) * b.hz;
+      const under = Math.min(1, (ws + this.env.waterLevelOffset - (p.y - e)) / (2 * e));
+      if (under <= 0) continue;
+      const force = 8 * b.hx * b.hy * b.hz * under * waterLift.weight * waterLift.share;
+      p.y += e * (under - 1);
+      this.body.applyImpulseAtPoint({ x: 0, y: force * dt, z: 0 }, p, true);
+      lift += force;
+    }
+    // The tyres are sealed: all the water they displace lifts the wheel off the bed.
+    const r = this.tuning.wheelRadius;
+    for (let i = 0; i < 4; i++) {
+      const hp = this.tuning.wheels[i];
+      this.localToWorld(hp.x, hp.y - this.wheels[i].suspension, hp.z, p);
+      const ws = ground.waterSurfaceAt(p.x, p.z);
+      if (ws === null) continue;
+      const h = Math.min(2 * r, ws + this.env.waterLevelOffset - (p.y - r));
+      if (h <= 0) continue;
+      // Area of the circle's slice under the water, over the whole circle.
+      const a = r - h;
+      const under =
+        (r * r * Math.acos(a / r) - a * Math.sqrt(Math.max(0, 2 * r * h - h * h))) / (Math.PI * r * r);
+      const force = Math.PI * r * r * this.tuning.wheelWidth * under * waterLift.weight;
+      this.body.applyImpulseAtPoint({ x: 0, y: force * dt, z: 0 }, p, true);
+      lift += force;
+    }
+    return lift;
   }
 
   /**
@@ -658,6 +1096,10 @@ export class Vehicle {
       const cp = c.wheelContactPoint(i);
       const n = c.wheelContactNormal(i);
       if (!cp || !n) continue;
+      // Not `steeredAxle`: the roll tuning (rollTorqueScale, the trailer tests) was calibrated
+      // with this mirrored direction for the steered wheels, which gives them about half the
+      // roll torque at full lock. With the true axle a full-lock turn while towing rolls the
+      // car. Retuning the roll with the true axle is on the roadmap.
       const s = c.wheelSteering(i) ?? 0;
       const axle = rotate(q, Math.cos(s), 0, Math.sin(s));
       const proj = axle.x * n.x + axle.y * n.y + axle.z * n.z;
@@ -696,7 +1138,7 @@ export class Vehicle {
       const load = Math.min(this.tuning.maxSuspensionForce, c.wheelSuspensionForce(i) ?? 0) * dt;
       const steer = c.wheelSteering(i) ?? 0;
       // Wheel axle and forward directions (forward = normal × axle, as in Rapier).
-      const ax = rotate(q, Math.cos(steer), 0, Math.sin(steer));
+      const ax = steeredAxle(q, steer);
       const fx = n.y * ax.z - n.z * ax.y;
       const fy = n.z * ax.x - n.x * ax.z;
       const fz = n.x * ax.y - n.y * ax.x;
@@ -832,6 +1274,11 @@ export class Vehicle {
       } else w.slide = 0;
       const ws = this.physics.ground.waterSurfaceAt(w.contactPoint.x, w.contactPoint.z);
       w.water = ws === null ? 0 : Math.max(0, ws + this.env.waterLevelOffset - w.contactPoint.y);
+      const hole = w.contact ? (this.physics.ground.holeAt?.(w.contactPoint.x, w.contactPoint.z) ?? 0) : 0;
+      // How squarely the tyre meets the hole's far edge varies.
+      this.wheelStrikes[i] =
+        hole > 0 && !this.inHole[i] ? Math.abs(this.speed) * hole * (0.75 + 0.5 * this.rand()) : 0;
+      this.inHole[i] = hole > 0;
     }
     // Locked wheels share angular travel, including a tyre hanging in the air.
     for (const [i, j] of [
@@ -884,7 +1331,7 @@ export class Vehicle {
   }
 }
 
-/** Health of the front suspension corner on one side (+1 right, -1 left). */
+/** Health of the front suspension corner (or tyre) on one side (+1 right, -1 left). */
 function frontHealth(t: VehicleTuning, suspension: readonly number[], side: 1 | -1): number {
   const i = t.wheels.findIndex((w) => w.front && Math.sign(w.x) === side);
   return i < 0 ? 1 : suspension[i];

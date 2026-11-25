@@ -6,7 +6,7 @@ import {
   challengeLoopRoute,
   challengeSigns,
   challengeTrails,
-} from '../src/data/challenges';
+} from './fixtures/maps/challenges';
 import { lateAfternoon } from '../src/data/environment';
 import { perentieTuning } from '../src/data/perentie';
 import { vehicleTuning } from '../src/data/vehicle';
@@ -73,10 +73,13 @@ describe('Granite Spur', () => {
   });
 
   it('the Rock Steps go in low range with open diffs but not in high range', async () => {
-    expect((await drive('rock-steps', 'open')).done).toBe(true);
-    const high = await drive('rock-steps', 'high', false, 45);
+    const open = await drive('rock-steps', 'open');
+    expect(open.done).toBe(true);
+    // High range bounces up the steps on spinning wheels, rolling back off them, and is
+    // still short of the top after three times as long as low range took.
+    const high = await drive('rock-steps', 'high', false, 3 * open.time);
     expect(high.done).toBe(false);
-    expect(high.remaining).toBeGreaterThan(5);
+    expect(high.remaining).toBeGreaterThan(2);
   });
 
   it('the Log Step lifts one side at a time', async () => {
@@ -266,8 +269,8 @@ describe('Granite Spur', () => {
         for (let cz = 0; cz < p.nz; cz++)
           for (let cx = 0; cx < p.nx; cx++) {
             if (!p.cells[cz * p.nx + cx]) continue;
-            const x = p.ix0 - terrain.half + cx + 0.37,
-              z = p.iz0 - terrain.half + cz + 0.61;
+            const x = p.ix0 - terrain.halfX + cx + 0.37,
+              z = p.iz0 - terrain.halfZ + cz + 0.61;
             const h = terrain.heightAt(x, z);
             const hit = sim.physics.world.castRay(
               new R.Ray({ x, y: h + 3, z }, { x: 0, y: -1, z: 0 }),

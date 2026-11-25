@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { collectErrors, shot, waitReady } from './helpers';
+import { openJourney, collectErrors, lowGraphics, shot, waitReady } from './helpers';
 
 declare global {
   interface Window {
@@ -32,29 +32,32 @@ function discoveryCards(page: Page): Promise<string[]> {
   return page.evaluate(() => window.__discoveryCards ?? []);
 }
 
-test('M5: driving into a POI shows the toast, adds it to the map, and survives a reload', async ({
+test('M5: driving into a place shows the card and its history, adds it to the map, and settings survive a reload', async ({
   page,
 }) => {
   test.setTimeout(900_000);
   const errors = collectErrors(page);
   await recordDiscoveryCards(page);
-  await page.goto('/');
+  await lowGraphics(page);
+  await page.goto('/?surprises=off&track=reopened');
+  await openJourney(page);
   await waitReady(page);
-  // Simulate up to a second per frame: the software renderer takes seconds per frame.
-  await page.evaluate(() => window.__game!.setCatchUp(true));
-  // Spawning at River Flat Camp discovers it.
-  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('River Flat Camp');
+  // Starting at Daintree Village discovers it.
+  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('Daintree Village');
   await shot(page, 'M5', 'hud-and-first-discovery');
 
-  // Drive into the Gravel Ford's radius.
-  await page.evaluate(() => window.__game!.teleport(-212, 228, 320));
-  expect(await page.evaluate(() => window.__game!.discovered())).not.toContain('gravel-ford');
+  // Drive down to the Daintree River crossing, from the road just north of the orientation bog.
+  await page.evaluate(() => window.__game!.teleport(-51.8, 2305.5, 65));
+  expect(await page.evaluate(() => window.__game!.discovered())).not.toContain('creek-ford');
   await page.evaluate(() => window.__game!.setInput({ throttle: 0.7 }));
   await expect
     .poll(() => page.evaluate(() => window.__game!.discovered()), { timeout: 300_000 })
-    .toContain('gravel-ford');
+    .toContain('creek-ford');
   await page.evaluate(() => window.__game!.setInput({ brake: 1 }));
-  expect(await discoveryCards(page)).toContain('Gravel Ford');
+  expect(await discoveryCards(page)).toContain('Daintree River crossing');
+  await expect
+    .poll(() => page.evaluate(() => window.__game!.historyShown()))
+    .toContain('Daintree River crossing');
   await shot(page, 'M5', 'discovery-toast');
   await page.evaluate(() => window.__game!.setInput(null));
 
@@ -81,18 +84,18 @@ test('M5: driving into a POI shows the toast, adds it to the map, and survives a
   await page.locator('[data-act="back"]').click();
   await page.locator('[data-act="resume"]').click();
   expect(await page.evaluate(() => window.__game!.ui().paused)).toBe(false);
-  // The speed in the status strip follows the units setting.
-  await expect(page.locator('.status-speed-value')).toBeVisible();
-  await expect(page.locator('.status-speed-value')).toContainText('mph');
+  // The speedometer follows the units setting.
+  await expect(page.locator('.inst-cluster')).toBeVisible();
+  await expect(page.locator('.inst-cluster')).toContainText('mph');
 
   // Tool menu.
-  await page.evaluate(() => window.__game!.teleport(-188, 225, 315));
+  await page.evaluate(() => window.__game!.teleport(-90, 2560, 27));
   await page.waitForTimeout(1000);
   await page.keyboard.down('KeyQ');
   await expect.poll(() => page.evaluate(() => window.__game!.ui().toolMenu)).toBe(true);
   await page.mouse.move(640, 360);
-  await page.locator('.tool-option', { hasText: 'Place planks' }).hover();
-  await expect(page.locator('.tool-option.selected')).toHaveText('Place planks');
+  await page.getByRole('button', { name: 'Place planks', exact: true }).hover();
+  await expect(page.locator('.tool-option.selected')).toHaveAttribute('aria-label', 'Place planks');
   await shot(page, 'M5', 'tool-menu');
   await page.keyboard.up('KeyQ');
   await expect.poll(() => page.evaluate(() => window.__game!.ui().mode)).toBe('plankPlace');
@@ -101,13 +104,12 @@ test('M5: driving into a POI shows the toast, adds it to the map, and survives a
   await page.keyboard.press('Escape');
   await expect.poll(() => page.evaluate(() => window.__game!.ui().mode)).toBe('drive');
 
-  // Reload: discoveries and settings are kept.
+  // Reload: settings are kept, and the run carries on from its last camp.
   await page.reload();
+  await openJourney(page);
   await waitReady(page);
-  const disc = await page.evaluate(() => window.__game!.discovered());
-  expect(disc).toContain('gravel-ford');
-  expect(disc).toContain('river-flat-camp');
-  await expect(page.locator('.status-speed-value')).toContainText('mph');
+  expect(await page.evaluate(() => window.__game!.episode())).toMatchObject({ camp: 'ironbark-camp' });
+  await expect(page.locator('.inst-cluster')).toContainText('mph');
   expect(errors).toEqual([]);
 });
 
@@ -122,15 +124,13 @@ test('M5: with storage blocked the game still runs', async ({ page }) => {
     });
   });
   await recordDiscoveryCards(page);
-  await page.goto('/');
+  await page.goto('/?surprises=off&track=reopened');
+  await openJourney(page);
   await waitReady(page);
-  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('River Flat Camp');
+  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('Daintree Village');
   const t0 = await page.evaluate(() => window.__game!.simTime());
   await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
-  // Poll rather than wait a fixed time: the software renderer can take longer than 3 s per frame.
-  await expect
-    .poll(() => page.evaluate(() => window.__game!.simTime()), { timeout: 60_000 })
-    .toBeGreaterThan(t0);
+  await expect.poll(() => page.evaluate(() => window.__game!.simTime())).toBeGreaterThan(t0 + 1);
   await shot(page, 'M5', 'storage-blocked-still-running');
   expect(errors).toEqual([]);
 });

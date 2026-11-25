@@ -1,6 +1,6 @@
 /**
  * Dev helper: render a top-down preview of the generated map to a PNG.
- * Usage: npx vite-node scripts/map-preview.ts [out.png] [scale] [high-country|ironbark-park]
+ * Usage: npx vite-node scripts/map-preview.ts [out.png] [scale] [map id]
  */
 import { writeFileSync } from 'node:fs';
 import { isMapId, maps } from '../src/data/maps';
@@ -11,7 +11,7 @@ import { encodePng } from './png';
 
 const out = process.argv[2] ?? 'map-preview.png';
 const scale = Number(process.argv[3] ?? 1);
-const mapId = process.argv[4] ?? 'high-country';
+const mapId = process.argv[4] ?? 'ironbark';
 if (!isMapId(mapId)) throw new Error(`Unknown map ${mapId}`);
 const map = maps[mapId].def;
 const t0 = performance.now();
@@ -35,21 +35,25 @@ const tintCols: Record<number, number[]> = {
   [GroundTint.CreekBed]: hex(palette.rockDark),
   [GroundTint.ForestFloor]: hex(palette.foliageDark),
   [GroundTint.FaintTrack]: hex('#BE8A55'),
+  [GroundTint.Concrete]: hex('#C4BFB4'),
+  [GroundTint.BlackSoil]: hex('#4A4A36'),
+  [GroundTint.Pothole]: hex('#3A2418'),
+  [GroundTint.Sand]: hex(palette.sand),
 };
-const size = terrain.size;
-const W = Math.floor(size / scale);
-const img = new Uint8Array(W * W * 3);
-const res = terrain.res;
+const W = Math.floor(terrain.sizeX / scale);
+const L = Math.floor(terrain.sizeZ / scale);
+const img = new Uint8Array(W * L * 3);
+const res = terrain.resX;
 let minH = Infinity;
 let maxH = -Infinity;
 for (const h of terrain.heights) {
   minH = Math.min(minH, h);
   maxH = Math.max(maxH, h);
 }
-for (let py = 0; py < W; py++) {
+for (let py = 0; py < L; py++) {
   for (let px = 0; px < W; px++) {
     const ix = Math.min(res - 2, Math.floor(px * scale));
-    const iz = Math.min(res - 2, Math.floor(py * scale));
+    const iz = Math.min(terrain.resZ - 2, Math.floor(py * scale));
     const i = iz * res + ix;
     const h = terrain.heights;
     const dx = h[i + 1] - h[i];
@@ -77,23 +81,25 @@ for (let py = 0; py < W; py++) {
   }
 }
 const mark = (x: number, z: number, col: number[], r = 3) => {
-  const cx = Math.floor((x + size / 2) / scale);
-  const cz = Math.floor((z + size / 2) / scale);
+  const cx = Math.floor((x + terrain.halfX) / scale);
+  const cz = Math.floor((z + terrain.halfZ) / scale);
   for (let dz = -r; dz <= r; dz++)
     for (let dx = -r; dx <= r; dx++) {
       const px = cx + dx;
       const py = cz + dz;
-      if (px < 0 || py < 0 || px >= W || py >= W) continue;
+      if (px < 0 || py < 0 || px >= W || py >= L) continue;
       const o = (py * W + px) * 3;
       img[o] = col[0];
       img[o + 1] = col[1];
       img[o + 2] = col[2];
     }
 };
+for (const t of features.tracks)
+  for (let k = 0; k < t.poly.count; k += 2) mark(t.poly.xs[k], t.poly.zs[k], [250, 230, 60], 0);
 for (const p of map.pois) mark(p.x, p.z, p.kind === 'campsite' ? [255, 255, 255] : [200, 30, 30], 4);
 for (const b of features.boxes) mark(b.x, b.z, [40, 40, 40], 0);
-writeFileSync(out, encodePng(W, W, img));
-console.log(`wrote ${out} (${W}x${W}); height range ${minH.toFixed(1)}..${maxH.toFixed(1)}`);
+writeFileSync(out, encodePng(W, L, img));
+console.log(`wrote ${out} (${W}x${L}); height range ${minH.toFixed(1)}..${maxH.toFixed(1)}`);
 for (const p of map.pois)
   console.log(
     `${p.id.padEnd(18)} h=${terrain.heightAt(p.x, p.z).toFixed(1).padStart(6)} slope=${terrain.slopeDegAt(p.x, p.z).toFixed(1)}`,

@@ -1,3 +1,4 @@
+import { saveData } from './helpers/saves';
 import { describe, expect, it } from 'vitest';
 import { DoubleSide, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from 'three';
 import { lateAfternoon } from '../src/data/environment';
@@ -7,7 +8,7 @@ import { DIAL_START, DIAL_SWEEP } from '../src/render/vehicleInstruments';
 import { VehicleModel } from '../src/render/vehicleModel';
 import { emptyInput } from '../src/sim/input/vehicleInput';
 import { loadRapier } from '../src/sim/physics';
-import { defaultSettings, loadSave, writeSave, type KeyValueStore } from '../src/sim/save/save';
+import { loadSave, writeSave, type KeyValueStore } from '../src/sim/save/save';
 import { Simulation } from '../src/sim/sim';
 import { coupledRpm } from '../src/sim/vehicle/drivetrain';
 import { createCondition } from '../src/sim/vehicle/condition';
@@ -77,6 +78,22 @@ describe('Land Rover 110 Perentie', () => {
     sim.physics.free();
   });
 
+  it('drives off after a swap away from camp and a return there before the next step', async () => {
+    // Changing vehicle from the pause menu does both while the game is paused.
+    const world = testWorld();
+    const sim = new Simulation(await loadRapier(), world, lateAfternoon);
+    sim.addVehicle('p', sim.campsitePose(world.map.spawnCampsite));
+    const inputs = new Map([['p', { ...emptyInput(), throttle: 0.6 }]]);
+    for (let i = 0; i < 240; i++) sim.step(inputs, 1 / 60);
+    sim.replaceVehicle('p', t);
+    sim.returnToCampsite('p', world.map.spawnCampsite);
+    const v = sim.vehicles.get('p')!;
+    const camp = { ...v.position };
+    for (let i = 0; i < 180; i++) sim.step(inputs, 1 / 60);
+    expect(Math.hypot(v.position.x - camp.x, v.position.z - camp.z)).toBeGreaterThan(3);
+    sim.physics.free();
+  });
+
   it('draws an open wheel well, coil springs, its own dials, and takes dirt and dents', async () => {
     const model = new VehicleModel(t);
     expect(model.root.name).toBe('land-rover-110-perentie');
@@ -111,13 +128,12 @@ describe('Land Rover 110 Perentie', () => {
   it('is remembered in the save, and older or broken saves start in the short-wheelbase 4WD', () => {
     const data = new Map<string, string>();
     const s: KeyValueStore = { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => void data.set(k, v) };
-    const exploration = { discovered: [], lastCampsite: 'river-flat-camp' };
-    writeSave({ version: 1, exploration, settings: defaultSettings, vehicle: 'perentie' }, s);
+    writeSave(saveData({ vehicle: 'perentie' }), s);
     expect(loadSave(s)!.vehicle).toBe('perentie');
-    writeSave({ version: 1, exploration, settings: defaultSettings }, s);
+    writeSave(saveData(), s);
     expect(loadSave(s)!.vehicle).toBe('shortie');
     const [key] = [...data.keys()];
-    data.set(key, JSON.stringify({ version: 1, exploration, settings: {}, vehicle: 'tank' }));
+    data.set(key, JSON.stringify({ version: 1, settings: {}, vehicle: 'tank' }));
     expect(loadSave(s)!.vehicle).toBe('shortie');
   });
 });

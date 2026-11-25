@@ -112,6 +112,11 @@ export class Rain {
     u.shelter.value.multiplyMatrices(this.offset, this.inverse);
   }
 
+  /** How hard it's raining (0..1): the share of the drops shown. */
+  setAmount(amount: number): void {
+    this.material.uniforms.amount.value = amount;
+  }
+
   dispose(): void {
     this.mesh.geometry.dispose();
     this.material.dispose();

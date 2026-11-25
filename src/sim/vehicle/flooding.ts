@@ -6,17 +6,19 @@ export type FloodEvent = 'stalled' | 'restarted' | null;
 /**
  * Engine flooding (SPEC §6.4). The timer counts up while the air intake is under water
  * and slowly back down when clear. At 10 s the engine stalls; it restarts on throttle
- * once the intake has been clear for 20 s.
+ * once the intake has been clear for 20 s. `rate` speeds the timer up while a bow wave
+ * throws water into the intake.
  */
 export function updateFlood(
   f: FloodState,
   submerged: boolean,
   throttle: number,
   dt: number,
+  rate = 1,
   t = floodTuning,
 ): FloodEvent {
   f.submerged = submerged;
-  if (submerged) f.timer += dt;
+  if (submerged) f.timer += dt * rate;
   else f.timer = Math.max(0, f.timer - dt * t.recoverRate);
   if (!f.stalled) {
     if (f.timer >= t.stallAt) {

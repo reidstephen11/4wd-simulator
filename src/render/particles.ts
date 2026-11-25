@@ -44,6 +44,12 @@ class Pool {
   private readonly p = new THREE.Vector3();
   private readonly c = new THREE.Color();
 
+  /** The per-particle arrays, three and one numbers a particle, for `kill` to move. */
+  private readonly vec3s: Float32Array[];
+  private readonly scalars: Float32Array[];
+  /** Instances uploaded last frame: an empty pool uploads nothing once it has said so. */
+  private uploaded = -1;
+
   constructor(o: PoolOptions) {
     const n = o.max;
     this.mesh = new THREE.InstancedMesh(o.geometry, o.material, n);
@@ -62,6 +68,8 @@ class Pool {
     this.color = new Float32Array(n * 3);
     this.color1 = new Float32Array(n * 3);
     this.floor = new Float32Array(n);
+    this.vec3s = [this.pos, this.vel, this.color, this.color1];
+    this.scalars = [this.age, this.life, this.size, this.size1, this.spin, this.floor];
     if (o.opacity) {
       this.opacityAttr = new THREE.InstancedBufferAttribute(new Float32Array(n), 1);
       this.opacityAttr.setUsage(THREE.DynamicDrawUsage);
@@ -115,11 +123,14 @@ class Pool {
   private kill(i: number): void {
     const j = --this.count;
     if (i === j) return;
-    const copy = (a: Float32Array, k: number) => {
-      for (let d = 0; d < k; d++) a[i * k + d] = a[j * k + d];
-    };
-    for (const a of [this.pos, this.vel, this.color, this.color1]) copy(a, 3);
-    for (const a of [this.age, this.life, this.size, this.size1, this.spin, this.floor]) copy(a, 1);
+    const i3 = i * 3;
+    const j3 = j * 3;
+    for (const a of this.vec3s) {
+      a[i3] = a[j3];
+      a[i3 + 1] = a[j3 + 1];
+      a[i3 + 2] = a[j3 + 2];
+    }
+    for (const a of this.scalars) a[i] = a[j];
   }
 
   /**
@@ -175,9 +186,12 @@ class Pool {
       if (this.opacityAttr && fade) this.opacityAttr.setX(i, fade(t));
     }
     this.mesh.count = this.count;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
-    if (this.opacityAttr) this.opacityAttr.needsUpdate = true;
+    // Upload only the live particles (v1.49); nothing at all while the pool stays empty.
+    if (this.count === 0 && this.uploaded === 0) return;
+    this.uploaded = this.count;
+    upload(this.mesh.instanceMatrix, this.count, 16);
+    if (this.mesh.instanceColor) upload(this.mesh.instanceColor, this.count, 3);
+    if (this.opacityAttr) upload(this.opacityAttr, this.count, 1);
   }
 
   clear(): void {
@@ -185,6 +199,20 @@ class Pool {
     this.mesh.count = 0;
   }
 }
+
+/** Mark the first `count` items of an instance attribute for upload. */
+function upload(attr: THREE.BufferAttribute, count: number, size: number): void {
+  attr.clearUpdateRanges();
+  if (count > 0) attr.addUpdateRange(0, count * size);
+  attr.needsUpdate = true;
+}
+
+// Each pool's size and fade over its particles' lives (0..1), made once rather than every frame.
+const dustShape = (t: number) => Math.min(1, t * 5) * (1 - t * t * 0.5);
+const dustFade = (t: number) => P.dust.opacity * Math.min(1, t * 6) * (1 - t) * (1 - t);
+const chunkShape = (t: number) => 1 - t * t;
+const wakeShape = () => 1;
+const wakeFade = (t: number) => P.wake.opacity * Math.min(1, t * 8) * (1 - t) ** 1.5;
 
 /**
  * Lambert material whose instances carry their own opacity. A `soft` one also fades
@@ -233,7 +261,11 @@ export class Particles {
   /** Fractional particles carried between frames, per wheel and effect. */
   private readonly acc = new Float32Array(4 * 4 + 4);
   private wetness = 0;
+  /** A storm's creek rise (m), and each sample's share of it (features.creekRise). */
+  creekRise = 0;
+  riseShare: Float32Array | null = null;
   private readonly cDust = mixPal('dirtTrack', 'barkPale', 0.62);
+  private readonly cSandDust = mixPal('sand', 'barkPale', 0.35);
   private readonly cGravelDust = mixPal('rock', 'barkPale', 0.55);
   private readonly cGrassDust = mixPal('grassDry', 'barkPale', 0.5);
   private readonly cMud = pal('mud').clone();
@@ -287,6 +319,13 @@ export class Particles {
     this.rateScale = q.particles;
   }
 
+  /** The water surface at (x, z) as the vehicle meets it: risen creeks included. */
+  private waterAt(x: number, z: number, offset: number): number | null {
+    const w = this.terrain.waterSurfaceAt(x, z, offset);
+    if (w === null || this.creekRise === 0 || !this.riseShare) return w;
+    return w + this.creekRise * this.riseShare[this.terrain.index(x, z)];
+  }
+
   setWetness(w: number): void {
     this.wetness = w;
   }
@@ -302,25 +341,9 @@ export class Particles {
     if (dt <= 0) return;
     dt = Math.min(dt, 0.1);
     if (this.rateScale > 0) this.emit(v, dt);
-    this.dust.update(
-      dt,
-      -P.dust.rise,
-      P.dust.drag,
-      (t) => Math.min(1, t * 5) * (1 - t * t * 0.5),
-      (t) => P.dust.opacity * Math.min(1, t * 6) * (1 - t) * (1 - t),
-      false,
-      false,
-    );
-    this.chunks.update(dt, P.gravity, 0.4, (t) => 1 - t * t, null, false, true);
-    this.wakes.update(
-      dt,
-      0,
-      0,
-      () => 1,
-      (t) => P.wake.opacity * Math.min(1, t * 8) * (1 - t) ** 1.5,
-      true,
-      false,
-    );
+    this.dust.update(dt, -P.dust.rise, P.dust.drag, dustShape, dustFade, false, false);
+    this.chunks.update(dt, P.gravity, 0.4, chunkShape, null, false, true);
+    this.wakes.update(dt, 0, 0, wakeShape, wakeFade, true, false);
   }
 
   private emit(v: Vehicle, dt: number): void {
@@ -367,7 +390,12 @@ export class Particles {
       }
       if (!w.contact) continue;
 
-      if (w.surface === SurfaceId.Mud) {
+      // Wet clay is thrown up in clods like mud.
+      if (
+        w.surface === SurfaceId.Mud ||
+        w.surface === SurfaceId.BlackSoil ||
+        (w.surface === SurfaceId.Clay && this.wetness > 0.3)
+      ) {
         const m = P.mud;
         const rate = m.spinRate * w.spin + m.speedRate * Math.min(1, speed / 6);
         const n = this.count(i, 1, rate * S * dt);
@@ -393,7 +421,7 @@ export class Particles {
 
       const d = P.dust;
       const scale =
-        w.surface === SurfaceId.Dirt
+        w.surface === SurfaceId.Dirt || w.surface === SurfaceId.Clay || w.surface === SurfaceId.Sand
           ? d.surfaceScale.dirt
           : w.surface === SurfaceId.Gravel
             ? d.surfaceScale.gravel
@@ -410,7 +438,9 @@ export class Particles {
             ? this.cGravelDust
             : w.surface === SurfaceId.Grass
               ? this.cGrassDust
-              : this.cDust;
+              : w.surface === SurfaceId.Sand
+                ? this.cSandDust
+                : this.cDust;
         for (let j = 0; j < n; j++) {
           this.tmpColor.copy(col).multiplyScalar(0.94 + Math.random() * 0.12);
           this.dust.spawn(
@@ -434,7 +464,7 @@ export class Particles {
     if (maxWater > W.minDepth && speed > W.fromSpeed) {
       const k = Math.min(1, speed / 4);
       v.localToWorld(0, 0, -2.0, this.bow);
-      const surface = this.terrain.waterSurfaceAt(this.bow.x, this.bow.z, this.waterLevelOffset);
+      const surface = this.waterAt(this.bow.x, this.bow.z, this.waterLevelOffset);
       if (surface !== null) {
         for (let n = this.count(4, 0, W.rate * k * Math.min(1, S) * dt); n > 0; n--)
           this.wakes.spawn(
@@ -453,7 +483,7 @@ export class Particles {
       }
       for (const i of [2, 3]) {
         const cp = v.wheels[i].contactPoint;
-        const s = this.terrain.waterSurfaceAt(cp.x, cp.z, this.waterLevelOffset);
+        const s = this.waterAt(cp.x, cp.z, this.waterLevelOffset);
         if (s === null) continue;
         for (let n = this.count(4, i - 1, W.rearRate * k * Math.min(1, S) * dt); n > 0; n--)
           this.wakes.spawn(

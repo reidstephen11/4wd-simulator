@@ -12,6 +12,8 @@ export interface Scene {
   time: number;
   /** Called after every physics step (e.g. to apply damage, as the simulation does). */
   afterStep?: (dt: number) => void;
+  /** Called just before every physics step (e.g. to step a trailer). */
+  beforeStep?: (dt: number) => void;
 }
 
 /** A static box as ground: `pitchDeg` tilts it so -z goes uphill, `rollDeg` tilts it sideways (+x goes down). */
@@ -72,6 +74,7 @@ export async function makeScene(opts: {
         const partial = typeof input === 'function' ? input(scene.time) : input;
         const inp = { ...emptyInput(), ...partial };
         vehicle.step(inp, PHYSICS_DT);
+        scene.beforeStep?.(PHYSICS_DT);
         physics.step();
         vehicle.postStep(PHYSICS_DT);
         scene.afterStep?.(PHYSICS_DT);

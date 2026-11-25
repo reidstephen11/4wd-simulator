@@ -7,7 +7,7 @@
  * drives the whole suggested loop with one car and prints each leg, with bins for the
  * leg named by the third argument.
  */
-import { challengeLoopRoute, challengeTrails } from '../src/data/challenges';
+import { challengeLoopRoute, challengeTrails } from '../tests/fixtures/maps/challenges';
 import { lateAfternoon } from '../src/data/environment';
 import { Autopilot } from '../src/sim/input/autopilot';
 import { emptyInput } from '../src/sim/input/vehicleInput';

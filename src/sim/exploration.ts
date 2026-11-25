@@ -24,6 +24,12 @@ export class Exploration {
       : (pois.find((p) => p.kind === 'campsite')?.id ?? '');
   }
 
+  /** Back to what had been found by a camp (a restart from it): later finds are new again. */
+  reset(discovered: Iterable<string>): void {
+    this.discovered.clear();
+    for (const id of discovered) if (this.pois.some((p) => p.id === id)) this.discovered.add(id);
+  }
+
   /** Check a position; returns newly discovered POIs and a campsite id if one was entered. */
   check(x: number, z: number): { discovered: PoiDef[]; campsite: string | null } {
     const found: PoiDef[] = [];

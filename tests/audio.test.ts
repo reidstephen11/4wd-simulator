@@ -9,6 +9,8 @@ import {
   squeakRate,
   proximityLevel,
   thumpLevel,
+  trailerBumpLevel,
+  trailerRattleLevel,
   tyreWeights,
   windLevel,
   winchPitch,
@@ -101,6 +103,16 @@ describe('audio mixing (M6)', () => {
     expect(thumpLevel(0.8)).toBe(0);
     expect(thumpLevel(2)).toBeGreaterThan(0);
     expect(thumpLevel(4)).toBeGreaterThan(thumpLevel(2));
+  });
+
+  it('a trailer rattles on rough ground at speed, less with drums in it, and bangs on hard hits', () => {
+    expect(trailerRattleLevel(0.8, 0, 0)).toBe(0);
+    expect(trailerRattleLevel(0, 8, 0)).toBe(0);
+    expect(trailerRattleLevel(0.6, 8, 0)).toBeGreaterThan(trailerRattleLevel(0.1, 8, 0));
+    expect(trailerRattleLevel(0.6, 8, 2)).toBeLessThan(trailerRattleLevel(0.6, 8, 0));
+    expect(trailerRattleLevel(5, 20, 0)).toBeLessThanOrEqual(1);
+    expect(trailerBumpLevel(0.8)).toBe(0);
+    expect(trailerBumpLevel(3)).toBeGreaterThan(trailerBumpLevel(1.5));
   });
 
   it('winch whine drops in pitch under load', () => {

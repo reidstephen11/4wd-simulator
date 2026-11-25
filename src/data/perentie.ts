@@ -1,8 +1,8 @@
 import type { VehicleTuning } from './vehicle';
 
 /**
- * Land Rover 110 "Perentie" General Service soft top, as Les Hiddins drove in the first
- * Bush Tucker Man series: 110 in (2.794 m) wheelbase, 1.486 m track, 7.50R16 tyres,
+ * Land Rover 110 "Perentie" General Service soft top, as the Australian Army ran across
+ * the north: 110 in (2.794 m) wheelbase, 1.486 m track, 7.50R16 tyres,
  * coil springs, the Australian Army's 3.9 L Isuzu 4BD1 diesel, the LT95A four-speed
  * gearbox with its two-speed transfer case and 3.54 axles. Same local frame as the
  * short-wheelbase 4WD: x right, y up, z back, origin 0.12 m above the parked hubs.
@@ -14,6 +14,7 @@ const MOUNT_Y = 0.32;
 
 export const perentieTuning: VehicleTuning = {
   id: 'perentie',
+  transfer: 'fullTime',
   name: 'Land Rover 110 Perentie',
   // About 2.15 t with crew and gear; the diesel and bull bar put a little more on the front.
   // The centre of mass is about 0.78 m off the ground: it rolls over in a full-lock turn
@@ -86,10 +87,13 @@ export const perentieTuning: VehicleTuning = {
     friction: { base: 18, perRpm: 0.012, pumpingPerRpm: 0.006 },
     inertia: 0.45,
     engineBrake: 140,
+    // Army EMEI G 100: 65 L for the 4x4 GS. Sources: docs/FUEL.md.
+    fuel: { tankLitres: 65, idleLitresPerHour: 0.8, efficiency: 0.38, energyMJPerLitre: 38.6 },
   },
-  // The game drives the gears itself; this coupling stands in for the clutch.
+  // Automatic mode's coupling: the game changes gear itself and this stands in for the clutch.
   converter: { capacity: 90, stallRatio: 1.25, couplingPoint: 0.8 },
   gearbox: {
+    kind: 'manual',
     ratios: [4.069, 2.448, 1.505, 1.0],
     reverse: 3.664,
     finalDrive: 3.54,
@@ -138,6 +142,8 @@ export const perentieTuning: VehicleTuning = {
   // Air cleaner intake behind the left wing's side vent.
   intakeHeight: 0.95,
   intake: { x: -0.66, y: 0.95 - R - 0.12, z: -1.02 },
-  winchMount: { x: 0, y: 0.06, z: -2.25 },
+  winchMount: { x: 0, y: 0.06, z: -2.13 },
   towPoint: { x: 0, y: 0.0, z: 2.4 },
+  // The pintle hook drawn under the rear crossmember (src/render/perentieBody.ts).
+  hitch: { x: 0, y: -0.04, z: 2.5 },
 };

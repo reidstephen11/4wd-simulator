@@ -14,6 +14,8 @@ export interface Anchor {
   body?: RAPIER.RigidBody;
   local?: Vec3;
   label: string;
+  /** Stranded vehicle this rated recovery point belongs to. */
+  recoveryId?: string;
 }
 
 /** Current world point of an anchor. */
