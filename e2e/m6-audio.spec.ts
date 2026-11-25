@@ -28,7 +28,7 @@ test('M6: audio starts with the Drive button, follows the car, and the volume se
   expect(idle.engineHz).toBeLessThan(50);
 
   // Driving: engine pitch rises, tyre noise follows the surface.
-  await page.evaluate(() => window.__game!.teleport(-62, 2312, 60));
+  await page.evaluate(() => window.__game!.teleport(-171, -30, 0));
   await page.evaluate(() => window.__game!.setInput({ throttle: 0.7 }));
   await expect
     .poll(async () => (await page.evaluate(() => window.__game!.vehicle())).speed, { timeout: 120_000 })
@@ -38,10 +38,9 @@ test('M6: audio starts with the Drive button, follows the car, and the volume se
   expect(Math.max(0, ...Object.values(driving.tyres))).toBeGreaterThan(0.1);
   await shot(page, 'M6', 'driving-with-audio-readout');
 
-  // Near the river the water ambience comes in. Parked at the water's edge: driven into the
-  // river, the current would carry the car off and end the episode.
+  // Near the creek the water ambience comes in: parked on the ford's west ramp, at the water's edge.
   await page.evaluate(() => window.__game!.setInput({ brake: 1 }));
-  await page.evaluate(() => window.__game!.teleport(2, 2272, 140));
+  await page.evaluate(() => window.__game!.teleport(-139, 41, 90));
   await expect.poll(async () => (await audio(page)).water, { timeout: 180_000 }).toBeGreaterThan(0.2);
   await shot(page, 'M6', 'river-water-audio');
 

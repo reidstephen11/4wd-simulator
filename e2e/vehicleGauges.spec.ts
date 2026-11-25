@@ -43,7 +43,7 @@ test('vehicle instruments show fuel, temperature, pressure setting and the damag
 
   // Away from camp, a torn front-left tyre must only mark that corner.
   await page.evaluate(() => {
-    window.__game!.teleport(-2, 2130, 40);
+    window.__game!.teleport(-171, -30, 0);
     window.__game!.setHealth({ tyres: [0.6, 1, 1, 1] });
   });
   const frontLeft = instruments.getByRole('meter', { name: 'Front left tyre', includeHidden: true });
