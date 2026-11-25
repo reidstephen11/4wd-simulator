@@ -5,6 +5,9 @@ test('Expedition tools fit, group related actions, and reject disabled choices',
   const errors = collectErrors(page);
   await page.goto('/?tool-menu-preview');
   await expect(page.locator('.tool-option')).toHaveCount(12);
+  // The labels are measured below: wait for the web font, or a run that gets here before it
+  // has loaded measures the wider fallback font and finds labels overlapping (v0.22).
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
   for (const cargo of [false, true]) {
     if (cargo) await page.locator('[data-preview-cargo]').click();
     await expect(page.locator('.tool-option')).toHaveCount(cargo ? 16 : 12);

@@ -17,7 +17,7 @@ async function drivingScreen(page: Page): Promise<void> {
     g.setInput({ handbrake: true });
   });
   await waitSim(page, 1);
-  await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
+  await page.evaluate(() => window.__game!.showNote('knoll-side-slope'));
   await expect(page.locator('.history-card')).toBeVisible();
   await expect(page.locator('.prompt').first()).toBeVisible();
 }
@@ -91,7 +91,7 @@ test.describe('phone held upright', () => {
     expect(small).toEqual([]);
     // The prompt and the note stay in the band under the dials, above the road and the car.
     // (A note folds away after a few seconds on a phone: show it again to measure it.)
-    await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
+    await page.evaluate(() => window.__game!.showNote('knoll-side-slope'));
     await expect(page.locator('.history-card')).toBeVisible();
     for (const sel of ['.prompt', '.history-card']) {
       const box = (await page.locator(sel).first().boundingBox())!;
@@ -163,7 +163,7 @@ test.describe('phone held upright, every HUD style and UI size', () => {
     await page.goto('/?surprises=off&track=reopened');
     await waitReady(page);
     // At the start the road name and its hint show under the dials (v1.79 screenshot).
-    await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
+    await page.evaluate(() => window.__game!.showNote('knoll-side-slope'));
     await expect(page.locator('.history-card')).toBeVisible();
     await expect(page.locator('.hud-stack .course-hint')).toBeVisible();
     const styles = ['dash', 'edge', 'kit'] as const;
@@ -180,7 +180,7 @@ test.describe('phone held upright, every HUD style and UI size', () => {
             { style, ui },
           );
           // The note closes itself after a few seconds: open it again for each check.
-          await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
+          await page.evaluate(() => window.__game!.showNote('knoll-side-slope'));
           await waitSim(page, 0.2);
           await expect(page.locator('.history-card')).toBeVisible();
           const where = `${style} ${size.width}×${size.height} ui ${ui}`;

@@ -228,6 +228,11 @@ const gardenStones: TrailStoneDef[] = [
   ...banks(12, 92, 4, 3.6, 1.4, 0.4),
 ];
 
+/**
+ * Route hints here are kept to one line on a television (about 55 characters): a longer one
+ * stands into the middle of the picture there and pushes a note down the screen on a phone.
+ * The notes in ironbark.ts carry the detail.
+ */
 const dirt = {
   width: 4,
   shoulder: 3,
@@ -246,7 +251,7 @@ export const creekTracks: TrackDef[] = [
     name: 'West bank track',
     points: westBank,
     ...dirt,
-    routeHint: 'Along the creek’s far bank: the camp, the bog hole and the rock garden are off this track',
+    routeHint: 'The camp, bog hole and rock garden are off this track',
   },
   {
     id: 'camp-spur',
@@ -254,8 +259,7 @@ export const creekTracks: TrackDef[] = [
     points: campSpur,
     ...dirt,
     smooth: 5,
-    routeHint:
-      'The ford is straight ahead. The bog hole is to the right along the bank track, the rock garden to the left',
+    routeHint: 'Ford ahead; bog hole to the right, rock garden left',
   },
   {
     id: 'paddock-spur',
@@ -263,7 +267,7 @@ export const creekTracks: TrackDef[] = [
     points: paddockSpur,
     ...dirt,
     smooth: 5,
-    routeHint: 'Down to the Knoll track: the bog trench is along it to the right',
+    routeHint: 'Down to the Knoll track; bog trench to the right',
   },
   {
     id: 'creek-ford',
@@ -280,8 +284,7 @@ export const creekTracks: TrackDef[] = [
     points: deepCrossing,
     ...dirt,
     smooth: 5,
-    routeHint:
-      'Over a metre deep on the straight line: crawl, or the bow wave floods the engine. The shallow bar is just downstream, to the left',
+    routeHint: 'Deep: crawl it, or take the bar downstream (left)',
   },
   {
     id: 'creek-chute',
@@ -303,7 +306,7 @@ export const creekTracks: TrackDef[] = [
       boulder(chuteExitLip + 1.5, 3, 0.8, 1.4),
       boulder(chuteLip - 1, -2.9, 0.7, 1.3),
     ],
-    routeHint: 'Low range, both lockers, wheels straddling the rut. Crawl down; crawl out, or winch',
+    routeHint: 'Low range, both lockers; straddle the rut',
   },
   {
     id: 'bog-hole',
@@ -313,7 +316,7 @@ export const creekTracks: TrackDef[] = [
     width: 3.6,
     smooth: 5,
     rough: undefined,
-    routeHint: 'Deep sticky mud. Lock both, pick a line and keep moving; the trees are there to winch from',
+    routeHint: 'Lock both and keep moving; winch from the trees',
   },
   {
     id: 'rock-garden',
@@ -328,7 +331,7 @@ export const creekTracks: TrackDef[] = [
     camber: 0.3,
     pinMode: 'follow',
     stones: gardenStones,
-    routeHint: 'Low range, lockers and crawl. Put a wheel on each rock rather than straddling it',
+    routeHint: 'Low range, lockers, crawl: a wheel on each rock',
   },
 ];
 

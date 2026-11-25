@@ -74,6 +74,11 @@ describe('Ironbark Creek: the level', () => {
     }
   });
 
+  it("keeps the creek side's route hints to one line on a television", () => {
+    for (const track of ironbarkMap.tracks.filter((tr) => !tr.id.startsWith('knoll-')))
+      if (track.routeHint) expect(track.routeHint.length, track.id).toBeLessThanOrEqual(55);
+  });
+
   it('has a camp on each side of the creek, on level ground inside the wall', () => {
     const camps = ironbarkMap.pois.filter((p) => p.kind === 'campsite');
     expect(camps.map((c) => c.id).sort()).toEqual(['ironbark-camp', 'top-paddock-camp']);
