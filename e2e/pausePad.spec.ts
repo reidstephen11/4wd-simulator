@@ -72,12 +72,15 @@ test('the pause menu on a television with a controller: rows, values, Back and s
   // Nothing of the driving screen shows over the card.
   await expect(page.locator('.inst-compass').first()).toBeHidden();
 
-  // Eight buttons, two abreast: Down goes down a row, Right goes across.
+  // Seven buttons, two abreast (the Trip journal makes eight once a note has been seen): Down
+  // goes down a row, Right goes across.
+  await expect(page.locator('[data-act="journal"]')).toHaveCount(0);
   await expect(focused(page)).toContainText('Resume');
   await press(page, Pad.Down);
-  await expect(focused(page)).toContainText('Trip journal');
-  await press(page, Pad.Right);
   await expect(focused(page)).toContainText('Restart from last camp');
+  await press(page, Pad.Right);
+  await expect(focused(page)).toContainText('Vehicle');
+  await press(page, Pad.Left);
   await press(page, Pad.Down);
   await expect(focused(page)).toHaveText('Settings');
   await press(page, Pad.A);

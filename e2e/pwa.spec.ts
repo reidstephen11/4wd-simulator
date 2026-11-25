@@ -16,10 +16,10 @@ test('the built site ships a Pages-scoped manifest and service worker', async ({
   const manifest = manifestRes.ok()
     ? await manifestRes.json()
     : await (await request.get('/manifest.webmanifest')).json();
-  expect(manifest.name).toBe('Over the Cape');
-  expect(manifest.short_name).toBe('Cape');
-  expect(manifest.start_url).toBe('/over-the-cape/');
-  expect(manifest.scope).toBe('/over-the-cape/');
+  expect(manifest.name).toBe('4WD Simulator');
+  expect(manifest.short_name).toBe('4WD Sim');
+  expect(manifest.start_url).toBe('/4wd-simulator/');
+  expect(manifest.scope).toBe('/4wd-simulator/');
   expect(manifest.display).toBe('standalone');
   expect(manifest.orientation).toBeUndefined();
   expect(manifest.theme_color).toBe('#54614B');
@@ -29,7 +29,7 @@ test('the built site ships a Pages-scoped manifest and service worker', async ({
   const sw = await request.get('/sw.js');
   expect(sw.ok()).toBe(true);
   const worker = await sw.text();
-  expect(worker).toContain('/over-the-cape/');
+  expect(worker).toContain('/4wd-simulator/');
   // A new build waits for the game to ask for it (v1.23) instead of taking over at once.
   expect(worker).toContain('SKIP_WAITING');
   expect(errors).toEqual([]);
