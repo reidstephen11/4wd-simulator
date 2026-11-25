@@ -61,9 +61,14 @@ describe('track edges at every terrain detail level (v1.74)', () => {
   // paint and 20% and 0.21 for the bank; the 4 m level 3.4% for the paint.
   const limits = [
     null,
-    { paint: 0.005, bank: 0.01, mean: 0.02 },
-    { paint: 0.015, bank: 0.03, mean: 0.04 },
-    { paint: 0.05, bank: 0.08, mean: 0.08 },
+    // On the CREB map these were 0.005/0.01/0.02, 0.015/0.03/0.04 and 0.05/0.08/0.08. Ironbark
+    // Creek's lines are tighter and cut steeper (hairpins 7 m across, the trench and the chute
+    // between walls at a batter over 1), which the coarser meshes follow less well: measured
+    // here (v0.22) 0.003/0.026/0.036, 0.029/0.039/0.049 and 0.081/0.085/0.096. The limits are
+    // those with a quarter to spare, so a change that draws the edges worse still fails.
+    { paint: 0.005, bank: 0.035, mean: 0.045 },
+    { paint: 0.04, bank: 0.05, mean: 0.06 },
+    { paint: 0.1, bank: 0.11, mean: 0.12 },
   ];
   for (const level of [1, 2, 3]) {
     it(`draws them where the 1 m mesh does at ${LEVELS[level][1]} m`, () => {
@@ -82,7 +87,8 @@ describe('track edges at every terrain detail level (v1.74)', () => {
         bankSum += bank;
       }
       const n = points.length;
-      expect(n).toBeGreaterThan(40000);
+      // (Over 40,000 on the 6 km CREB map; this one is a twelfth of its length.)
+      expect(n).toBeGreaterThan(15000);
       const limit = limits[level]!;
       expect(paintOff / n).toBeLessThan(limit.paint);
       expect(bankOff / n).toBeLessThan(limit.bank);
@@ -91,15 +97,23 @@ describe('track edges at every terrain detail level (v1.74)', () => {
     });
   }
 
+  /** The lines cut into the knoll or the creek's banks: the ones with clay banks beside them. */
+  const BANKED = [
+    'knoll-switchbacks',
+    'knoll-bog-trench',
+    'knoll-drop',
+    'knoll-steep-descent',
+    'creek-deep',
+    'creek-ford',
+  ];
+
   it('runs the edge of a clay bank smooth along the track at 1 m', () => {
     // Where the bank's cover crosses a half, every 1 m along each side of the Paddock Road
     // (the stretch the owner saw it on, in Over the Cape) and the CREB Track there, here the
     // knoll loop and the west bank track: how far that moves out or in
     // from one metre to the next: 0.16 m before v1.74, 0.11 m since.
     const jumps: number[] = [];
-    for (const track of world.features.tracks.filter((tr) =>
-      ['knoll-loop', 'west-bank'].includes(tr.def.id),
-    )) {
+    for (const track of world.features.tracks.filter((tr) => BANKED.includes(tr.def.id))) {
       const { xs, zs, count } = track.poly;
       const hw = track.def.width / 2;
       for (const side of [-1, 1]) {
@@ -124,6 +138,7 @@ describe('track edges at every terrain detail level (v1.74)', () => {
     }
     expect(jumps.length).toBeGreaterThan(500);
     const mean = jumps.reduce((a, b) => a + b, 0) / jumps.length;
-    expect(mean).toBeLessThan(0.13);
+    // 0.11 m on the CREB's long straight banks; 0.17 m here, round the hairpins and the trench.
+    expect(mean).toBeLessThan(0.2);
   });
 });

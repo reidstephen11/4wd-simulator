@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { environmentFor } from '../src/data/environment';
 import { ironbarkLevel } from '../src/data/levels/ironbark';
 import { PLAIN, chuteExitLip, chuteLip, creekBogs, water } from '../src/data/levels/ironbarkCreek';
 import { knollBogs } from '../src/data/levels/ironbarkKnoll';
 import { ironbarkMap } from '../src/data/levels/ironbarkMap';
 import { ute40Tuning } from '../src/data/ute40';
 import { vehicleTuning } from '../src/data/vehicle';
+import { xtracabTuning } from '../src/data/xtracab';
 import { trailPoint, trailProgress } from '../src/sim/world/crawlTrail';
-import { driver, steepest } from './helpers/drive';
+import { driveLeg, driver, steepest } from './helpers/drive';
 import { ironbarkWorld } from './world';
 
 /** Ironbark Creek, the first playground level (v0.22). */
@@ -213,6 +215,25 @@ describe('Ironbark Creek: driving it (low range, crawling)', () => {
       expect(locked.done, `${id} locked stopped ${locked.remaining.toFixed(1)} m short`).toBe(true);
       const open = await drive(id, 'open', false, 200, vehicleTuning, 25);
       expect(open.done, `${id} open diffs`).toBe(false);
+    }
+  }, 500_000);
+
+  it('takes the SR5 Xtra Cab up the rock climb locked but not open, and over both water crossings after rain', async () => {
+    const locked = await drive('knoll-rock-climb', 'both', false, 200, xtracabTuning);
+    expect(locked.done, `stopped ${locked.remaining.toFixed(1)} m from the top`).toBe(true);
+    const open = await drive('knoll-rock-climb', 'open', false, 200, xtracabTuning, 25);
+    expect(open.done, 'open diffs').toBe(false);
+    const wet = driver(world, environmentFor({ time: 'afternoon', weather: 'wet' }));
+    for (const id of ['creek-ford', 'creek-deep']) {
+      const s = await wet.scene(id, false, 'both', xtracabTuning);
+      try {
+        const r = await driveLeg(s, s.track, false, 150, true);
+        expect(r.done, id).toBe(true);
+        expect(r.tilt, id).toBeLessThan(45);
+        expect(s.v.condition.flood.stalled, id).toBe(false);
+      } finally {
+        s.sim.physics.free();
+      }
     }
   }, 500_000);
 });

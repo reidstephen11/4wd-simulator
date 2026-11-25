@@ -12,8 +12,8 @@ interface Mode {
   apply(g: Game, on: boolean): void;
 }
 
-/** Where the test parks: on the Bloomfield Track in thick forest south of the bridge, where a Pixel 10a ran at 39 fps. */
-const SPOT = { x: 111, z: -773 };
+/** Where the test parks: on the Knoll track south of the knoll, looking along it with the rock climb in view. */
+const SPOT = { x: 15, z: 165 };
 
 const graphics = (level: QualityLevel): Mode => ({
   name: `${level[0].toUpperCase()}${level.slice(1)} graphics`,
@@ -58,7 +58,7 @@ const MODES: Mode[] = [
 ];
 
 /**
- * `?bench`: stops in thick forest on the Bloomfield Track and times the frames with one thing
+ * `?bench`: stops on the Knoll track below the rock climb and times the frames with one thing
  * turned off at a time, and on each graphics setting, so a phone can show what slows it down.
  * The results stay on screen.
  */
@@ -77,7 +77,7 @@ export class Bench {
       'position:fixed;left:8px;top:8px;z-index:99999;max-width:92vw;padding:10px 12px;border-radius:8px;' +
       'background:rgba(0,0,0,0.82);color:#fff;font:13px/1.45 monospace;white-space:pre-wrap;pointer-events:none';
     document.body.appendChild(this.el);
-    this.show('Phone test: starting in the trees on the Bloomfield Track…');
+    this.show('Phone test: starting on the Knoll track…');
   }
 
   private show(text: string): void {

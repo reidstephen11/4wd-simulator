@@ -12,7 +12,13 @@ import { stormFixture as storm, storyLevel } from './fixtures/story';
 // The game's level has no storm, so the engine's is tested with the story fixture's (an
 // afternoon storm on a wet day that starts at 12:30 pm) over the fixture map and its creek.
 // Its own world: the flood is spread into it.
-const world = buildWorld(highCountryMap);
+// The fixture map's roads are smooth; one is given mud holes, which the rain fills.
+const world = buildWorld({
+  ...highCountryMap,
+  tracks: highCountryMap.tracks.map((t) =>
+    t.id === 'main-track' ? { ...t, rough: { bumps: 0.08, bogs: 4, bogDepth: 0.3 } } : t,
+  ),
+});
 const start = episodeWeatherAt(storyLevel.startHour, storyLevel.weather, storm);
 addPuddles(world, start.env);
 const { halfX, halfZ } = world.terrain;

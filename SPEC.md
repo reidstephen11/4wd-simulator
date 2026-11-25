@@ -1,5 +1,7 @@
 # 4WD Simulator — Build Spec (v0.1: playable slice)
 
+> **Direction from v0.22.** 4WD Simulator is a playground of 4WD challenges: small levels packed with climbs, creek crossings, bog holes and rock, with no route, no clock and no fuel to manage; challenging and fun, with many lines through each obstacle and open ground to explore between them. It runs on Over the Cape's engine (vehicles, physics, HUD, menus). Levels are kept small so the graphics can be pushed: tyre marks left on the ground and finer detail on rock and mud come next. The rest of this document is the specification the game was first built from (v0.01–v0.21); where it describes worlds, maps or a welcome screen that no longer exist, `README.md` and `docs/DECISIONS.md` (v0.22 onwards) are current.
+
 A relaxed, single-player off-road exploration game that runs in the browser. You drive a classic 1970s-style 4WD through a hand-designed patch of Australian high country, using a winch, planks and careful line choice to get over rough ground. There are no races, scores, currency or objectives. The point is the drive and finding what's over the next hill.
 
 Inspired by *Over The Hill* (Funselektor, 2026). Use none of its names, assets, logos or text. At the user’s request, the vehicle now takes its shape from a 1970s Land Cruiser 40 Series, with original geometry and no copied badges or logos.
