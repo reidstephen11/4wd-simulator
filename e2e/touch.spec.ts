@@ -254,6 +254,11 @@ test.describe('phone', () => {
     await page.evaluate(() => window.__game!.setTouchDrive('stick'));
     await expect(page.locator('.touch-controls')).toHaveClass(/stick-drive/);
     await expect(page.locator('.touch-stick')).toHaveAttribute('aria-label', 'Steer, throttle and brake');
+    // Onto the west bank track, heading north with 250 m of it ahead: from the camp the track
+    // runs 70 m straight into the ford, and at the speed the tests run the car is in the creek
+    // with a flooded engine before the next line looks.
+    await page.evaluate(() => window.__game!.teleport(-169, 60, 0));
+    await waitSim(page, 1);
 
     const f = await fingers(page);
     await f.press(1, '.touch-stick-base');
@@ -267,7 +272,7 @@ test.describe('phone', () => {
     expect((await page.evaluate(() => window.__game!.vehicle())).throttle).toBe(0);
 
     // Back on the stick brakes a rolling car (below a walking pace it selects reverse, so get it
-    // rolling first: the camp is level, and one second from a standstill is barely that).
+    // rolling first).
     await f.press(1, '.touch-stick-base');
     await f.move(1, '.touch-stick-base', 0, -80);
     await waitSim(page, 3);

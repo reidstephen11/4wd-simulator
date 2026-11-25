@@ -12,9 +12,9 @@ async function drivingScreen(page: Page): Promise<void> {
   await page.evaluate(() => {
     const g = window.__game!;
     g.teleport(-128, -61, 270);
-    // Pedal down against the handbrake: the car stays where the prompts are (the boulder to
-    // winch from, and the handbrake's own), however long the slow renderer takes to look.
-    g.setInput({ throttle: 0.5, handbrake: true });
+    // Held on the handbrake: the car stays by the boulder it can winch from, so that prompt
+    // stays up however long the slow renderer takes to look.
+    g.setInput({ handbrake: true });
   });
   await waitSim(page, 1);
   await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
