@@ -263,9 +263,14 @@ test.describe('phone', () => {
     await waitSim(page, 0.2);
     expect((await page.evaluate(() => window.__game!.vehicle())).throttle).toBe(0);
 
+    // Back on the stick brakes a rolling car (below a walking pace it selects reverse, so get it
+    // rolling first: the camp is level, and one second from a standstill is barely that).
     await f.press(1, '.touch-stick-base');
+    await f.move(1, '.touch-stick-base', 0, -80);
+    await waitSim(page, 3);
+    expect((await page.evaluate(() => window.__game!.vehicle())).speed).toBeGreaterThan(2);
     await f.move(1, '.touch-stick-base', 0, 80);
-    await waitSim(page, 0.5);
+    await waitSim(page, 0.15);
     const back = await page.evaluate(() => window.__game!.vehicle());
     expect(back.throttle).toBe(0);
     expect(back.brake).toBeGreaterThan(0.5);
