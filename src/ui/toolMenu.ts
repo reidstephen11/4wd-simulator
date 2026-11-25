@@ -64,7 +64,7 @@ export class ToolMenu {
     this.el.classList.toggle('tool-dense', options.length > 10);
     this.el.classList.toggle('tool-crowded', options.length > 13);
     this.el.classList.remove('hidden');
-    this.el.innerHTML = `<div class="tool-heading"><span>OVER THE CAPE / FIELD CONTROLS</span><h2>Vehicle tools</h2></div>
+    this.el.innerHTML = `<div class="tool-heading"><span>4WD SIMULATOR / FIELD CONTROLS</span><h2>Vehicle tools</h2></div>
       <div class="tool-stage"><svg class="tool-sectors" viewBox="-300 -300 600 600" aria-hidden="true"></svg>
       <div class="tool-centre"><span class="tool-eyebrow">READY WHEN YOU ARE</span><strong>Choose a tool</strong><small>Return to centre<br>to cancel</small></div></div>
       <div class="tool-legend"><span>Traction</span><span>Recovery</span><span>Vehicle</span>${options.some((o) => toolGroup(o.id) === 'cargo') ? '<span>Trailer</span>' : ''}</div>

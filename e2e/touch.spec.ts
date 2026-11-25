@@ -149,7 +149,7 @@ test.describe('phone', () => {
     await expect(page.locator('.tool-menu')).toBeVisible();
     await expect(controls).toBeHidden();
     await shot(page, 'touch', 'tool-menu');
-    await f.tap('.tool-ring');
+    await f.tap('.tool-heading');
     await expect(page.locator('.tool-menu')).toBeHidden();
     await expect(controls).toBeVisible();
 
