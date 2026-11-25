@@ -149,21 +149,20 @@ test('the Troop Carrier is chosen on the welcome screen, starts with its sub-tan
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 1280, height: 720 });
 
-  // The briefing lists the CREB's load with the sub-tank's 60 L and two spares.
+  // The briefing lists the Troop Carrier's two spares; a playground uses no fuel.
   await page.locator('[data-welcome-drive]').click({ timeout: 120_000 });
-  await expect(page.locator('.briefing')).toContainText('110 L of fuel');
   await expect(page.locator('.briefing')).toContainText('2 spare wheels');
+  await expect(page.locator('.briefing')).toContainText('No fuel is used');
   await driveFromBriefing(page);
   expect(await page.evaluate(() => window.__game!.vehicleId())).toBe('troopy');
   const load = await page.evaluate(() => window.__game!.health());
-  // A little has gone on starting and idling.
-  expect(load.fuel).toBeGreaterThan(109);
-  expect(load.fuel).toBeLessThanOrEqual(110);
   expect(load.spares).toBe(2);
   await page.evaluate(() => window.__game!.setInput({ throttle: 0.6 }));
   await waitSim(page, 3);
   expect((await page.evaluate(() => window.__game!.vehicle())).speed).toBeGreaterThan(2);
   await page.evaluate(() => window.__game!.setInput(null));
+  // Nothing was burnt, starting or driving.
+  expect((await page.evaluate(() => window.__game!.health())).fuel).toBe(load.fuel);
   await shot(page, 'vehicle', 'troopy-in-game');
   await page.evaluate(() => window.__game!.cameraPreset('cockpit' as never));
   await waitSim(page, 1);

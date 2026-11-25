@@ -7,11 +7,11 @@ import { collectErrors, drawnText, lowGraphics, shot, waitReady, waitSim } from 
  * screen (src/ui/uiScale.ts); these check the driving screen as drawn.
  */
 
-/** Drive onto the CREB's first pinch in low range with an action prompt and a history note up. */
+/** Drive up the deep crossing's west bank with an action prompt and a note up. */
 async function drivingScreen(page: Page): Promise<void> {
   await page.evaluate(() => {
     const g = window.__game!;
-    g.teleport(-33, 2428, 5);
+    g.teleport(-128, -61, 270);
     g.setInput({ throttle: 0.5 });
   });
   await waitSim(page, 1);

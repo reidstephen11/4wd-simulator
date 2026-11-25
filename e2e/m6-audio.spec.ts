@@ -74,9 +74,9 @@ test('M6: audio starts with the Drive button, follows the car, and the volume se
   expect(peak).toBeGreaterThan(0.01);
   expect(peak).toBeLessThan(1);
 
-  // Winch whine while reeling in, hooked to a tree on Big Red (held on the park brake, or it
-  // rolls back down the hill out of the winch's reach).
-  await page.evaluate(() => window.__game!.teleport(2, 1226, 330));
+  // Winch whine while reeling in, hooked to the boulder above the deep crossing's west bank
+  // (held on the park brake, or it rolls back down the bank out of the winch's reach).
+  await page.evaluate(() => window.__game!.teleport(-128, -61, 270));
   await page.evaluate(() => window.__game!.setParkBrake(true));
   await waitSim(page, 1);
   await page.keyboard.press('KeyE');

@@ -126,7 +126,7 @@ test('M5: with storage blocked the game still runs', async ({ page }) => {
   await page.goto('/?surprises=off&track=reopened');
   await openJourney(page);
   await waitReady(page);
-  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('Daintree Village');
+  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('Ironbark camp');
   const t0 = await page.evaluate(() => window.__game!.simTime());
   await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
   await expect.poll(() => page.evaluate(() => window.__game!.simTime())).toBeGreaterThan(t0 + 1);

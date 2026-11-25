@@ -307,7 +307,7 @@ test.describe('phone', () => {
   });
 });
 
-test.describe('phone on the CREB', () => {
+test.describe('phone at Ironbark Creek', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
   test("the HUD's panels keep clear of each other and the buttons in every view", async ({ page }) => {
