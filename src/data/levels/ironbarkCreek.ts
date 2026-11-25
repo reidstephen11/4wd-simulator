@@ -12,7 +12,16 @@ import type {
   XZ,
 } from '../../sim/world/mapTypes';
 import { densify, pointAt } from '../../sim/world/polyline';
-import { banks, boulder, endSign, gradedLine, rockStep, slab, type GradedLine } from '../courseKit';
+import {
+  banks,
+  boulder,
+  endSign,
+  gradedLine,
+  headingOf,
+  rockStep,
+  slab,
+  type GradedLine,
+} from '../courseKit';
 import { knollGraded, type Waypoint } from './ironbarkKnoll';
 
 /**
@@ -401,6 +410,11 @@ const middle = (id: string): XZ => {
   const p = pointAt(poly, poly.length / 2);
   return [Math.round(p.x * 10) / 10, Math.round(p.z * 10) / 10];
 };
+/** Where test mode's "Start from" puts the car: a little way along the line, facing along it. */
+const lineStart = (id: string, along = 4): NonNullable<PoiDef['reset']> => {
+  const p = pointAt(lineOf(id).poly, along);
+  return { x: Math.round(p.x * 10) / 10, z: Math.round(p.z * 10) / 10, headingDeg: Math.round(headingOf(p)) };
+};
 const feature = (id: string, name: string, note: string, at: XZ = middle(id), radius = 20): PoiDef => ({
   id,
   name,
@@ -408,6 +422,7 @@ const feature = (id: string, name: string, note: string, at: XZ = middle(id), ra
   x: at[0],
   z: at[1],
   radius,
+  reset: lineStart(id),
   note,
 });
 

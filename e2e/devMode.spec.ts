@@ -35,7 +35,8 @@ test('test mode sets the weather, the clock, the place and the vehicle', async (
 
   // Jump to another place and change vehicle on the spot.
   const before = await page.evaluate(() => window.__game!.vehicle());
-  await panel.locator('.debug-teleports button').nth(3).click();
+  // (The second place is Top paddock camp: level ground, for the trailer below.)
+  await panel.locator('.debug-teleports button').nth(1).click();
   const after = await page.evaluate(() => window.__game!.vehicle());
   expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeGreaterThan(20);
   await panel.getByRole('button', { name: /Perentie/ }).click();

@@ -10,7 +10,17 @@ import type {
   XZ,
 } from '../../sim/world/mapTypes';
 import { densify, pointAt } from '../../sim/world/polyline';
-import { banks, boulder, endSign, gradedLine, rockStep, slab, tread, type GradedLine } from '../courseKit';
+import {
+  banks,
+  boulder,
+  endSign,
+  gradedLine,
+  headingOf,
+  rockStep,
+  slab,
+  tread,
+  type GradedLine,
+} from '../courseKit';
 
 /** A track control point; an optional third value pins the track height there. */
 export type Waypoint = readonly [number, number] | readonly [number, number, number];
@@ -672,6 +682,10 @@ const middle = (id: string) => {
   const poly = lineOf(id).poly;
   return pointAt(poly, poly.length / 2);
 };
+const lineStart = (id: string, along = 4): NonNullable<PoiDef['reset']> => {
+  const p = pointAt(lineOf(id).poly, along);
+  return { x: Math.round(p.x * 10) / 10, z: Math.round(p.z * 10) / 10, headingDeg: Math.round(headingOf(p)) };
+};
 const poi = (
   id: string,
   name: string,
@@ -685,6 +699,9 @@ const poi = (
   x: Math.round(at[0] * 10) / 10,
   z: Math.round(at[1] * 10) / 10,
   radius,
+  // Where test mode's "Start from" puts the car: a little way along the line, facing along it
+  // (the summit has no line of its own).
+  ...(lines.some((l) => l.id === id) ? { reset: lineStart(id) } : {}),
   note,
 });
 

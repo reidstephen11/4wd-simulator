@@ -58,6 +58,22 @@ describe('Ironbark Creek: the level', () => {
     expect(ironbarkLevel.notes['ironbark-camp']).toBeUndefined();
   });
 
+  it('starts every obstacle from dry ground at the start of its line, facing along it', () => {
+    for (const id of [...KNOLL_LINES, ...CROSSINGS, ...WEST_BANK_LINES]) {
+      const poi = ironbarkMap.pois.find((p) => p.id === id)!;
+      const line = trackOf(id);
+      const r = poi.reset!;
+      expect(r, id).toBeDefined();
+      const at = trailProgress(line, r.x, r.z);
+      expect(at.distance, id).toBeLessThan(0.5);
+      expect(at.along, id).toBeLessThan(6);
+      expect(t.waterDepthAt(r.x, r.z), id).toBe(0);
+      const ahead = trailPoint(line, at.along + 3);
+      const bearing = (Math.atan2(ahead.x - r.x, -(ahead.z - r.z)) * 180) / Math.PI;
+      expect(Math.abs(((bearing - r.headingDeg + 540) % 360) - 180), id).toBeLessThan(15);
+    }
+  });
+
   it('has a camp on each side of the creek, on level ground inside the wall', () => {
     const camps = ironbarkMap.pois.filter((p) => p.kind === 'campsite');
     expect(camps.map((c) => c.id).sort()).toEqual(['ironbark-camp', 'top-paddock-camp']);
