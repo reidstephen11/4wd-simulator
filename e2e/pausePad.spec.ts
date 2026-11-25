@@ -135,9 +135,12 @@ test('the pause menu on a television with a controller: rows, values, Back and s
   await expect(focused(page)).toHaveText('Settings');
 
   // Controls: opens at the top of the table, and Down turns its pages.
+  // (With seven buttons Main menu has the last row to itself, under Settings.)
   await press(page, Pad.Down);
   await expect(focused(page)).toContainText('Main menu');
-  await press(page, Pad.Left);
+  await press(page, Pad.Up);
+  await expect(focused(page)).toHaveText('Settings');
+  await press(page, Pad.Right);
   await expect(focused(page)).toHaveText('Controls');
   await press(page, Pad.A);
   await expect(page.locator('.pause-card h2')).toHaveText('Controls');
