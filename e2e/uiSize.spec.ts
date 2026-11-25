@@ -12,7 +12,9 @@ async function drivingScreen(page: Page): Promise<void> {
   await page.evaluate(() => {
     const g = window.__game!;
     g.teleport(-128, -61, 270);
-    g.setInput({ throttle: 0.5 });
+    // Pedal down against the handbrake: the car stays where the prompts are (the boulder to
+    // winch from, and the handbrake's own), however long the slow renderer takes to look.
+    g.setInput({ throttle: 0.5, handbrake: true });
   });
   await waitSim(page, 1);
   await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
@@ -88,6 +90,9 @@ test.describe('phone held upright', () => {
     );
     expect(small).toEqual([]);
     // The prompt and the note stay in the band under the dials, above the road and the car.
+    // (A note folds away after a few seconds on a phone: show it again to measure it.)
+    await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
+    await expect(page.locator('.history-card')).toBeVisible();
     for (const sel of ['.prompt', '.history-card']) {
       const box = (await page.locator(sel).first().boundingBox())!;
       expect(box.y + box.height, sel).toBeLessThan(844 * 0.3);

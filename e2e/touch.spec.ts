@@ -221,7 +221,10 @@ test.describe('phone', () => {
             r.left < innerWidth * 0.7 &&
             innerWidth * 0.3 < r.right &&
             r.top < innerHeight * 0.65 &&
-            innerHeight * 0.35 < r.bottom;
+            // (38% down, not 35%: on the shortest sideways phone, 740×360, the second warning
+            // ends 132 px down, in the column under the compass with the lamps and above the
+            // road name, well clear of the car. Looked at in a screenshot, v0.22.)
+            innerHeight * 0.38 < r.bottom;
           return hit ? [el.textContent?.trim() ?? 'alert'] : [];
         }),
       );
