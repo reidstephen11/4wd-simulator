@@ -32,6 +32,8 @@ export const cameraTuning = {
   /** Extra distance at speed (fraction of distance at `speedRef`). */
   speedPullback: 0.3,
   speedRef: 22,
+  /** Towing a trailer, the outside views stand this much further back and higher (share of the usual). */
+  towScale: 0.6,
   /** Extra height on steep slopes (m at 30°). */
   slopeLift: 1.2,
   /** Distance multiplier when crawling. */
@@ -74,6 +76,17 @@ export const cockpit = {
   maxYaw: 2.4,
   maxPitch: 1.0,
   near: 0.05,
+};
+
+/** Small inertial movement relative to the seat, at the fixed physics rate. */
+export const headMotion = {
+  accelerationRate: 10,
+  springRate: 14,
+  maxAcceleration: 20,
+  gain: { x: 0.003, y: 0.0018, z: 0.004 },
+  maxOffset: { x: 0.018, y: 0.012, z: 0.022 },
+  pitchPerMetre: 0.6,
+  rollPerMetre: 0.55,
 };
 
 export type CameraPreset = keyof typeof cameraPresets;

@@ -188,21 +188,20 @@ const clearSkies: Record<TimeOfDay, EnvironmentConfig> = {
   },
 };
 
-/** How far each weather turns the sky grey, and what it does to the ground and creek. */
-const weatherEffects: Record<
-  Weather,
-  {
-    grey: number;
-    /** How dark the cloud is (1 = bright overcast). */
-    dark: number;
-    sun: number;
-    shadowRadius: number;
-    fog: { start: number; end: number; maxAmount: number };
-    wetness: number;
-    rain: number;
-    waterLevelOffset: number;
-  }
-> = {
+/** How far a weather turns the sky grey, and what it does to the ground and creek. */
+interface WeatherEffect {
+  grey: number;
+  /** How dark the cloud is (1 = bright overcast). */
+  dark: number;
+  sun: number;
+  shadowRadius: number;
+  fog: { start: number; end: number; maxAmount: number };
+  wetness: number;
+  rain: number;
+  waterLevelOffset: number;
+}
+
+const weatherEffects: Record<Weather, WeatherEffect> = {
   clear: {
     grey: 0,
     dark: 1,
@@ -269,11 +268,124 @@ function shadeHex(a: string, k: number): string {
  * nearer haze, wet ground and falling rain as the weather says.
  */
 export function environmentFor(c: Conditions): EnvironmentConfig {
-  const base = clearSkies[c.time];
-  const w = weatherEffects[c.weather];
-  if (c.weather === 'clear') return base;
+  return withWeather(clearSkies[c.time], c.weather, c.time === 'night');
+}
+
+/**
+ * The light at a clock time (hours), for an episode's moving sun: the clear-sky presets
+ * pinned to the hour they show and blended between, then the weather on top.
+ */
+export const presetHours: ReadonlyArray<readonly [number, TimeOfDay]> = [
+  [7.75, 'morning'],
+  [12.5, 'midday'],
+  [16.5, 'afternoon'],
+  [17.9, 'dusk'],
+  [19, 'night'],
+];
+
+/** The headlights light the ground from this hour (dusk coming on). */
+export const lampBeamsFromHour = 17.5;
+
+/**
+ * A storm passing over (src/data/weatherTimeline.ts): how hard it is raining (0..1),
+ * which turns the sky from the after-rain overcast to the raining one, and how wet the
+ * ground is. The creek level offset stays the after-rain one: the puddles were laid for
+ * it, and the storm raises the creeks on their own.
+ */
+export interface Storm {
+  rain: number;
+  wetness: number;
+}
+
+export function environmentAt(hour: number, weather: Weather, storm?: Storm): EnvironmentConfig {
+  const h = Math.min(presetHours[presetHours.length - 1][0], Math.max(presetHours[0][0], hour));
+  let i = 0;
+  while (i < presetHours.length - 2 && h > presetHours[i + 1][0]) i++;
+  const [h0, a] = presetHours[i];
+  const [h1, b] = presetHours[i + 1];
+  const t = (h - h0) / (h1 - h0);
+  const base = blendEnvironment(clearSkies[a], clearSkies[b], t);
+  base.lampBeams = hour >= lampBeamsFromHour;
+  const night = hour >= presetHours[presetHours.length - 1][0] - 0.25;
+  if (!storm) return withWeather(base, weather, night);
+  const w = weatherEffects.wet;
+  const r = weatherEffects.rain;
+  const k = Math.min(1, Math.max(0, storm.rain));
+  const n = (a: number, b: number) => a + (b - a) * k;
+  return withEffect(
+    base,
+    {
+      grey: n(w.grey, r.grey),
+      dark: n(w.dark, r.dark),
+      sun: n(w.sun, r.sun),
+      shadowRadius: n(w.shadowRadius, r.shadowRadius),
+      fog: {
+        start: n(w.fog.start, r.fog.start),
+        end: n(w.fog.end, r.fog.end),
+        maxAmount: n(w.fog.maxAmount, r.fog.maxAmount),
+      },
+      wetness: storm.wetness,
+      rain: k,
+      waterLevelOffset: w.waterLevelOffset,
+    },
+    night,
+  );
+}
+
+function blendEnvironment(a: EnvironmentConfig, b: EnvironmentConfig, t: number): EnvironmentConfig {
+  const n = (x: number, y: number) => x + (y - x) * t;
+  const c = (x: string, y: string) => mixHex(x, y, t);
+  // Bearings go the short way round (north-east moon to west-north-west sun).
+  const turn = ((((b.sun.azimuthDeg - a.sun.azimuthDeg) % 360) + 540) % 360) - 180;
+  return {
+    sun: {
+      color: c(a.sun.color, b.sun.color),
+      intensity: n(a.sun.intensity, b.sun.intensity),
+      elevationDeg: n(a.sun.elevationDeg, b.sun.elevationDeg),
+      azimuthDeg: (a.sun.azimuthDeg + turn * t + 360) % 360,
+      shadowRadius: n(a.sun.shadowRadius, b.sun.shadowRadius),
+    },
+    hemisphere: {
+      sky: c(a.hemisphere.sky, b.hemisphere.sky),
+      ground: c(a.hemisphere.ground, b.hemisphere.ground),
+      intensity: n(a.hemisphere.intensity, b.hemisphere.intensity),
+    },
+    fog: {
+      nearColor: c(a.fog.nearColor, b.fog.nearColor),
+      farColor: c(a.fog.farColor, b.fog.farColor),
+      start: n(a.fog.start, b.fog.start),
+      end: n(a.fog.end, b.fog.end),
+      colorShiftEnd: n(a.fog.colorShiftEnd, b.fog.colorShiftEnd),
+      maxAmount: n(a.fog.maxAmount, b.fog.maxAmount),
+    },
+    sky: {
+      horizon: c(a.sky.horizon, b.sky.horizon),
+      zenith: c(a.sky.zenith, b.sky.zenith),
+      sunGlow: c(a.sky.sunGlow, b.sky.sunGlow),
+      sunGlowSize: n(a.sky.sunGlowSize, b.sky.sunGlowSize),
+      groundColor: c(a.sky.groundColor, b.sky.groundColor),
+    },
+    toneMapping: a.toneMapping,
+    exposure: n(a.exposure, b.exposure),
+    waterLevelOffset: n(a.waterLevelOffset, b.waterLevelOffset),
+    wetness: n(a.wetness, b.wetness),
+    rain: n(a.rain, b.rain),
+    lampBeams: t < 0.5 ? a.lampBeams : b.lampBeams,
+    stars: n(a.stars, b.stars),
+    cloudLight: n(a.cloudLight, b.cloudLight),
+  };
+}
+
+function withWeather(base: EnvironmentConfig, weather: Weather, night: boolean): EnvironmentConfig {
+  // A copy even when nothing changes: the simulation writes the rain and the wet ground into the
+  // environment it is given, and `environmentFor` passes a clear-sky preset straight through here.
+  // Handed the preset itself, a storm set in test mode stayed in it, so Clear kept the rain (v0.22).
+  return weather === 'clear' ? { ...base } : withEffect(base, weatherEffects[weather], night);
+}
+
+function withEffect(base: EnvironmentConfig, w: WeatherEffect, night: boolean): EnvironmentConfig {
   // Grey overcast is darker the lower the sun is, and darkest at night under the moon.
-  const light = c.time === 'night' ? 0.13 : 0.55 + 0.45 * Math.min(1, base.sun.elevationDeg / 40);
+  const light = night ? 0.13 : 0.55 + 0.45 * Math.min(1, Math.max(0, base.sun.elevationDeg) / 40);
   const g = w.grey;
   const grey = (from: string, to: string) => mixHex(from, shadeHex(to, light * w.dark), g);
   return {

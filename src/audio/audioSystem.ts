@@ -6,8 +6,20 @@ import { CrawlSounds } from './crawlSounds';
 import { createNoiseBank, type NoiseBank } from './buffers';
 import { EngineSound, HornSound } from './engineSound';
 import type { AudioFrame } from './frame';
-import { knockLevel, thumpLevel } from './mix';
-import { clunk, dentCrunch, knock, puncture, ratchet, stallClunk, switchClick, thump } from './oneShots';
+import { knockLevel, thumpLevel, trailerBumpLevel } from './mix';
+import {
+  clunk,
+  dentCrunch,
+  knock,
+  puncture,
+  ratchet,
+  rockSlide,
+  stallClunk,
+  switchClick,
+  thump,
+  treeFall,
+} from './oneShots';
+import { TrailerSound } from './trailerSound';
 import { TyreSound } from './tyreSound';
 import { UiSounds } from './uiSounds';
 import { WinchSound } from './winchSound';
@@ -32,6 +44,7 @@ interface Graph {
   tyres: TyreSound;
   crawl: CrawlSounds;
   winch: WinchSound;
+  trailer: TrailerSound;
   ambience: Ambience;
   ui: UiSounds;
 }
@@ -51,6 +64,8 @@ export interface AudioInfo {
   /** 'synth' (AudioWorklet engine), 'oscillator' (fallback) or 'loading'. */
   engineVoice: string;
   winchHz: number;
+  /** The trailer's rattle (0..1). */
+  trailer: number;
   wind: number;
   water: number;
   tyres: Partial<Record<TyreLayer, number>>;
@@ -68,6 +83,8 @@ export class AudioSystem {
   private g: Graph | null = null;
   private settings: Settings;
   private failed = false;
+  /** A statechange listener is on the context, waiting for it to run. */
+  private stateWatched = false;
   private lastGear = 0;
   private vehicle: VehicleId = 'shortie';
   private readonly buf = new Float32Array(1024);
@@ -122,7 +139,16 @@ export class AudioSystem {
     const ctx = this.g.ctx;
     if (ctx.state === 'suspended' && !document.hidden) void ctx.resume().catch(() => undefined);
     if (ctx.state === 'running') this.removeGestureListeners();
-    else ctx.addEventListener('statechange', () => ctx.state === 'running' && this.removeGestureListeners());
+    else if (!this.stateWatched) {
+      // One listener, however many gestures arrive before the context runs.
+      this.stateWatched = true;
+      const onState = () => {
+        if (ctx.state !== 'running') return;
+        ctx.removeEventListener('statechange', onState);
+        this.removeGestureListeners();
+      };
+      ctx.addEventListener('statechange', onState);
+    }
   }
 
   private removeGestureListeners(): void {
@@ -180,6 +206,7 @@ export class AudioSystem {
       tyres: new TyreSound(ctx, fxBus, noise),
       crawl: new CrawlSounds(ctx, fxBus, noise),
       winch: new WinchSound(ctx, fxBus, noise),
+      trailer: new TrailerSound(ctx, fxBus, noise),
       ambience: new Ambience(ctx, ambienceBus, noise),
       ui: new UiSounds(ctx, uiBus, noise),
     };
@@ -229,11 +256,16 @@ export class AudioSystem {
     g.horn.set(f.horn && !f.paused);
     g.tyres.update(f.wheels, f.speed);
     g.crawl.update(f.crawl);
-    // Selecting drive or reverse clunks through the driveline.
-    if (Math.sign(f.gear + 0.5) !== Math.sign(this.lastGear + 0.5) && !f.paused)
-      clunk(g.ctx, g.fxBus, g.noise, 'gear');
-    this.lastGear = f.gear;
+    // Selecting drive or reverse clunks through the driveline; with a manual gearbox
+    // every change of gear (and into or out of neutral) does.
+    const gearKey = f.neutral ? -0.25 : f.gear;
+    const changed = f.manualGearbox
+      ? gearKey !== this.lastGear
+      : Math.sign(f.gear + 0.5) !== Math.sign(this.lastGear + 0.5);
+    if (changed && !f.paused) clunk(g.ctx, g.fxBus, g.noise, 'gear');
+    this.lastGear = f.manualGearbox ? gearKey : f.gear;
     g.winch.update(f.winch);
+    g.trailer.update(f.paused ? null : f.trailer);
     g.ambience.update(f.ambience);
   }
 
@@ -253,6 +285,22 @@ export class AudioSystem {
     if (g && level > 0) thump(g.ctx, g.fxBus, g.noise, level);
   }
 
+  /** A trailer wheel hit something (spring compression speed, m/s), with this many drums on board. */
+  trailerBump(speed: number, drums: number): void {
+    const g = this.live();
+    const level = trailerBumpLevel(speed);
+    if (g && level > 0) g.trailer.bump(level, drums);
+  }
+
+  /** The trailer hitched or unhitched, came round against the car, or went over. */
+  trailerEvent(kind: 'hitched' | 'unhitched' | 'jackknifed' | 'tipped', drums: number): void {
+    const t = this.live()?.trailer;
+    if (!t) return;
+    if (kind === 'hitched' || kind === 'unhitched') t.coupling(kind === 'hitched');
+    else if (kind === 'jackknifed') t.jackknifed();
+    else t.tipped(drums);
+  }
+
   /** The chassis knocked a rock (impulse, N·s). */
   bodyKnock(impulse: number): void {
     const g = this.live();
@@ -261,9 +309,28 @@ export class AudioSystem {
   }
 
   /** Transfer-case range change or an air locker engaging / releasing. */
-  drivetrainClunk(kind: 'range' | 'lockOn' | 'lockOff'): void {
+  drivetrainClunk(kind: 'range' | 'lockOn' | 'lockOff' | 'windup'): void {
     const g = this.live();
-    if (g) clunk(g.ctx, g.fxBus, g.noise, kind);
+    if (!g) return;
+    if (kind === 'windup') {
+      const osc = g.ctx.createOscillator();
+      const gain = g.ctx.createGain();
+      const now = g.ctx.currentTime;
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(145, now);
+      osc.frequency.exponentialRampToValueAtTime(48, now + 0.55);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.035, now + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.connect(gain);
+      gain.connect(g.fxBus);
+      osc.start(now);
+      osc.stop(now + 0.65);
+      osc.onended = () => {
+        osc.disconnect();
+        gain.disconnect();
+      };
+    } else clunk(g.ctx, g.fxBus, g.noise, kind);
   }
 
   /** The handbrake ratchets on or clunks off. */
@@ -292,6 +359,14 @@ export class AudioSystem {
   dent(impact: number): void {
     const g = this.live();
     if (g) dentCrunch(g.ctx, g.fxBus, g.noise, Math.min(1, Math.max(0.35, (impact - 2.5) / 6)));
+  }
+
+  /** A surprise up ahead: a tree coming down (landing after `seconds`) or rocks off a bank. */
+  surprise(kind: 'treefall' | 'rockfall', seconds: number): void {
+    const g = this.live();
+    if (!g) return;
+    if (kind === 'treefall') treeFall(g.ctx, g.fxBus, g.noise, seconds);
+    else rockSlide(g.ctx, g.fxBus, g.noise, seconds);
   }
 
   discovery(): void {
@@ -358,6 +433,7 @@ export class AudioSystem {
       scrape: g?.crawl.scrape ?? 0,
       engineVoice: g?.engine.kind ?? 'off',
       winchHz: g?.winch.hz ?? 0,
+      trailer: g?.trailer.level ?? 0,
       wind: g?.ambience.wind ?? 0,
       water: g?.ambience.water ?? 0,
       tyres,

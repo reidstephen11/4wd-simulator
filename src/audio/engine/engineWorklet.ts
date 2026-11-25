@@ -23,10 +23,11 @@ class EngineProcessor extends AudioWorkletProcessor {
       automationRate: 'k-rate',
     });
     return [
-      p('rpm', 800, 9000),
+      // Silent until the game drives it: the engine is off on the loading screen.
+      p('rpm', 0, 9000),
       p('load', 0, 1),
       p('throttle', 0, 1),
-      p('running', 1, 1),
+      p('running', 0, 1),
       p('misfire', 0, 1),
       p('shaftHz', 0, 400),
       p('whine', 0, 1),
@@ -35,10 +36,10 @@ class EngineProcessor extends AudioWorkletProcessor {
 
   private synth = new EngineSynth(sampleRate);
   private readonly inputs: EngineInputs = {
-    rpm: 800,
+    rpm: 0,
     load: 0,
     throttle: 0,
-    running: true,
+    running: false,
     misfire: 0,
     shaftHz: 0,
     whine: 0,

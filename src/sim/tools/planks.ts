@@ -4,6 +4,7 @@ import { SurfaceId } from '../../data/surfaces';
 import { Groups, groups, type Physics } from '../physics';
 import type { Vehicle } from '../vehicle/vehicle';
 import { rotate } from '../vehicle/math';
+import { poseOf, type PosedBody } from '../bodyPose';
 
 export interface PlankPose {
   x: number;
@@ -15,7 +16,7 @@ export interface PlankPose {
   pitch: number;
 }
 
-export interface PlacedPlank {
+export interface PlacedPlank extends PosedBody {
   id: number;
   body: RAPIER.RigidBody;
 }
@@ -90,7 +91,8 @@ export class PlankKit {
     if (this.carried <= 0) return false;
     const poses = this.previewPoses(v, probe);
     for (const pose of poses) {
-      this.placed.push({ id: this.nextId++, body: createPlankBody(physics, pose) });
+      const body = createPlankBody(physics, pose);
+      this.placed.push({ id: this.nextId++, body, ...poseOf(body) });
       this.carried--;
     }
     this.previewing = false;

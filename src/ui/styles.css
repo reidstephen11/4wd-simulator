@@ -7,6 +7,16 @@
   --water: #5e8e98;
   --font: 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
   --font-hand: 'Patrick Hand', 'Nunito', 'Comic Sans MS', cursive;
+  /*
+   * The interface scale (src/ui/uiScale.ts sets --ui from the screen and Settings → UI size).
+   * Every length in these stylesheets is a multiple of --u, so the whole interface grows
+   * with the screen: 1 on a phone and a 1280×720 window, about 1.9 on a 1080p television.
+   */
+  --ui: 1;
+  --u: calc(1px * var(--ui));
+  /* The dash cluster's own scale (uiScale.ts: 0.8 of --ui on a big screen). */
+  --ui-dash: 1;
+  --u-dash: calc(1px * var(--ui-dash));
 }
 
 * {
@@ -39,20 +49,20 @@ body {
 
 .camera-help {
   position: absolute;
-  right: 18px;
-  bottom: 18px;
-  padding: 8px 11px;
-  font-size: 12px;
+  right: calc(18 * var(--u));
+  bottom: calc(18 * var(--u));
+  padding: calc(8 * var(--u)) calc(11 * var(--u));
+  font-size: calc(12 * var(--u));
   color: var(--ink-soft);
   pointer-events: auto;
 }
 
 .camera-help button {
   display: block;
-  margin: 5px 0 0 auto;
-  padding: 3px 7px;
+  margin: calc(5 * var(--u)) 0 0 auto;
+  padding: calc(3 * var(--u)) calc(7 * var(--u));
   border: 1px solid var(--ink-soft);
-  border-radius: 5px;
+  border-radius: calc(5 * var(--u));
   background: transparent;
   color: var(--ink);
   font: inherit;
@@ -70,12 +80,12 @@ body {
 
 .camera-reset-icon {
   display: none;
-  font-size: 17px;
+  font-size: calc(17 * var(--u));
   line-height: 1;
 }
 
 .camera-help kbd {
-  margin-left: 5px;
+  margin-left: calc(5 * var(--u));
   font: inherit;
   font-weight: 800;
 }
@@ -104,11 +114,11 @@ body {
 
 .paper {
   background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: 10px 14px 9px 12px;
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(10 * var(--u)) calc(14 * var(--u)) calc(9 * var(--u)) calc(12 * var(--u));
   box-shadow:
-    3px 4px 0 rgba(59, 42, 30, 0.25),
-    inset 0 0 30px rgba(180, 150, 100, 0.25);
+    calc(3 * var(--u)) calc(4 * var(--u)) 0 rgba(59, 42, 30, 0.25),
+    inset 0 0 calc(30 * var(--u)) rgba(180, 150, 100, 0.25);
 }
 
 .loading {
@@ -127,28 +137,28 @@ body {
 }
 
 .loading-card {
-  width: min(440px, 90vw);
-  padding: 28px 32px 22px;
+  width: min(calc(440 * var(--u)), 90vw);
+  padding: calc(28 * var(--u)) calc(32 * var(--u)) calc(22 * var(--u));
   text-align: center;
 }
 
 .loading h1 {
   font-family: var(--font-hand);
-  font-size: 44px;
+  font-size: calc(44 * var(--u));
   margin: 0;
   letter-spacing: 1px;
 }
 
 .loading .subtitle {
-  margin: 2px 0 18px;
+  margin: calc(2 * var(--u)) 0 calc(18 * var(--u));
   color: var(--ink-soft);
   font-weight: 700;
 }
 
 .progress {
-  height: 12px;
-  border: 2px solid var(--ink);
-  border-radius: 7px;
+  height: calc(12 * var(--u));
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(7 * var(--u));
   overflow: hidden;
   background: var(--paper-dark);
 }
@@ -161,16 +171,16 @@ body {
 }
 
 .progress-label {
-  font-size: 14px;
+  font-size: calc(14 * var(--u));
   color: var(--ink-soft);
-  margin: 8px 0 14px;
+  margin: calc(8 * var(--u)) 0 calc(14 * var(--u));
 }
 
 .controls-reminder {
   list-style: none;
   padding: 0;
   margin: 0;
-  font-size: 14px;
+  font-size: calc(14 * var(--u));
   line-height: 1.7;
 }
 
@@ -183,45 +193,45 @@ body {
 }
 
 .error-panel .paper {
-  padding: 24px;
-  max-width: 520px;
+  padding: calc(24 * var(--u));
+  max-width: calc(520 * var(--u));
 }
 
 .debug-overlay {
   position: fixed;
-  top: 8px;
-  left: 8px;
+  top: calc(8 * var(--u));
+  left: calc(8 * var(--u));
   color: #fff;
   font:
-    12px/1.35 ui-monospace,
+    calc(12 * var(--u))/1.35 ui-monospace,
     Menlo,
     Consolas,
     monospace;
-  text-shadow: 0 1px 2px #000;
+  text-shadow: 0 1px calc(2 * var(--u)) #000;
   z-index: 40;
   pointer-events: none;
 }
 
 .debug-overlay pre {
-  margin: 4px 0 0;
+  margin: calc(4 * var(--u)) 0 0;
 }
 
 .debug-panel {
   position: fixed;
-  top: 8px;
-  right: 8px;
-  width: 260px;
-  max-height: calc(100vh - 16px);
+  top: calc(8 * var(--u));
+  right: calc(8 * var(--u));
+  width: calc(260 * var(--u));
+  max-height: calc(100vh - calc(16 * var(--u)));
   overflow: auto;
   background: rgba(20, 16, 12, 0.72);
   color: #f3ebda;
   font:
-    12px/1.4 ui-monospace,
+    calc(12 * var(--u))/1.4 ui-monospace,
     Menlo,
     Consolas,
     monospace;
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: calc(6 * var(--u)) calc(8 * var(--u));
+  border-radius: calc(6 * var(--u));
   z-index: 41;
 }
 
@@ -232,12 +242,12 @@ body {
 
 .debug-panel button {
   font: inherit;
-  margin: 2px;
-  padding: 2px 6px;
+  margin: calc(2 * var(--u));
+  padding: calc(2 * var(--u)) calc(6 * var(--u));
   background: #3b2a1e;
   color: #f3ebda;
   border: 1px solid #6b5442;
-  border-radius: 3px;
+  border-radius: calc(3 * var(--u));
   cursor: pointer;
 }
 
@@ -252,13 +262,45 @@ body {
 
 .debug-slider {
   display: grid;
-  grid-template-columns: 82px 1fr 44px;
-  gap: 4px;
+  grid-template-columns: calc(82 * var(--u)) 1fr calc(44 * var(--u));
+  gap: calc(4 * var(--u));
   align-items: center;
 }
 
 .debug-slider input {
   width: 100%;
+}
+
+/* Test mode (?dev): top right, above the camera box; the debug panel moves over beside it. */
+.dev-panel {
+  width: calc(250 * var(--u));
+  max-height: calc(100vh - calc(150 * var(--u)));
+}
+
+body:has(.dev-panel) .debug-panel:not(.dev-panel) {
+  right: calc(268 * var(--u));
+}
+
+.dev-panel h3 {
+  margin: calc(8 * var(--u)) 0 calc(2 * var(--u));
+  font-size: calc(12 * var(--u));
+  color: #e7c48f;
+}
+
+.dev-slider {
+  display: grid;
+  grid-template-columns: 1fr calc(120 * var(--u));
+  gap: calc(4 * var(--u));
+  align-items: center;
+}
+
+.dev-slider input {
+  width: 100%;
+}
+
+.dev-note {
+  margin: calc(4 * var(--u)) 0;
+  opacity: 0.75;
 }
 
 /* ---------- HUD ---------- */
@@ -273,6 +315,11 @@ body {
   opacity: 0;
 }
 
+/* Groups the readout cards without a box of its own, except on a short sideways phone. */
+.hud-readout {
+  display: contents;
+}
+
 .hud svg {
   width: 100%;
   height: 100%;
@@ -280,13 +327,13 @@ body {
 
 .compass {
   position: absolute;
-  top: 10px;
+  top: calc(10 * var(--u));
   left: 50%;
   transform: translateX(-50%);
-  width: min(420px, 70vw);
-  height: 38px;
-  padding: 0 6px;
-  border-radius: 8px 10px 7px 9px;
+  width: min(calc(420 * var(--u)), 70vw);
+  height: calc(38 * var(--u));
+  padding: 0 calc(6 * var(--u));
+  border-radius: calc(8 * var(--u)) calc(10 * var(--u)) calc(7 * var(--u)) calc(9 * var(--u));
   overflow: hidden;
   opacity: 0.94;
 }
@@ -299,27 +346,28 @@ body {
 
 .status {
   position: absolute;
-  left: 14px;
-  bottom: 14px;
+  left: calc(14 * var(--u));
+  bottom: calc(14 * var(--u));
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 12px 6px 8px;
+  gap: calc(10 * var(--u));
+  padding: calc(6 * var(--u)) calc(12 * var(--u)) calc(6 * var(--u)) calc(8 * var(--u));
   font-weight: 800;
-  font-size: 15px;
+  font-size: calc(15 * var(--u));
   opacity: 0.94;
 }
 
 .status-range {
   font-family: var(--font-hand);
-  font-size: 26px;
+  font-size: calc(26 * var(--u));
   line-height: 1;
-  width: 32px;
-  height: 32px;
+  min-width: calc(40 * var(--u));
+  padding-inline: calc(3 * var(--u));
+  height: calc(32 * var(--u));
   display: grid;
   place-items: center;
-  border: 2px solid var(--ink);
-  border-radius: 6px;
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(6 * var(--u));
 }
 
 .status-range.low {
@@ -330,9 +378,9 @@ body {
 .status-speed {
   display: none;
   align-items: baseline;
-  gap: 6px;
+  gap: calc(6 * var(--u));
   font-family: var(--font-hand);
-  font-size: 20px;
+  font-size: calc(20 * var(--u));
   line-height: 1;
   white-space: nowrap;
 }
@@ -343,26 +391,26 @@ body {
 
 .status-gear {
   min-width: 1.2em;
-  padding: 1px 4px;
+  padding: 1px calc(4 * var(--u));
   border: 1px solid var(--ink-soft);
-  border-radius: 4px;
-  font-size: 16px;
+  border-radius: calc(4 * var(--u));
+  font-size: calc(16 * var(--u));
   text-align: center;
 }
 
 .status-park {
   display: none;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 2px solid #a3311f;
+  width: calc(32 * var(--u));
+  height: calc(32 * var(--u));
+  border: calc(2 * var(--u)) solid #a3311f;
   border-radius: 50%;
   box-shadow:
-    inset 0 0 0 2px var(--paper),
-    inset 0 0 0 4px #a3311f;
+    inset 0 0 0 calc(2 * var(--u)) var(--paper),
+    inset 0 0 0 calc(4 * var(--u)) #a3311f;
   color: #a3311f;
   font-family: var(--font-hand);
-  font-size: 19px;
+  font-size: calc(19 * var(--u));
   line-height: 1;
 }
 
@@ -373,12 +421,12 @@ body {
 .status-drive {
   pointer-events: auto;
   border: 1px solid var(--ink);
-  border-radius: 5px;
+  border-radius: calc(5 * var(--u));
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 11px;
-  padding: 6px;
+  font-size: calc(11 * var(--u));
+  padding: calc(6 * var(--u));
   cursor: pointer;
 }
 
@@ -388,31 +436,31 @@ body {
 }
 
 .status-drive:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: calc(2 * var(--u)) solid var(--accent);
+  outline-offset: calc(2 * var(--u));
 }
 
 .crawl-run {
   position: absolute;
-  top: 58px;
+  top: calc(58 * var(--u));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: baseline;
-  gap: 14px;
-  padding: 4px 16px;
+  gap: calc(14 * var(--u));
+  padding: calc(4 * var(--u)) calc(16 * var(--u));
   font-weight: 800;
   white-space: nowrap;
 }
 
 .gate-count {
   position: absolute;
-  top: 58px;
+  top: calc(58 * var(--u));
   left: 50%;
   transform: translateX(-50%);
-  padding: 3px 14px;
+  padding: calc(3 * var(--u)) calc(14 * var(--u));
   font-family: var(--font-hand);
-  font-size: 20px;
+  font-size: calc(20 * var(--u));
   white-space: nowrap;
   opacity: 0.94;
 }
@@ -427,12 +475,12 @@ body {
 
 .crawl-run strong {
   font-family: var(--font-hand);
-  font-size: 22px;
+  font-size: calc(22 * var(--u));
 }
 
 .crawl-run-time {
   font-variant-numeric: tabular-nums;
-  font-size: 18px;
+  font-size: calc(18 * var(--u));
 }
 
 .crawl-run-points {
@@ -444,17 +492,17 @@ body {
 }
 
 .run-detail {
-  margin-top: 3px;
-  font-size: 13px;
+  margin-top: calc(3 * var(--u));
+  font-size: calc(13 * var(--u));
   font-weight: 700;
   color: var(--ink-soft);
 }
 
 .crawl-gauges {
   position: absolute;
-  right: 18px;
-  bottom: 132px;
-  padding: 6px 8px 4px;
+  right: calc(18 * var(--u));
+  bottom: calc(132 * var(--u));
+  padding: calc(6 * var(--u)) calc(8 * var(--u)) calc(4 * var(--u));
   pointer-events: none;
 }
 
@@ -471,19 +519,19 @@ body {
  * let the view show through and sit low in the corners over the doors and dash.
  */
 .hud.cockpit .crawl-gauges {
-  right: 10px;
-  bottom: 46px;
+  right: calc(10 * var(--u));
+  bottom: calc(46 * var(--u));
   transform: scale(0.68);
   transform-origin: bottom right;
   opacity: 0.78;
 }
 
 .hud.cockpit .camera-help {
-  right: 10px;
-  bottom: 10px;
+  right: calc(10 * var(--u));
+  bottom: calc(10 * var(--u));
   display: flex;
-  gap: 6px;
-  padding: 4px 6px;
+  gap: calc(6 * var(--u));
+  padding: calc(4 * var(--u)) calc(6 * var(--u));
   opacity: 0.72;
 }
 
@@ -493,7 +541,7 @@ body {
 
 .hud.cockpit .camera-help button {
   margin: 0;
-  font-size: 11px;
+  font-size: calc(11 * var(--u));
 }
 
 .hud.cockpit .status,
@@ -504,30 +552,30 @@ body {
 }
 
 .hud.cockpit .status {
-  left: 10px;
-  bottom: 10px;
+  left: calc(10 * var(--u));
+  bottom: calc(10 * var(--u));
 }
 
 .hud.cockpit .course-hint {
-  left: 10px;
-  bottom: 58px;
+  left: calc(10 * var(--u));
+  bottom: calc(58 * var(--u));
 }
 
 .course-hint {
   position: absolute;
-  left: 14px;
-  bottom: 78px;
-  max-width: 290px;
-  padding: 10px 12px;
+  left: calc(14 * var(--u));
+  bottom: calc(78 * var(--u));
+  max-width: calc(290 * var(--u));
+  padding: calc(10 * var(--u)) calc(12 * var(--u));
   display: grid;
-  gap: 5px;
-  font-size: 13px;
+  gap: calc(5 * var(--u));
+  font-size: calc(13 * var(--u));
   line-height: 1.35;
 }
 
 .course-hint strong {
   font-family: var(--font-hand);
-  font-size: 22px;
+  font-size: calc(22 * var(--u));
 }
 
 .course-hint.hidden {
@@ -538,16 +586,27 @@ body {
   color: var(--ink-soft);
 }
 
+/* An episode adds the supplies strip above the status strip: the hint card sits above it. */
+body:not(.touch-mode) .supplies:not(.hidden) ~ .course-hint {
+  bottom: calc(216 * var(--u));
+}
+
 .status-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: calc(4 * var(--u));
   color: var(--ink);
 }
 
 .status-item svg {
-  width: 26px;
-  height: 26px;
+  width: calc(26 * var(--u));
+  height: calc(26 * var(--u));
+}
+
+/* A short word beside an icon, so it says what it counts. */
+.status-label {
+  font-size: 0.8em;
+  color: var(--ink-soft);
 }
 
 .status-winch,
@@ -594,63 +653,68 @@ body {
 .prompts {
   position: absolute;
   left: 50%;
-  bottom: 22px;
+  bottom: calc(22 * var(--u));
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: calc(6 * var(--u));
 }
 
 .prompt {
-  padding: 5px 14px 6px 6px;
+  padding: calc(5 * var(--u)) calc(14 * var(--u)) calc(6 * var(--u)) calc(6 * var(--u));
   font-weight: 700;
-  font-size: 16px;
+  font-size: calc(16 * var(--u));
   white-space: nowrap;
 }
 
 .prompt .key {
   --progress: 0%;
   display: inline-block;
-  min-width: 28px;
-  padding: 1px 7px;
-  margin-right: 4px;
+  min-width: calc(28 * var(--u));
+  padding: 1px calc(7 * var(--u));
+  margin-right: calc(4 * var(--u));
   text-align: center;
-  border: 2px solid var(--ink);
-  border-radius: 6px;
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(6 * var(--u));
   background: linear-gradient(
     90deg,
     rgba(181, 101, 58, 0.55) var(--progress),
     var(--paper-dark) var(--progress)
   );
   font-family: var(--font-hand);
-  font-size: 18px;
+  font-size: calc(18 * var(--u));
+}
+
+/* Phone warnings. Hidden until touch controls are up; then a short rail (see .touch-mode). */
+.alert-rail {
+  display: none;
 }
 
 /* Messages and discovery cards stack in the top right corner, clear of the track ahead. */
 .notices {
   position: absolute;
   z-index: 2;
-  top: 14px;
-  right: 14px;
-  max-width: min(330px, 42vw);
+  top: calc(14 * var(--u));
+  right: calc(14 * var(--u));
+  max-width: min(calc(330 * var(--u)), 42vw);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: calc(6 * var(--u));
 }
 
 .toasts {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: calc(6 * var(--u));
 }
 
 .toast {
-  padding: 4px 12px;
+  padding: calc(4 * var(--u)) calc(12 * var(--u));
   font-weight: 700;
-  font-size: 14px;
+  font-size: calc(14 * var(--u));
   text-align: right;
   animation: toast-in 0.25s ease-out;
   transition:
@@ -660,25 +724,25 @@ body {
 
 .toast.out {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(calc(-8 * var(--u)));
 }
 
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(calc(-8 * var(--u)));
   }
 }
 
 .discovery {
-  perspective: 600px;
+  perspective: calc(600 * var(--u));
 }
 
 .discovery-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 16px 8px 12px;
+  gap: calc(10 * var(--u));
+  padding: calc(8 * var(--u)) calc(16 * var(--u)) calc(8 * var(--u)) calc(12 * var(--u));
   transform-origin: top center;
   animation: unfold 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   transition:
@@ -699,91 +763,36 @@ body {
 }
 
 .discovery-icon {
-  width: 28px;
-  height: 28px;
+  width: calc(28 * var(--u));
+  height: calc(28 * var(--u));
   color: var(--accent);
 }
 
 .discovery-label {
-  font-size: 11px;
+  font-size: calc(11 * var(--u));
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: calc(2 * var(--u));
   text-transform: uppercase;
   color: var(--ink-soft);
 }
 
 .discovery-name {
   font-family: var(--font-hand);
-  font-size: 23px;
+  font-size: calc(23 * var(--u));
   line-height: 1.05;
 }
 
 /* ---------- Tool menu ---------- */
-.tool-menu {
-  position: fixed;
-  inset: 0;
-  background: rgba(30, 22, 14, 0.25);
-}
-
 .tool-menu.hidden,
 .paper-map.hidden,
 .pause.hidden {
   display: none;
 }
 
-.tool-ring {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 240px;
-  height: 240px;
-  margin: -120px 0 0 -120px;
-  border: 3px dashed rgba(243, 235, 218, 0.7);
-  border-radius: 50%;
-}
-
-.tool-centre {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  padding: 6px 12px;
-  font-family: var(--font-hand);
-  font-size: 22px;
-}
-
-.tool-option {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  width: 128px;
-  padding: 8px 6px;
-  font: 700 14px var(--font);
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.tool-option.selected {
-  background: var(--accent);
-  color: var(--paper);
-}
-
-.tool-option.disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.tool-icon {
-  width: 32px;
-  height: 32px;
-}
-
 /* The ring can reach the compass and status strip on a short screen: fade them out under it. */
 .hud.tool-menu-open .compass,
 .hud.tool-menu-open .status,
+.hud.tool-menu-open .supplies,
 .hud.tool-menu-open .course-hint,
 .hud.tool-menu-open .crawl-gauges,
 .hud.tool-menu-open .camera-help {
@@ -796,25 +805,36 @@ body {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(30, 22, 14, 0.55);
-  perspective: 1400px;
-  z-index: 30;
+  background: rgba(30, 22, 14, 0.72);
+  perspective: calc(1400 * var(--u));
+  z-index: 32;
+}
+
+/* The compass and panels sit under this dim; hide them so they can't show through it. */
+body.map-open .hud {
+  visibility: hidden;
 }
 
 .paper-map-sheet {
   position: relative;
-  width: min(92vmin, 1000px);
-  aspect-ratio: 1;
+  /* Longer side at most calc(1000 * var(--u)); the short side follows the map (--map-aspect is width / height). */
+  width: min(
+    92vw,
+    calc(92vh * var(--map-aspect, 1)),
+    calc(calc(1000 * var(--u)) * min(var(--map-aspect, 1), 1))
+  );
+  aspect-ratio: var(--map-aspect, 1);
   transform-origin: center top;
   animation: map-unfold 0.45s cubic-bezier(0.2, 0.8, 0.3, 1);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 calc(18 * var(--u)) calc(50 * var(--u)) rgba(0, 0, 0, 0.45);
 }
 
 .paper-map-view {
+  position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: calc(4 * var(--u));
   touch-action: none;
   cursor: grab;
 }
@@ -824,24 +844,52 @@ body {
 }
 
 .paper-map canvas {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   transform-origin: 0 0;
 }
 
-/* Inside the sheet's bottom edge, so a short screen can't cut it off. */
+.paper-map-close {
+  display: none;
+  position: absolute;
+  top: calc(8 * var(--u));
+  right: calc(8 * var(--u));
+  z-index: 2;
+  min-width: calc(44 * var(--u));
+  height: calc(32 * var(--u));
+  padding: 0 calc(10 * var(--u));
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(8 * var(--u));
+  background: rgba(243, 235, 218, 0.94);
+  color: var(--ink);
+  font: 800 calc(13 * var(--u)) var(--font);
+  cursor: pointer;
+}
+
+.touch-mode .paper-map-close {
+  display: block;
+}
+
+/* Inside the sheet's bottom edge, so a short screen can't cut it off. Fades once read. */
 .paper-map-hint {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
-  padding: 2px 8px;
-  border-radius: 5px;
+  right: calc(8 * var(--u));
+  bottom: calc(8 * var(--u));
+  z-index: 2;
+  padding: calc(2 * var(--u)) calc(8 * var(--u));
+  border-radius: calc(5 * var(--u));
   background: rgba(243, 235, 218, 0.88);
   color: var(--ink);
   font-weight: 700;
-  font-size: 12px;
+  font-size: calc(12 * var(--u));
   pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+.paper-map-hint.faded {
+  opacity: 0;
 }
 
 @keyframes map-unfold {
@@ -862,30 +910,83 @@ body {
 }
 
 .pause-card {
-  width: min(460px, 92vw);
+  width: min(calc(460 * var(--u)), 92vw);
   max-height: 90vh;
-  overflow: auto;
-  padding: 20px 26px 22px;
+  overflow: hidden;
+  padding: calc(20 * var(--u)) calc(26 * var(--u)) calc(22 * var(--u));
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: calc(8 * var(--u));
+}
+
+/* A page is a heading, a body and a foot. Only the body scrolls when the page is taller than
+   the screen, so the heading, Back and the input hint stay in sight (v1.84). Rows keep their
+   own height (a vehicle's two-line description once spilled onto the next button when they
+   shrank). */
+.pause-card > *,
+.pause-body > * {
+  flex-shrink: 0;
+}
+
+.pause-card > .pause-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(8 * var(--u));
+  /* Room for the highlight's outline, which the scrolling box would otherwise cut off. */
+  margin: calc(-4 * var(--u));
+  padding: calc(4 * var(--u));
+  scrollbar-width: thin;
+}
+
+.pause-foot {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6 * var(--u));
+}
+
+/* A setting's name was drawn at the page's unscaled size, half the height of its options on a
+   television (v1.84). */
+.pause-card .setting-row {
+  min-height: calc(30 * var(--u));
+  font-size: calc(15 * var(--u));
+}
+
+/* Settings are single lines: closer together than a page of buttons. */
+.pause-body:has(> .setting-row) {
+  gap: calc(5 * var(--u));
+}
+
+/* The row of a setting the highlight is in. */
+.setting-row {
+  border-radius: calc(8 * var(--u));
+}
+
+.setting-row.focused-row {
+  --row-band: rgba(120, 80, 20, 0.16);
+  background: var(--row-band);
+  box-shadow:
+    calc(-6 * var(--u)) 0 0 var(--row-band),
+    calc(6 * var(--u)) 0 0 var(--row-band);
 }
 
 .pause-card h2 {
-  margin: 0 0 6px;
+  margin: 0 0 calc(6 * var(--u));
   text-align: center;
   font-family: var(--font-hand);
-  font-size: 38px;
+  font-size: calc(38 * var(--u));
   font-weight: 400;
 }
 
 .pause-card button {
-  font: 700 17px var(--font);
+  font: 700 calc(17 * var(--u)) var(--font);
   color: var(--ink);
   background: var(--paper-dark);
-  border: 2px solid var(--ink);
-  border-radius: 8px 10px 7px 9px;
-  padding: 8px 12px;
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(8 * var(--u)) calc(10 * var(--u)) calc(7 * var(--u)) calc(9 * var(--u));
+  padding: calc(8 * var(--u)) calc(12 * var(--u));
   cursor: pointer;
   text-align: left;
 }
@@ -893,14 +994,14 @@ body {
 .pause-card button small {
   display: block;
   font-weight: 400;
-  font-size: 13px;
+  font-size: calc(13 * var(--u));
   color: var(--ink-soft);
 }
 
 .pause-card button:hover,
 .pause-card button.focused,
 .pause-card input.focused {
-  outline: 3px solid var(--accent);
+  outline: calc(3 * var(--u)) solid var(--accent);
   outline-offset: 1px;
 }
 
@@ -914,8 +1015,8 @@ body {
 }
 
 .menu-note {
-  margin: 2px 0;
-  font-size: 13px;
+  margin: calc(2 * var(--u)) 0;
+  font-size: calc(13 * var(--u));
   color: var(--ink-soft);
 }
 
@@ -923,7 +1024,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: calc(12 * var(--u));
   font-weight: 700;
 }
 
@@ -932,78 +1033,88 @@ body {
   accent-color: var(--accent);
 }
 
+.controller-setting {
+  display: block;
+}
+
+.controller-setting .seg {
+  flex-wrap: wrap;
+  margin-top: calc(6 * var(--u));
+}
+
+.controller-setting .seg button {
+  flex: 1 1 auto;
+  width: auto;
+}
+
 .seg {
   display: flex;
-  gap: 6px;
+  gap: calc(6 * var(--u));
 }
 
 .seg button {
   text-align: center;
-  padding: 5px 12px;
+  padding: calc(5 * var(--u)) calc(12 * var(--u));
 }
 
 table.controls {
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: calc(14 * var(--u));
 }
 
-.pause-controls {
-  overflow: hidden;
-}
-
+/* The Controls table scrolls with the page's body. */
 .controls-scroll {
   min-height: 0;
-  overflow: auto;
 }
 
 .pause-buttons {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: calc(8 * var(--u));
 }
 
 /* Short screens (small laptops, phones held sideways): everything on the pause card fits without scrolling. */
 @media (max-height: 640px) {
   .pause-card {
-    padding: 10px 18px 12px;
-    gap: 6px;
+    padding: calc(10 * var(--u)) calc(18 * var(--u)) calc(12 * var(--u));
+    gap: calc(6 * var(--u));
   }
 
   .pause-card h2 {
     margin: 0;
-    font-size: 28px;
+    font-size: calc(28 * var(--u));
   }
 
   .pause-card button {
-    padding: 5px 10px;
-    font-size: 15px;
+    padding: calc(5 * var(--u)) calc(10 * var(--u));
+    font-size: calc(15 * var(--u));
   }
 
   .pause-card button small {
-    font-size: 12px;
+    font-size: calc(12 * var(--u));
   }
 
   .pause-card .build-label {
-    margin-top: 4px;
+    margin-top: calc(4 * var(--u));
   }
 }
 
 @media (max-height: 640px) and (min-width: 700px) {
   .pause-main {
-    width: min(640px, 92vw);
+    width: min(calc(640 * var(--u)), 92vw);
   }
 
   .pause-main .pause-buttons {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: calc(6 * var(--u));
   }
 }
 
 table.controls th,
 table.controls td {
   text-align: left;
-  padding: 4px 6px;
+  padding: calc(4 * var(--u)) calc(6 * var(--u));
   border-bottom: 1px solid rgba(59, 42, 30, 0.2);
 }
 
@@ -1022,8 +1133,8 @@ table.controls td {
 }
 
 .build-label {
-  margin: 12px 0 0;
-  font-size: 11px;
+  margin: calc(12 * var(--u)) 0 0;
+  font-size: calc(11 * var(--u));
   color: var(--ink-soft);
   text-align: center;
   user-select: text;
@@ -1035,9 +1146,9 @@ table.controls td {
   inset: 0;
   z-index: 60;
   display: grid;
-  place-items: center;
+  place-items: safe center;
   overflow-y: auto;
-  padding: 16px;
+  padding: calc(16 * var(--u));
   pointer-events: auto;
   background: linear-gradient(180deg, #8db3c9 0%, #cfc6a8 55%, #e9c89a 100%);
   transition: opacity 0.35s ease;
@@ -1049,41 +1160,41 @@ table.controls td {
 }
 
 .welcome-card {
-  width: min(880px, 100%);
-  padding: 22px 26px 16px;
+  width: min(calc(820 * var(--u)), 100%);
+  padding: calc(28 * var(--u)) calc(30 * var(--u)) calc(16 * var(--u));
   text-align: center;
 }
 
 .welcome h1 {
   font-family: var(--font-hand);
-  font-size: 46px;
+  font-size: calc(46 * var(--u));
   margin: 0;
   letter-spacing: 1px;
 }
 
 .welcome .subtitle {
-  margin: 0 0 14px;
+  margin: 0 0 calc(24 * var(--u));
   color: var(--ink-soft);
   font-weight: 700;
 }
 
 .welcome-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 22px;
+  grid-template-columns: 1fr 1.15fr;
+  gap: calc(24 * var(--u));
   text-align: left;
 }
 
 .welcome-section h2 {
-  margin: 0 0 6px;
+  margin: 0 0 calc(6 * var(--u));
   font-family: var(--font-hand);
-  font-size: 22px;
+  font-size: calc(22 * var(--u));
   font-weight: 400;
 }
 
 .welcome-options {
   display: grid;
-  gap: 6px;
+  gap: calc(6 * var(--u));
 }
 
 .welcome-options.seg {
@@ -1093,12 +1204,12 @@ table.controls td {
 
 .welcome-option,
 .welcome-drive {
-  font: 700 16px var(--font);
+  font: 700 calc(16 * var(--u)) var(--font);
   color: var(--ink);
   background: var(--paper-dark);
-  border: 2px solid var(--ink);
-  border-radius: 8px 10px 7px 9px;
-  padding: 7px 12px;
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(8 * var(--u)) calc(10 * var(--u)) calc(7 * var(--u)) calc(9 * var(--u));
+  padding: calc(7 * var(--u)) calc(12 * var(--u));
   cursor: pointer;
   text-align: left;
 }
@@ -1111,7 +1222,7 @@ table.controls td {
 .welcome-option small {
   display: block;
   font-weight: 400;
-  font-size: 13px;
+  font-size: calc(13 * var(--u));
   color: var(--ink-soft);
 }
 
@@ -1129,7 +1240,7 @@ table.controls td {
 .welcome-drive:hover,
 .welcome-drive.focused,
 .welcome button:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: calc(3 * var(--u)) solid var(--accent);
   outline-offset: 1px;
 }
 
@@ -1139,20 +1250,128 @@ table.controls td {
 }
 
 .welcome-note {
-  margin: 8px 0 0;
-  font-size: 13px;
+  margin: calc(8 * var(--u)) 0 0;
+  font-size: calc(13 * var(--u));
   color: var(--ink-soft);
 }
 
 .welcome-drive {
-  margin: 18px auto 4px;
+  margin: calc(18 * var(--u)) auto calc(4 * var(--u));
   display: block;
-  min-width: 220px;
+  min-width: calc(220 * var(--u));
   text-align: center;
-  font-size: 22px;
+  font-size: calc(22 * var(--u));
   font-family: var(--font-hand);
   background: var(--ink);
   color: var(--paper);
+}
+
+.welcome [hidden] {
+  display: none;
+}
+
+.welcome-trip {
+  display: flex;
+  flex-direction: column;
+  padding: calc(20 * var(--u));
+  border-radius: calc(10 * var(--u));
+  background: var(--paper-dark);
+}
+
+.welcome-kicker {
+  margin: 0 0 calc(4 * var(--u));
+  font-size: calc(12 * var(--u));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--ink-soft);
+}
+
+.welcome-trip h2 {
+  font-size: calc(30 * var(--u));
+  line-height: 1.15;
+}
+
+.welcome-route {
+  margin: 0;
+  font-size: calc(13 * var(--u));
+  color: var(--ink-soft);
+}
+
+.welcome-mission {
+  margin: calc(18 * var(--u)) 0;
+  font-size: calc(18 * var(--u));
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.welcome-trip .welcome-drive {
+  width: 100%;
+  min-width: 0;
+  margin: auto 0 0;
+  min-height: calc(48 * var(--u));
+}
+
+.welcome-start {
+  margin-bottom: calc(14 * var(--u));
+}
+
+.welcome-setup-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(8 * var(--u)) calc(20 * var(--u));
+  width: 100%;
+  padding: calc(16 * var(--u)) 0;
+  margin-top: calc(20 * var(--u));
+  border: 0;
+  border-top: 1px solid var(--paper-dark);
+  background: transparent;
+  font: 700 calc(14 * var(--u)) var(--font);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.welcome-setup-toggle span:last-child {
+  font-size: calc(13 * var(--u));
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.welcome-setup-toggle b {
+  margin-left: calc(8 * var(--u));
+}
+
+.welcome-setup {
+  padding-top: calc(8 * var(--u));
+  text-align: left;
+}
+
+.welcome-later,
+.welcome-rules,
+.launch-details {
+  font-size: calc(13 * var(--u));
+  color: var(--ink-soft);
+  margin-top: calc(12 * var(--u));
+  text-align: left;
+}
+
+.welcome summary,
+.loading summary {
+  cursor: pointer;
+  padding: calc(6 * var(--u)) 0;
+}
+
+.welcome summary:focus-visible,
+.loading summary:focus-visible {
+  outline: calc(2 * var(--u)) solid var(--accent);
+  outline-offset: calc(3 * var(--u));
+}
+
+.welcome-setup-toggle.focused {
+  outline: calc(3 * var(--u)) solid var(--accent);
+  outline-offset: calc(2 * var(--u));
 }
 
 @media (max-width: 720px) {
@@ -1165,7 +1384,60 @@ table.controls td {
   }
 
   .welcome h1 {
-    font-size: 36px;
+    font-size: calc(36 * var(--u));
+  }
+
+  .welcome-card {
+    padding: calc(20 * var(--u)) calc(18 * var(--u)) calc(12 * var(--u));
+  }
+
+  .welcome .subtitle {
+    margin-bottom: calc(18 * var(--u));
+  }
+
+  .welcome-grid {
+    gap: calc(18 * var(--u));
+  }
+
+  .welcome-trip {
+    padding: calc(16 * var(--u));
+    grid-row: 1;
+  }
+
+  .welcome-setup-toggle {
+    flex-wrap: wrap;
+    margin-top: calc(14 * var(--u));
+  }
+}
+
+@media (min-width: 721px) and (max-height: 500px) {
+  .welcome {
+    padding: calc(10 * var(--u));
+  }
+
+  .welcome-card {
+    padding: calc(12 * var(--u)) calc(20 * var(--u));
+  }
+
+  .welcome h1 {
+    font-size: calc(30 * var(--u));
+  }
+
+  .welcome .subtitle {
+    margin-bottom: calc(12 * var(--u));
+  }
+
+  .welcome-trip {
+    align-self: start;
+    padding: calc(14 * var(--u));
+  }
+
+  .welcome-mission {
+    margin: calc(12 * var(--u)) 0;
+  }
+
+  .welcome-trip .welcome-drive {
+    margin-top: 0;
   }
 }
 
@@ -1195,22 +1467,22 @@ table.controls td {
 }
 
 .touch-top {
-  top: max(10px, env(safe-area-inset-top));
-  left: max(12px, env(safe-area-inset-left));
+  top: max(calc(10 * var(--u)), env(safe-area-inset-top));
+  left: max(calc(12 * var(--u)), env(safe-area-inset-left));
   display: flex;
-  gap: 6px;
+  gap: calc(6 * var(--u));
 }
 
 .touch-btn {
-  min-width: 44px;
-  height: 42px;
-  padding: 0 8px;
-  font: 800 14px var(--font);
+  min-width: calc(44 * var(--u));
+  height: calc(42 * var(--u));
+  padding: 0 calc(8 * var(--u));
+  font: 800 calc(14 * var(--u)) var(--font);
   color: var(--ink);
   background: rgba(243, 235, 218, 0.82);
-  border: 2px solid var(--ink);
-  border-radius: 9px 11px 8px 10px;
-  box-shadow: 2px 3px 0 rgba(59, 42, 30, 0.25);
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(9 * var(--u)) calc(11 * var(--u)) calc(8 * var(--u)) calc(10 * var(--u));
+  box-shadow: calc(2 * var(--u)) calc(3 * var(--u)) 0 rgba(59, 42, 30, 0.25);
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1220,7 +1492,7 @@ table.controls td {
 }
 
 .touch-btn.down {
-  transform: translate(1px, 2px);
+  transform: translate(1px, calc(2 * var(--u)));
   box-shadow: none;
   filter: brightness(0.85);
 }
@@ -1231,40 +1503,68 @@ table.controls td {
 }
 
 .touch-stick {
-  left: max(12px, env(safe-area-inset-left));
-  bottom: max(14px, env(safe-area-inset-bottom));
-  width: 170px;
-  height: 170px;
+  left: max(calc(12 * var(--u)), env(safe-area-inset-left));
+  bottom: max(calc(14 * var(--u)), env(safe-area-inset-bottom));
+  width: calc(170 * var(--u));
+  height: calc(170 * var(--u));
   display: grid;
   place-items: center;
 }
 
 .touch-stick-base {
-  width: 132px;
-  height: 132px;
+  position: relative;
+  width: calc(132 * var(--u));
+  height: calc(132 * var(--u));
   border-radius: 50%;
-  border: 3px dashed rgba(243, 235, 218, 0.85);
+  border: calc(3 * var(--u)) dashed rgba(243, 235, 218, 0.85);
   background: rgba(59, 42, 30, 0.22);
   display: grid;
   place-items: center;
 }
 
 .touch-stick-knob {
-  width: 58px;
-  height: 58px;
+  position: relative;
+  z-index: 1;
+  width: calc(58 * var(--u));
+  height: calc(58 * var(--u));
   border-radius: 50%;
   background: rgba(243, 235, 218, 0.9);
-  border: 2px solid var(--ink);
-  box-shadow: 2px 3px 0 rgba(59, 42, 30, 0.25);
+  border: calc(2 * var(--u)) solid var(--ink);
+  box-shadow: calc(2 * var(--u)) calc(3 * var(--u)) 0 rgba(59, 42, 30, 0.25);
+}
+
+.touch-stick-axis {
+  display: none;
+  position: absolute;
+  inset: calc(14 * var(--u)) 0;
+  margin: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  font: 800 calc(11 * var(--u))/1 var(--font);
+  color: rgba(243, 235, 218, 0.75);
+  pointer-events: none;
+}
+
+.touch-controls.stick-drive .touch-stick-axis {
+  display: flex;
+}
+
+.touch-controls.stick-drive .touch-pedals.touch-drive {
+  display: none;
+}
+
+.touch-controls.tool-mode .touch-stick-axis {
+  display: none;
 }
 
 .touch-right {
-  right: max(12px, env(safe-area-inset-right));
-  bottom: max(14px, env(safe-area-inset-bottom));
+  right: max(calc(12 * var(--u)), env(safe-area-inset-right));
+  bottom: max(calc(14 * var(--u)), env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  gap: calc(10 * var(--u));
   pointer-events: none;
 }
 
@@ -1274,13 +1574,13 @@ table.controls td {
 
 .touch-grid {
   display: grid;
-  grid-template-columns: repeat(3, 60px);
-  gap: 6px;
+  grid-template-columns: repeat(3, calc(60 * var(--u)));
+  gap: calc(6 * var(--u));
 }
 
 .touch-grid .touch-btn {
-  padding: 0 2px;
-  font-size: 12px;
+  padding: 0 calc(2 * var(--u));
+  font-size: calc(12 * var(--u));
 }
 
 .touch-wide {
@@ -1290,8 +1590,8 @@ table.controls td {
 /* Range, crawl and diff locks: a row above the other buttons, shown while 4WD is open. */
 .touch-pile {
   display: none;
-  grid-template-columns: repeat(4, 60px);
-  gap: 6px;
+  grid-template-columns: repeat(4, calc(60 * var(--u)));
+  gap: calc(6 * var(--u));
 }
 
 .touch-controls.pile-open:not(.tool-mode) .touch-pile {
@@ -1299,8 +1599,8 @@ table.controls td {
 }
 
 .touch-pile .touch-btn {
-  padding: 0 2px;
-  font-size: 12px;
+  padding: 0 calc(2 * var(--u));
+  font-size: calc(12 * var(--u));
 }
 
 .touch-pile-toggle {
@@ -1308,26 +1608,26 @@ table.controls td {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: calc(3 * var(--u));
   line-height: 1;
 }
 
 .touch-pile-toggle[aria-expanded='true'] {
   background: var(--paper-dark);
-  box-shadow: inset 0 0 0 2px var(--ink);
+  box-shadow: inset 0 0 0 calc(2 * var(--u)) var(--ink);
 }
 
 .touch-pile-marks {
   display: flex;
-  gap: 2px;
+  gap: calc(2 * var(--u));
 }
 
 .touch-pile-marks i {
-  width: 12px;
-  height: 12px;
+  width: calc(12 * var(--u));
+  height: calc(12 * var(--u));
   border: 1px solid var(--ink-soft);
-  border-radius: 3px;
-  font: 800 9px/10px var(--font);
+  border-radius: calc(3 * var(--u));
+  font: 800 calc(9 * var(--u))/calc(10 * var(--u)) var(--font);
   color: var(--ink-soft);
   text-align: center;
 }
@@ -1340,13 +1640,13 @@ table.controls td {
 
 .touch-pedals {
   display: flex;
-  gap: 10px;
+  gap: calc(10 * var(--u));
 }
 
 .touch-pedal {
-  width: 86px;
-  height: 104px;
-  font-size: 16px;
+  width: calc(86 * var(--u));
+  height: calc(104 * var(--u));
+  font-size: calc(16 * var(--u));
 }
 
 .touch-gas {
@@ -1368,13 +1668,36 @@ table.controls td {
   display: flex;
 }
 
+/* Joystick on the right: the stick and the buttons trade sides (Settings > Joystick side). */
+.touch-controls.stick-right .touch-stick {
+  left: auto;
+  right: max(calc(12 * var(--u)), env(safe-area-inset-right));
+}
+
+.touch-controls.stick-right .touch-right {
+  right: auto;
+  left: max(calc(12 * var(--u)), env(safe-area-inset-left));
+  align-items: flex-start;
+}
+
+/* The prompts sit above the buttons, so they follow them to the left. */
+body.touch-swap.touch-mode .prompts {
+  left: max(calc(12 * var(--u)), env(safe-area-inset-left));
+  right: auto;
+  align-items: flex-start;
+}
+
+body.touch-swap.touch-mode .prompt {
+  text-align: left;
+}
+
 /* The HUD moves out of the way of the thumbs. */
 .touch-mode .status {
-  top: max(60px, calc(env(safe-area-inset-top) + 50px));
+  top: max(calc(60 * var(--u)), calc(env(safe-area-inset-top) + calc(50 * var(--u))));
   bottom: auto;
-  left: max(12px, env(safe-area-inset-left));
-  padding: 3px 10px 3px 6px;
-  font-size: 13px;
+  left: max(calc(12 * var(--u)), env(safe-area-inset-left));
+  padding: calc(3 * var(--u)) calc(10 * var(--u)) calc(3 * var(--u)) calc(6 * var(--u));
+  font-size: calc(13 * var(--u));
 }
 
 .touch-mode .status-drive {
@@ -1382,12 +1705,12 @@ table.controls td {
 }
 
 .touch-mode .course-hint {
-  top: 104px;
+  top: calc(104 * var(--u));
   bottom: auto;
-  left: max(12px, env(safe-area-inset-left));
-  max-width: 230px;
-  padding: 6px 9px;
-  font-size: 12px;
+  left: max(calc(12 * var(--u)), env(safe-area-inset-left));
+  max-width: calc(230 * var(--u));
+  padding: calc(6 * var(--u)) calc(9 * var(--u));
+  font-size: calc(12 * var(--u));
 }
 
 .touch-mode .course-hint small {
@@ -1396,31 +1719,107 @@ table.controls td {
 
 /* Narrow enough to stay between the top row's buttons and the camera buttons. */
 .touch-mode .compass {
-  width: min(420px, 44vw, 100vw - 490px);
-  height: 34px;
+  width: min(calc(420 * var(--u)), 44vw, 100vw - calc(490 * var(--u)));
+  height: calc(34 * var(--u));
 }
 
 /*
  * Below the camera buttons in the top right corner, one at a time (the newest message,
  * else the discovery card), so the stack never reaches the buttons under the thumb.
+ * Warnings and toasts leave this corner for the rail under the compass.
  */
 .touch-mode .notices {
-  top: max(62px, calc(env(safe-area-inset-top) + 52px));
-  right: max(12px, env(safe-area-inset-right));
+  top: max(calc(62 * var(--u)), calc(env(safe-area-inset-top) + calc(52 * var(--u))));
+  right: max(calc(12 * var(--u)), env(safe-area-inset-right));
 }
 
 .touch-mode .toasts .toast:not(:last-child),
-.touch-mode .notices:has(.toast) .discovery {
+body.touch-mode:has(.alert-rail .alert) .discovery,
+body.touch-mode:has(.alert-rail .toast) .discovery {
   display: none;
 }
 
+/*
+ * Warnings sit in the sky band under the compass, one short line each, clear of the
+ * road, the joystick, the pedals and the panels. Held sideways they share a row in the
+ * middle, between the left-hand panels and the camera buttons. Held upright the compass
+ * is lower and the right-hand panels start sooner, so the lines stack on the right.
+ */
+.touch-mode .alert-rail {
+  position: fixed;
+  z-index: 4;
+  display: flex;
+  pointer-events: none;
+  top: calc(max(calc(10 * var(--u)), env(safe-area-inset-top)) + calc(46 * var(--u)));
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  max-width: min(calc(300 * var(--u)), calc(100vw - calc(220 * var(--u))));
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: calc(4 * var(--u));
+}
+
+.touch-mode .alerts,
+.touch-mode .alert-rail .toasts {
+  display: contents;
+}
+
+.touch-mode .alert-rail.full .toasts {
+  display: none;
+}
+
+.touch-mode .alert {
+  display: flex;
+  align-items: center;
+  gap: calc(4 * var(--u));
+  padding: 1px calc(8 * var(--u)) calc(2 * var(--u)) calc(3 * var(--u));
+  font-size: calc(12 * var(--u));
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+  box-shadow: calc(2 * var(--u)) calc(2 * var(--u)) 0 rgba(59, 42, 30, 0.25);
+}
+
+.touch-mode .alert .mark {
+  display: inline-grid;
+  place-items: center;
+  width: calc(16 * var(--u));
+  height: calc(16 * var(--u));
+  border-radius: calc(4 * var(--u));
+  background: #a3311f;
+  color: var(--paper);
+  font-size: calc(12 * var(--u));
+  line-height: 1;
+}
+
+.touch-mode .alert.critical {
+  border-color: #a3311f;
+}
+
+.touch-mode .alert.minimised {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.touch-mode .alert-rail .toast {
+  padding: calc(2 * var(--u)) calc(8 * var(--u));
+  font-size: calc(12 * var(--u));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(calc(220 * var(--u)), 40vw);
+}
+
 .touch-mode .camera-help {
-  top: max(10px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
+  top: max(calc(10 * var(--u)), env(safe-area-inset-top));
+  right: max(calc(12 * var(--u)), env(safe-area-inset-right));
   bottom: auto;
   display: flex;
-  gap: 6px;
-  padding: 4px;
+  gap: calc(6 * var(--u));
+  padding: calc(4 * var(--u));
 }
 
 .touch-mode .camera-help .camera-hint,
@@ -1430,54 +1829,49 @@ table.controls td {
 
 .touch-mode .camera-help button {
   margin: 0;
-  padding: 6px 8px;
-  font-size: 13px;
+  padding: calc(6 * var(--u)) calc(8 * var(--u));
+  font-size: calc(13 * var(--u));
 }
 
 .touch-mode .crawl-gauges,
 .touch-mode .hud.cockpit .crawl-gauges {
   right: auto;
   left: 50%;
-  bottom: max(8px, env(safe-area-inset-bottom));
-  transform: translateX(-50%) scale(0.6);
+  bottom: max(calc(8 * var(--u)), env(safe-area-inset-bottom));
+  transform: translateX(-50%) scale(0.62);
   transform-origin: bottom center;
 }
 
 .touch-mode .prompts {
-  bottom: 112px;
+  bottom: calc(112 * var(--u));
 }
 
 .touch-mode .prompt {
-  font-size: 13px;
-}
-
-.touch-mode .tool-option {
-  width: 112px;
-  font-size: 12px;
+  font-size: calc(13 * var(--u));
 }
 
 /* The driver's-seat panels keep their touch places: top left, and the camera buttons top right. */
 .touch-mode .hud.cockpit .status,
 .touch-mode .hud.cockpit .course-hint {
   bottom: auto;
-  left: max(12px, env(safe-area-inset-left));
+  left: max(calc(12 * var(--u)), env(safe-area-inset-left));
   transform-origin: top left;
 }
 
 .touch-mode .hud.cockpit .camera-help {
   bottom: auto;
-  right: max(12px, env(safe-area-inset-right));
-  padding: 4px;
+  right: max(calc(12 * var(--u)), env(safe-area-inset-right));
+  padding: calc(4 * var(--u));
 }
 
 .touch-mode .hud.cockpit .camera-help button {
-  font-size: 13px;
+  font-size: calc(13 * var(--u));
 }
 
 @media (orientation: portrait) {
   /* The top row and the camera buttons share one line: short labels, no gaps to spare. */
   .touch-top {
-    gap: 4px;
+    gap: calc(4 * var(--u));
   }
 
   .touch-mode .camera-help .camera-preset-name,
@@ -1489,68 +1883,72 @@ table.controls td {
     display: inline;
   }
 
-  /* Narrow enough for the tool menu's options to sit side by side across the screen. */
-  .touch-mode .tool-option {
-    width: 104px;
-    font-size: 11px;
-  }
-
   .touch-mode .compass {
-    top: max(60px, calc(env(safe-area-inset-top) + 50px));
+    top: max(calc(60 * var(--u)), calc(env(safe-area-inset-top) + calc(50 * var(--u))));
     width: 64vw;
   }
 
   .touch-mode .status {
-    top: 104px;
+    top: calc(104 * var(--u));
   }
 
   .touch-mode .course-hint {
-    top: 146px;
+    top: calc(146 * var(--u));
   }
 
   .touch-mode .notices {
-    top: 104px;
+    top: calc(104 * var(--u));
+  }
+
+  .touch-mode .alert-rail {
+    top: calc(max(calc(60 * var(--u)), env(safe-area-inset-top) + calc(50 * var(--u))) + calc(40 * var(--u)));
+    left: auto;
+    right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+    transform: none;
+    max-width: calc(100vw - calc(220 * var(--u)));
+    flex-direction: column;
+    align-items: flex-end;
   }
 
   .touch-mode .crawl-gauges,
   .touch-mode .hud.cockpit .crawl-gauges {
-    top: 146px;
+    top: calc(146 * var(--u));
     bottom: auto;
     left: auto;
-    right: max(8px, env(safe-area-inset-right));
-    transform: scale(0.55);
+    right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+    transform: scale(0.62);
     transform-origin: top right;
   }
 
   /* The gate count or run clock gets its own line under the compass; the panels below move down. */
   .touch-mode .gate-count,
   .touch-mode .crawl-run {
-    top: max(98px, calc(env(safe-area-inset-top) + 88px));
-    padding: 2px 12px;
-    font-size: 17px;
+    top: max(calc(98 * var(--u)), calc(env(safe-area-inset-top) + calc(88 * var(--u))));
+    padding: calc(2 * var(--u)) calc(12 * var(--u));
+    font-size: calc(17 * var(--u));
   }
 
   .touch-mode .crawl-run strong {
-    font-size: 18px;
+    font-size: calc(18 * var(--u));
   }
 
   .touch-mode .crawl-run-time {
-    font-size: 15px;
+    font-size: calc(15 * var(--u));
   }
 
   .touch-mode .hud.with-progress .status,
   .touch-mode .hud.with-progress .notices {
-    top: 132px;
+    top: calc(132 * var(--u));
   }
 
   .touch-mode .hud.with-progress .course-hint,
   .touch-mode .hud.with-progress .crawl-gauges {
-    top: 174px;
+    top: calc(174 * var(--u));
   }
 
   /* Beside the crawl gauges the course hint keeps only its title. */
   .touch-mode .hud.with-gauges .course-hint {
-    max-width: calc(100vw - 216px);
+    max-width: calc(100vw - calc(216 * var(--u)));
   }
 
   .touch-mode .hud.with-gauges .course-hint span {
@@ -1560,23 +1958,1462 @@ table.controls td {
   /* Small, just above the buttons under the right thumb, rather than over the car. */
   .touch-mode .prompts {
     left: auto;
-    right: max(12px, env(safe-area-inset-right));
-    bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--touch-right-height, 252px) + 8px);
+    right: max(calc(12 * var(--u)), env(safe-area-inset-right));
+    bottom: calc(
+      max(calc(14 * var(--u)), env(safe-area-inset-bottom)) +
+        var(--touch-right-height, calc(252 * var(--u))) + calc(8 * var(--u))
+    );
     transform: none;
     align-items: flex-end;
-    max-width: calc(100vw - 24px);
-    gap: 4px;
+    max-width: calc(100vw - calc(24 * var(--u)));
+    gap: calc(4 * var(--u));
   }
 
   .touch-mode .prompt {
-    padding: 3px 10px 4px 4px;
-    font-size: 12px;
+    padding: calc(3 * var(--u)) calc(10 * var(--u)) calc(4 * var(--u)) calc(4 * var(--u));
+    font-size: calc(12 * var(--u));
     white-space: normal;
     text-align: right;
   }
 
   .touch-mode .prompt .key {
-    padding: 0 5px;
-    font-size: 15px;
+    padding: 0 calc(5 * var(--u));
+    font-size: calc(15 * var(--u));
   }
+}
+
+/* ---------- Episodes: mission panel, supplies, history and result cards, briefing ---------- */
+.mission {
+  position: absolute;
+  top: calc(10 * var(--u));
+  left: calc(14 * var(--u));
+  max-width: min(calc(300 * var(--u)), 30vw);
+  padding: calc(6 * var(--u)) calc(12 * var(--u)) calc(7 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  opacity: 0.94;
+}
+
+.mission.hidden {
+  display: none;
+}
+
+.mission small {
+  font-size: calc(12 * var(--u));
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.mission strong {
+  font-family: var(--font-hand);
+  font-size: calc(19 * var(--u));
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.mission-clock {
+  font-weight: 800;
+  font-size: calc(14 * var(--u));
+}
+
+.mission-clock.urgent {
+  color: #a3311f;
+}
+
+/* Fuel and what's on board, just above the status strip. */
+.supplies {
+  position: absolute;
+  left: calc(14 * var(--u));
+  bottom: calc(62 * var(--u));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(5 * var(--u));
+  padding: calc(8 * var(--u)) calc(10 * var(--u)) calc(5 * var(--u));
+  font-weight: 800;
+  font-size: calc(14 * var(--u));
+  opacity: 0.94;
+}
+
+.supplies.hidden {
+  display: none;
+}
+
+.supplies .status-item svg {
+  width: calc(22 * var(--u));
+  height: calc(22 * var(--u));
+}
+
+.supplies-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(3 * var(--u)) calc(12 * var(--u));
+  padding-top: calc(5 * var(--u));
+  border-top: 1px solid var(--paper-dark);
+}
+
+.status-supplies {
+  gap: calc(8 * var(--u));
+  font-size: calc(14 * var(--u));
+}
+
+.status-supplies span {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.status-supplies svg {
+  width: calc(20 * var(--u));
+  height: calc(20 * var(--u));
+}
+
+.status-trailer {
+  gap: calc(4 * var(--u));
+  font-size: calc(14 * var(--u));
+  white-space: nowrap;
+}
+
+.status-trailer.hidden {
+  display: none;
+}
+
+.status-trailer.left {
+  opacity: 0.7;
+}
+
+.status-trailer.warn {
+  color: #a8650f;
+}
+
+.status-trailer.bad {
+  color: #a3311f;
+}
+
+.history-card {
+  position: absolute;
+  z-index: 3;
+  right: calc(14 * var(--u));
+  top: calc(120 * var(--u));
+  width: min(calc(360 * var(--u)), 44vw);
+  padding: calc(10 * var(--u)) calc(16 * var(--u)) calc(12 * var(--u));
+  cursor: pointer;
+  animation: unfold 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.history-card.hidden {
+  display: none;
+}
+
+.history-card small {
+  font-size: calc(12 * var(--u));
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.history-card strong {
+  display: block;
+  font-family: var(--font-hand);
+  font-size: calc(22 * var(--u));
+  font-weight: 400;
+}
+
+.history-card p {
+  margin: calc(4 * var(--u)) 0 0;
+  font-size: calc(14 * var(--u));
+  line-height: 1.45;
+}
+
+.history-close {
+  position: absolute;
+  top: calc(4 * var(--u));
+  right: calc(10 * var(--u));
+  font-size: calc(20 * var(--u));
+  color: var(--ink-soft);
+}
+
+.result {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(30, 22, 14, 0.5);
+  pointer-events: auto;
+}
+
+.result.hidden {
+  display: none;
+}
+
+.result-card {
+  width: min(calc(560 * var(--u)), 92vw);
+  max-height: 90vh;
+  overflow: auto;
+  padding: calc(18 * var(--u)) calc(26 * var(--u)) calc(20 * var(--u));
+  text-align: center;
+}
+
+.result-card small {
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.result-card h2 {
+  margin: calc(2 * var(--u)) 0 calc(8 * var(--u));
+  font-family: var(--font-hand);
+  font-size: calc(40 * var(--u));
+  font-weight: 400;
+}
+
+.result-card.failed h2 {
+  color: #a3311f;
+}
+
+.result-text {
+  text-align: left;
+  font-size: calc(15 * var(--u));
+  line-height: 1.5;
+}
+
+.result-stats {
+  list-style: none;
+  margin: calc(10 * var(--u)) 0 calc(14 * var(--u));
+  padding: calc(8 * var(--u)) 0 0;
+  border-top: 1px dashed var(--ink-soft);
+  font-size: calc(14 * var(--u));
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.result-buttons {
+  display: flex;
+  gap: calc(10 * var(--u));
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.result-buttons button {
+  font: 700 calc(17 * var(--u)) var(--font);
+  color: var(--ink);
+  background: var(--paper-dark);
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(8 * var(--u)) calc(10 * var(--u)) calc(7 * var(--u)) calc(9 * var(--u));
+  padding: calc(8 * var(--u)) calc(16 * var(--u));
+  cursor: pointer;
+  min-width: calc(180 * var(--u));
+}
+
+.result-buttons button small {
+  display: block;
+  font-weight: 400;
+  font-size: calc(13 * var(--u));
+}
+
+.result-buttons button:hover,
+.result-buttons button.focused {
+  outline: calc(3 * var(--u)) solid var(--accent);
+  outline-offset: 1px;
+}
+
+.pause-episode {
+  margin: calc(-6 * var(--u)) 0 calc(4 * var(--u));
+  text-align: center;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.loading.with-briefing .loading-card {
+  width: min(calc(620 * var(--u)), 94vw);
+  max-height: 94vh;
+  max-height: 94dvh;
+  overflow: auto;
+}
+
+.loading-brand {
+  margin: 0 0 calc(18 * var(--u));
+  font-family: var(--font-hand);
+  font-size: calc(24 * var(--u));
+  color: var(--ink-soft);
+}
+
+.loading.with-briefing .subtitle {
+  display: none;
+}
+
+.briefing {
+  text-align: left;
+  margin-bottom: calc(14 * var(--u));
+}
+
+.briefing.hidden {
+  display: none;
+}
+
+.briefing h2 {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: calc(28 * var(--u));
+  font-weight: 400;
+  text-align: center;
+}
+
+.briefing-route {
+  margin: 0 0 calc(8 * var(--u));
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: calc(13 * var(--u));
+}
+
+.briefing-mission {
+  margin: calc(24 * var(--u)) 0 calc(12 * var(--u));
+  text-align: center;
+  font-size: calc(23 * var(--u));
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.briefing-conditions,
+.briefing-resume {
+  text-align: center;
+  font-size: calc(14 * var(--u));
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 0 0 calc(18 * var(--u));
+}
+
+.launch-controls {
+  text-align: center;
+  font-size: calc(13 * var(--u));
+  color: var(--ink-soft);
+  margin: calc(12 * var(--u)) 0 calc(18 * var(--u));
+}
+
+.launch-details {
+  border-top: 1px solid var(--paper-dark);
+  padding-top: calc(6 * var(--u));
+}
+
+.launch-details[open] summary {
+  margin-bottom: calc(8 * var(--u));
+}
+
+@media (max-width: 720px) {
+  .loading-card {
+    padding: calc(20 * var(--u));
+  }
+
+  .briefing-mission {
+    font-size: calc(20 * var(--u));
+  }
+}
+
+.briefing-text p {
+  margin: 0 0 calc(8 * var(--u));
+  font-size: calc(15 * var(--u));
+  line-height: 1.5;
+}
+
+.briefing-facts {
+  margin: calc(8 * var(--u)) 0 0;
+  padding: calc(8 * var(--u)) 0 0 calc(18 * var(--u));
+  border-top: 1px dashed var(--ink-soft);
+  font-size: calc(14 * var(--u));
+  line-height: 1.5;
+}
+
+.progress.hidden,
+.progress-label.hidden,
+.briefing-drive.hidden {
+  display: none;
+}
+
+.welcome-option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.welcome-section h2 + .welcome-options,
+.welcome-note + h2 {
+  margin-top: calc(4 * var(--u));
+}
+
+.welcome-section .welcome-options + h2,
+.welcome-section .welcome-note + h2 {
+  margin-top: calc(12 * var(--u));
+}
+
+.welcome-upcoming {
+  margin: calc(4 * var(--u)) 0 0;
+  padding-left: calc(18 * var(--u));
+  font-size: calc(13 * var(--u));
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+/*
+ * On a phone or tablet the fuel and the mission sit under the status strip, clear of the
+ * thumbs. The episode's name is in the pause menu.
+ */
+.touch-mode .supplies {
+  top: calc(106 * var(--u));
+  bottom: auto;
+  left: max(calc(12 * var(--u)), env(safe-area-inset-left));
+  font-size: calc(12 * var(--u));
+  padding: calc(6 * var(--u)) calc(8 * var(--u)) calc(4 * var(--u));
+  gap: calc(3 * var(--u));
+}
+
+.touch-mode .mission {
+  top: calc(220 * var(--u));
+  left: max(calc(12 * var(--u)), env(safe-area-inset-left));
+  max-width: calc(230 * var(--u));
+  padding: calc(4 * var(--u)) calc(9 * var(--u));
+}
+
+.touch-mode .mission small {
+  display: none;
+}
+
+.touch-mode .mission strong {
+  font-size: calc(16 * var(--u));
+}
+
+.touch-mode .mission-clock {
+  font-size: calc(13 * var(--u));
+}
+
+/* Held sideways the joystick is close below and the prompts beside: the clock only. */
+@media (orientation: landscape) {
+  .touch-mode .mission strong,
+  .touch-mode .mission:has(.mission-clock:empty) {
+    display: none;
+  }
+}
+
+/*
+ * A phone held sideways is short. The map fills it (the tall sheet would otherwise be a
+ * thin column). The readout is one card under the top buttons, the view controls shrink
+ * to icons, and a prompt sits above the pedals instead of over the car. GAS, BRAKE and
+ * the joystick stay full size. Upright and desktop keep the rules above.
+ */
+@media (orientation: landscape) and (max-height: 540px) {
+  .touch-mode .paper-map-sheet {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: max(calc(8 * var(--u)), env(safe-area-inset-top));
+    right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+    bottom: max(calc(8 * var(--u)), env(safe-area-inset-bottom));
+    left: max(calc(20 * var(--u)), env(safe-area-inset-left));
+    width: auto;
+    height: auto;
+    aspect-ratio: auto;
+  }
+
+  .touch-mode .paper-map-view {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+
+  .touch-mode .paper-map-close {
+    height: calc(36 * var(--u));
+    font-size: calc(14 * var(--u));
+  }
+
+  .touch-mode .paper-map-hint {
+    top: calc(8 * var(--u));
+    right: calc(78 * var(--u));
+    bottom: auto;
+    left: calc(8 * var(--u));
+    font-size: calc(11 * var(--u));
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .touch-mode .touch-top {
+    gap: calc(4 * var(--u));
+  }
+
+  .touch-mode .touch-top .touch-btn {
+    height: calc(34 * var(--u));
+    min-width: calc(36 * var(--u));
+    padding: 0 calc(7 * var(--u));
+    font-size: calc(12 * var(--u));
+  }
+
+  .touch-mode .camera-help {
+    gap: calc(4 * var(--u));
+    padding: calc(2 * var(--u));
+  }
+
+  .touch-mode .camera-help .camera-preset-name,
+  .touch-mode .camera-help .camera-reset-label,
+  .touch-mode .camera-help kbd {
+    display: none;
+  }
+
+  .touch-mode .camera-help .camera-reset-icon {
+    display: inline;
+  }
+
+  .touch-mode .camera-help button {
+    min-width: calc(36 * var(--u));
+    height: calc(32 * var(--u));
+    padding: 0 calc(8 * var(--u));
+    font-size: calc(13 * var(--u));
+  }
+
+  .touch-mode .hud-readout {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(40 * var(--u)));
+    left: max(calc(8 * var(--u)), env(safe-area-inset-left));
+    width: max-content;
+    max-width: min(calc(220 * var(--u)), calc(50vw - calc(150 * var(--u))));
+    gap: 1px;
+    padding: calc(3 * var(--u)) calc(8 * var(--u)) calc(4 * var(--u));
+    background: var(--paper);
+    border: calc(2 * var(--u)) solid var(--ink);
+    border-radius: calc(8 * var(--u)) calc(10 * var(--u)) calc(7 * var(--u)) calc(9 * var(--u));
+    box-shadow: calc(2 * var(--u)) calc(3 * var(--u)) 0 rgba(59, 42, 30, 0.25);
+    opacity: 0.94;
+    overflow: hidden;
+  }
+
+  .touch-mode .hud-readout > .paper {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    min-width: 0;
+    max-width: 100%;
+    width: auto;
+    transform: none;
+    background: none;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    opacity: 1;
+  }
+
+  .touch-mode .hud-readout .status {
+    gap: calc(6 * var(--u));
+    font-size: calc(12 * var(--u));
+  }
+
+  .touch-mode .hud-readout .status-range {
+    width: calc(22 * var(--u));
+    height: calc(22 * var(--u));
+    font-size: calc(16 * var(--u));
+  }
+
+  .touch-mode .hud-readout .status-speed {
+    gap: calc(4 * var(--u));
+    font-size: calc(15 * var(--u));
+  }
+
+  .touch-mode .hud-readout .status-gear {
+    font-size: calc(13 * var(--u));
+  }
+
+  .touch-mode .hud-readout .status-label {
+    display: none;
+  }
+
+  .touch-mode .hud-readout .supplies {
+    flex-wrap: wrap;
+    gap: calc(2 * var(--u)) calc(6 * var(--u));
+    font-size: calc(11 * var(--u));
+  }
+
+  .touch-mode .hud-readout .mission-clock {
+    display: block;
+    font-size: calc(11 * var(--u));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .touch-mode .hud-readout .course-hint {
+    font-size: calc(11 * var(--u));
+    gap: 0;
+  }
+
+  .touch-mode .hud-readout .course-hint span,
+  .touch-mode .hud-readout .course-hint small {
+    display: none;
+  }
+
+  .touch-mode .prompts {
+    left: auto;
+    right: max(calc(12 * var(--u)), env(safe-area-inset-right));
+    bottom: calc(
+      max(calc(14 * var(--u)), env(safe-area-inset-bottom)) +
+        var(--touch-right-height, calc(220 * var(--u))) + calc(6 * var(--u))
+    );
+    transform: none;
+    align-items: flex-end;
+    max-width: min(calc(190 * var(--u)), 34vw);
+    gap: calc(4 * var(--u));
+  }
+
+  .touch-mode .prompt {
+    padding: calc(2 * var(--u)) calc(8 * var(--u)) calc(3 * var(--u));
+    font-size: calc(12 * var(--u));
+    white-space: normal;
+    text-align: right;
+  }
+
+  .touch-mode .prompt-echo .key {
+    display: none;
+  }
+
+  .touch-mode .touch-right {
+    gap: calc(6 * var(--u));
+  }
+}
+
+@media (orientation: portrait) {
+  .touch-mode .supplies {
+    top: calc(150 * var(--u));
+  }
+
+  /* One line, clear of the mission under it: the trailer's weight is in its tooltip. */
+  .touch-mode .trailer-kg {
+    display: none;
+  }
+
+  .touch-mode .mission {
+    top: calc(258 * var(--u));
+  }
+
+  /* The crawl gauges go top right under the fuel, and the mission narrows beside them. */
+  .touch-mode .crawl-gauges,
+  .touch-mode .hud.cockpit .crawl-gauges {
+    top: calc(258 * var(--u));
+  }
+
+  .touch-mode .hud.with-gauges .mission {
+    max-width: calc(100vw - calc(216 * var(--u)));
+  }
+
+  /* A lesson sign takes the mission's title space while its clock remains visible. */
+  .touch-mode .hud-readout:has(.course-hint:not(.hidden)) .mission strong {
+    display: none;
+  }
+
+  .touch-mode .supplies:not(.hidden) ~ .course-hint {
+    top: calc(292 * var(--u));
+    max-width: calc(100vw - calc(216 * var(--u)));
+    padding: calc(4 * var(--u)) calc(8 * var(--u));
+  }
+
+  .touch-mode .supplies:not(.hidden) ~ .course-hint strong {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: calc(16 * var(--u));
+    line-height: 1.1;
+  }
+
+  .touch-mode .supplies:not(.hidden) ~ .course-hint span,
+  .touch-mode .supplies:not(.hidden) ~ .course-hint small {
+    display: none;
+  }
+}
+
+/*
+ * Compact phone HUD: the car and the track stay in the middle. One slim readout, a thin
+ * compass, smaller thumbs, pitch/roll only when the lean is risky. Desktop is unchanged.
+ */
+.touch-mode .touch-top .touch-btn {
+  height: calc(30 * var(--u));
+  min-width: calc(32 * var(--u));
+  padding: 0 calc(6 * var(--u));
+  font-size: calc(11 * var(--u));
+}
+
+.touch-mode .camera-help {
+  gap: calc(4 * var(--u));
+  padding: calc(2 * var(--u));
+}
+
+.touch-mode .camera-help button {
+  min-width: calc(32 * var(--u));
+  height: calc(30 * var(--u));
+  padding: 0 calc(7 * var(--u));
+  font-size: calc(12 * var(--u));
+}
+
+.touch-mode .compass {
+  top: max(calc(8 * var(--u)), env(safe-area-inset-top));
+  height: calc(22 * var(--u));
+  width: min(calc(220 * var(--u)), 46vw);
+  padding: 0 calc(4 * var(--u));
+  opacity: 0.88;
+}
+
+.touch-mode .touch-stick {
+  width: calc(148 * var(--u));
+  height: calc(148 * var(--u));
+}
+
+.touch-mode .touch-stick-base {
+  width: calc(114 * var(--u));
+  height: calc(114 * var(--u));
+}
+
+.touch-mode .touch-stick-knob {
+  width: calc(50 * var(--u));
+  height: calc(50 * var(--u));
+}
+
+.touch-mode .touch-right {
+  gap: calc(6 * var(--u));
+}
+
+.touch-mode .touch-grid {
+  grid-template-columns: repeat(2, calc(48 * var(--u)));
+  gap: calc(4 * var(--u));
+}
+
+.touch-mode .touch-grid .touch-btn {
+  height: calc(36 * var(--u));
+  min-width: 0;
+  font-size: calc(11 * var(--u));
+}
+
+.touch-mode .touch-wide {
+  grid-column: span 2;
+}
+
+.touch-mode .touch-pile {
+  grid-template-columns: repeat(4, calc(42 * var(--u)));
+  gap: calc(4 * var(--u));
+}
+
+.touch-mode .touch-pile .touch-btn {
+  height: calc(32 * var(--u));
+  font-size: calc(10 * var(--u));
+}
+
+.touch-mode .hud-readout {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(32 * var(--u)));
+  left: max(calc(8 * var(--u)), env(safe-area-inset-left));
+  width: max-content;
+  max-width: min(calc(248 * var(--u)), calc(100vw - calc(120 * var(--u))));
+  gap: calc(2 * var(--u));
+  padding: calc(3 * var(--u)) calc(7 * var(--u)) calc(4 * var(--u));
+  background: var(--paper);
+  border: calc(2 * var(--u)) solid var(--ink);
+  border-radius: calc(8 * var(--u)) calc(10 * var(--u)) calc(7 * var(--u)) calc(9 * var(--u));
+  box-shadow: calc(2 * var(--u)) calc(3 * var(--u)) 0 rgba(59, 42, 30, 0.25);
+  opacity: 0.92;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.touch-mode .hud-readout > .paper {
+  position: static;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  min-width: 0;
+  max-width: 100%;
+  width: auto;
+  transform: none;
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  opacity: 1;
+}
+
+.touch-mode .hud-readout .status {
+  gap: calc(6 * var(--u));
+  font-size: calc(12 * var(--u));
+  padding: 0;
+}
+
+.touch-mode .hud-readout .status-range {
+  width: calc(20 * var(--u));
+  height: calc(20 * var(--u));
+  font-size: calc(14 * var(--u));
+}
+
+.touch-mode .hud-readout .status-speed {
+  font-size: calc(14 * var(--u));
+}
+
+.touch-mode .hud-readout .status-label {
+  display: none;
+}
+
+.touch-mode .hud-readout .supplies {
+  gap: calc(2 * var(--u));
+  font-size: calc(11 * var(--u));
+  padding: 0;
+}
+
+.touch-mode .hud-readout .supplies-footer {
+  padding-top: calc(2 * var(--u));
+  gap: calc(4 * var(--u)) calc(8 * var(--u));
+}
+
+.touch-mode .hud-readout .mission {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: calc(6 * var(--u));
+  max-width: none;
+  padding: 1px 0 0;
+}
+
+.touch-mode .hud-readout .mission small {
+  display: none;
+}
+
+.touch-mode .hud-readout .mission strong {
+  font-family: var(--font);
+  font-size: calc(11 * var(--u));
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.touch-mode .hud-readout .mission-clock {
+  display: block;
+  flex: 0 0 auto;
+  font-size: calc(11 * var(--u));
+  white-space: nowrap;
+}
+
+.touch-mode .vehicle-gauges .vehicle-strip {
+  display: flex;
+  align-items: center;
+  gap: calc(6 * var(--u));
+  width: 100%;
+  margin: 0;
+  padding: 1px 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: calc(11 * var(--u));
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-mode .vehicle-gauges:not(.open) .vehicle-dial,
+.touch-mode .vehicle-gauges:not(.open) .tyre-panel {
+  display: none;
+}
+
+.touch-mode .vehicle-gauges.open {
+  flex-wrap: wrap;
+  gap: calc(4 * var(--u));
+}
+
+.touch-mode .strip-heat.hot,
+.touch-mode .strip-heat.critical,
+.touch-mode .strip-fuel.low {
+  color: #a3311f;
+}
+
+.touch-mode .strip-tyres {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(2 * var(--u));
+}
+
+.touch-mode .strip-tyres i {
+  width: calc(6 * var(--u));
+  height: calc(8 * var(--u));
+  border-radius: 1px;
+  background: #6b8f5e;
+}
+
+.touch-mode .strip-tyres i.leak {
+  background: #b8741a;
+}
+
+.touch-mode .strip-tyres i.flat {
+  background: #a3311f;
+}
+
+.touch-mode .strip-clock {
+  margin-left: auto;
+  color: var(--ink-soft);
+}
+
+.touch-mode .alert-rail {
+  z-index: 6;
+}
+
+.touch-mode .alert {
+  font-size: calc(13 * var(--u));
+}
+
+.touch-mode .crawl-gauges,
+.touch-mode .hud.cockpit .crawl-gauges {
+  left: auto;
+  right: max(calc(8 * var(--u)), env(safe-area-inset-right));
+  bottom: calc(
+    max(calc(14 * var(--u)), env(safe-area-inset-bottom)) + var(--touch-right-height, calc(160 * var(--u))) +
+      calc(6 * var(--u))
+  );
+  top: auto;
+  transform: scale(0.62);
+  transform-origin: bottom right;
+}
+
+/* Held sideways the crawl gauges sit above the buttons too; upright they stay at the top right. */
+@media (orientation: landscape) {
+  body.touch-swap.touch-mode .crawl-gauges,
+  body.touch-swap.touch-mode .hud.cockpit .crawl-gauges {
+    right: auto;
+    left: max(calc(8 * var(--u)), env(safe-area-inset-left));
+    transform-origin: bottom left;
+  }
+}
+
+@media (orientation: portrait) {
+  .touch-mode .compass {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(34 * var(--u)));
+    width: min(calc(240 * var(--u)), 64vw);
+  }
+
+  .touch-mode .hud-readout {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(58 * var(--u)));
+    max-width: min(calc(248 * var(--u)), calc(100vw - calc(88 * var(--u))));
+  }
+
+  .touch-mode .crawl-gauges,
+  .touch-mode .hud.cockpit .crawl-gauges {
+    top: calc(max(calc(8 * var(--u)), env(safe-area-inset-top)) + calc(34 * var(--u)));
+    bottom: auto;
+    transform: scale(0.62);
+    transform-origin: top right;
+  }
+
+  .touch-mode .hud.with-gauges .mission,
+  .touch-mode .hud.with-gauges .course-hint {
+    max-width: none;
+  }
+}
+
+/* On a touch screen a history note is read with the game stopped, over a dimmed view. */
+.history-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(30, 22, 14, 0.45);
+}
+
+.history-backdrop.hidden,
+.history-hint {
+  display: none;
+}
+
+.history-card.reading {
+  position: fixed;
+  z-index: 31;
+  inset: 0;
+  margin: auto;
+  width: min(calc(460 * var(--u)), calc(100vw - calc(32 * var(--u))));
+  height: fit-content;
+  max-height: calc(100vh - calc(32 * var(--u)));
+  overflow: auto;
+  transform: none;
+}
+
+.history-card.reading .history-hint {
+  display: block;
+  margin-top: calc(6 * var(--u));
+  font-size: calc(13 * var(--u));
+  font-weight: 700;
+  text-align: right;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 720px) {
+  .history-card {
+    top: auto;
+    bottom: calc(120 * var(--u));
+    right: 50%;
+    transform: translateX(50%);
+    width: 86vw;
+  }
+}
+
+.vehicle-gauges {
+  --dial-size: calc(88 * var(--u));
+  --tyre-width: calc(132 * var(--u));
+  display: flex;
+  align-items: center;
+  gap: calc(8 * var(--u));
+  font-variant-numeric: tabular-nums;
+}
+
+.vehicle-strip {
+  display: none;
+}
+
+.vehicle-dial {
+  position: relative;
+  flex: 0 0 var(--dial-size);
+  width: var(--dial-size);
+  height: var(--dial-size);
+  color: var(--ink);
+}
+
+.dial-face {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.dial-bezel {
+  fill: #faf4e7;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.dial-track,
+.dial-danger {
+  fill: none;
+  stroke-width: 5;
+}
+
+.dial-track {
+  stroke: var(--paper-dark);
+}
+
+.dial-danger {
+  stroke: #b54532;
+}
+
+.dial-ticks {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1;
+}
+
+.dial-title,
+.dial-end {
+  fill: var(--ink-soft);
+  font: 800 calc(9 * var(--u)) var(--font);
+  text-anchor: middle;
+}
+
+.dial-title {
+  letter-spacing: 1px;
+}
+
+.dial-needle {
+  transform-origin: calc(50 * var(--u)) calc(47 * var(--u));
+  transition: transform 0.3s ease-out;
+  fill: var(--accent);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.dial-value {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 9%;
+  text-align: center;
+  font-size: calc(var(--dial-size) * 0.12);
+  line-height: 1;
+}
+
+.vehicle-dial.hot,
+.vehicle-dial.low {
+  color: #a3311f;
+}
+
+.vehicle-dial.hot .dial-bezel,
+.vehicle-dial.low .dial-bezel {
+  fill: #fbe6d7;
+  stroke: #a3311f;
+  stroke-width: 2;
+}
+
+.vehicle-dial.critical .dial-value {
+  text-decoration: underline;
+  text-underline-offset: calc(2 * var(--u));
+}
+
+.tyre-panel {
+  width: var(--tyre-width);
+  flex: 0 0 var(--tyre-width);
+  padding-left: calc(8 * var(--u));
+  border-left: 1px solid var(--paper-dark);
+}
+
+.tyre-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(4 * var(--u));
+  font-size: calc(10 * var(--u));
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  line-height: 1;
+}
+
+.tyre-mode {
+  padding: calc(2 * var(--u)) calc(4 * var(--u));
+  border: 1px solid var(--ink-soft);
+  border-radius: calc(3 * var(--u));
+  color: var(--ink-soft);
+  font-size: calc(9 * var(--u));
+  line-height: 1;
+}
+
+.tyre-mode.trail {
+  color: #416443;
+  border-color: #416443;
+  background: #e3e9d6;
+}
+
+.tyre-layout {
+  display: grid;
+  grid-template-columns: 1fr calc(20 * var(--u)) 1fr;
+  grid-template-rows: calc(26 * var(--u)) calc(26 * var(--u));
+  gap: calc(2 * var(--u));
+  align-items: center;
+  margin: calc(4 * var(--u)) 0;
+}
+
+.tyre-chassis {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  width: calc(20 * var(--u));
+  height: calc(50 * var(--u));
+  fill: var(--paper-dark);
+  stroke: var(--ink-soft);
+  stroke-width: 1.5;
+}
+
+.tyre-windscreen {
+  fill: var(--paper);
+}
+
+.tyre-gauge {
+  display: grid;
+  grid-template-columns: calc(11 * var(--u)) calc(7 * var(--u)) 1fr;
+  gap: calc(3 * var(--u));
+  align-items: center;
+  font-size: calc(9 * var(--u));
+  line-height: 1;
+}
+
+.tyre-gauge[data-corner='FL'] {
+  grid-area: 1 / 1;
+}
+
+.tyre-gauge[data-corner='FR'] {
+  grid-area: 1 / 3;
+}
+
+.tyre-gauge[data-corner='RL'] {
+  grid-area: 2 / 1;
+}
+
+.tyre-gauge[data-corner='RR'] {
+  grid-area: 2 / 3;
+}
+
+.tyre-corner {
+  color: var(--ink-soft);
+  font-size: calc(8 * var(--u));
+}
+
+.tyre-air {
+  display: flex;
+  align-items: flex-end;
+  height: calc(22 * var(--u));
+  overflow: hidden;
+  border: 1px solid var(--ink-soft);
+  border-radius: calc(3 * var(--u));
+  background: var(--paper-dark);
+}
+
+.tyre-air > span {
+  width: 100%;
+  background: #52704b;
+  transition: height 0.3s linear;
+}
+
+.tyre-gauge.leaking {
+  color: #995017;
+}
+
+.tyre-gauge.leaking .tyre-air > span {
+  background: #b8741a;
+}
+
+.tyre-gauge.flat {
+  color: #a3311f;
+}
+
+.tyre-gauge.flat .tyre-air {
+  border-color: #a3311f;
+}
+
+.tyre-caption {
+  display: block;
+  color: var(--ink-soft);
+  font-size: calc(8 * var(--u));
+  letter-spacing: 0.6px;
+  text-align: center;
+  line-height: 1;
+}
+
+.touch-mode .vehicle-gauges {
+  --dial-size: calc(64 * var(--u));
+  --tyre-width: calc(132 * var(--u));
+}
+
+.touch-mode .supplies-footer {
+  padding-top: calc(3 * var(--u));
+}
+
+.touch-mode .supplies .status-item svg {
+  width: calc(16 * var(--u));
+  height: calc(16 * var(--u));
+}
+
+.touch-mode .status-supplies {
+  font-size: calc(12 * var(--u));
+}
+
+.touch-mode .tyre-mode {
+  padding: 1px calc(3 * var(--u));
+  font-size: calc(8 * var(--u));
+}
+
+.touch-mode .tyre-layout {
+  grid-template-rows: calc(18 * var(--u)) calc(18 * var(--u));
+  margin: calc(2 * var(--u)) 0;
+}
+
+.touch-mode .tyre-chassis {
+  height: calc(36 * var(--u));
+}
+
+.touch-mode .tyre-air {
+  height: calc(17 * var(--u));
+}
+
+@media (orientation: landscape) and (max-height: 540px) {
+  .touch-mode .hud.cockpit .camera-help {
+    padding: calc(2 * var(--u));
+  }
+
+  .touch-mode .hud-readout .course-hint strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font: 800 calc(11 * var(--u))/1.2 var(--font);
+  }
+
+  .touch-mode .trailer-kg {
+    display: none;
+  }
+
+  .touch-mode .vehicle-gauges {
+    --dial-size: calc(48 * var(--u));
+    --tyre-width: calc(94 * var(--u));
+    gap: calc(4 * var(--u));
+  }
+
+  .touch-mode .tyre-panel {
+    padding-left: calc(4 * var(--u));
+  }
+
+  .touch-mode .tyre-heading {
+    font-size: calc(8 * var(--u));
+    letter-spacing: 0;
+  }
+
+  .touch-mode .tyre-mode {
+    font-size: calc(7 * var(--u));
+    padding: 1px calc(2 * var(--u));
+  }
+
+  .touch-mode .tyre-layout {
+    grid-template-columns: 1fr calc(12 * var(--u)) 1fr;
+    grid-template-rows: calc(18 * var(--u)) calc(18 * var(--u));
+    margin: calc(2 * var(--u)) 0;
+  }
+
+  .touch-mode .tyre-chassis {
+    width: calc(12 * var(--u));
+    height: calc(34 * var(--u));
+  }
+
+  .touch-mode .tyre-gauge {
+    grid-template-columns: calc(5 * var(--u)) 1fr;
+    gap: calc(2 * var(--u));
+    font-size: calc(8 * var(--u));
+  }
+
+  .touch-mode .tyre-corner,
+  .touch-mode .tyre-caption {
+    display: none;
+  }
+
+  .touch-mode .tyre-air {
+    height: calc(16 * var(--u));
+  }
+
+  .touch-mode .dial-value {
+    font-size: calc(8 * var(--u));
+  }
+
+  .touch-mode .supplies-footer {
+    gap: calc(2 * var(--u)) calc(6 * var(--u));
+    padding-top: calc(2 * var(--u));
+  }
+
+  .touch-mode .status-supplies,
+  .touch-mode .status-trailer {
+    font-size: calc(10 * var(--u));
+  }
+
+  .touch-mode .supplies .status-item svg {
+    width: calc(15 * var(--u));
+    height: calc(15 * var(--u));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dial-needle,
+  .tyre-air > span {
+    transition: none;
+  }
+}
+
+/* Optional jobs share the paper menu and keep Back visible on small screens. */
+.pause-journal {
+  width: min(calc(680 * var(--u)), 92vw);
+  overflow: hidden;
+}
+
+.journal-scroll {
+  min-height: 0;
+  padding: calc(3 * var(--u));
+}
+
+.journal-trip {
+  border: 1px solid currentColor;
+  border-radius: calc(8 * var(--u));
+  margin-bottom: calc(14 * var(--u));
+  padding: calc(14 * var(--u));
+  font-size: calc(15 * var(--u));
+  line-height: 1.45;
+}
+
+.journal-trip.focused {
+  outline: calc(2 * var(--u)) solid currentColor;
+  outline-offset: 1px;
+}
+
+.journal-trip h3 {
+  margin: 0 0 calc(8 * var(--u));
+  font-size: calc(19 * var(--u));
+}
+
+.journal-trip p {
+  margin: calc(6 * var(--u)) 0;
+}
+
+.journal-trip ol {
+  padding-left: calc(24 * var(--u));
+}
+
+.journal-trip li {
+  margin: calc(12 * var(--u)) 0;
+}
+
+.journal-trip .done {
+  opacity: 0.65;
+}
+
+.journal-trip .current {
+  border-left: calc(3 * var(--u)) solid currentColor;
+  padding-left: calc(8 * var(--u));
+}
+
+.journal-notes-heading {
+  margin: calc(14 * var(--u)) 0 calc(6 * var(--u));
+}
+
+.journal-reward {
+  font-weight: bold;
+}
+
+/* A history card behind the translucent pause menu must not show through it (any page). */
+/* Nothing of the driving screen shows over or through a pause page: the compass sat on the
+   card's corner and a prompt showed through its foot (v1.84). */
+#ui:has(.pause:not(.hidden)) .notices,
+#ui:has(.pause:not(.hidden)) .compass,
+#ui:has(.pause:not(.hidden)) .inst-compass,
+#ui:has(.pause:not(.hidden)) .prompts {
+  visibility: hidden;
+}
+
+#ui[data-hud] .pause-card.pause-journal {
+  width: min(calc(640 * var(--u)), 92vw);
+}
+
+.journal-memory {
+  font-style: italic;
+}
+
+.gate-count.scored-course {
+  max-width: calc(100vw - calc(24 * var(--u)));
+  white-space: normal;
+  text-align: center;
+  font-size: calc(14 * var(--u));
+  line-height: 1.35;
+}
+
+/* Keep course progress below the driving view, clear of phone dials and notices. */
+.touch-mode #ui[data-hud] .gate-count.scored-course {
+  top: auto;
+  bottom: calc(max(calc(8 * var(--u)), env(safe-area-inset-bottom)) + calc(210 * var(--u)));
+  left: max(calc(8 * var(--u)), env(safe-area-inset-left));
+  right: auto;
+  transform: none;
+  max-width: calc(100vw - calc(16 * var(--u)));
+  width: fit-content;
 }

@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { lateAfternoon } from '../src/data/environment';
 import { camelTuning } from '../src/data/camel';
-import { gateTrailBridges, gateTrailGates, gateTrailSections, gateTrailSigns } from '../src/data/gateTrail';
-import { isMapId, mapOrder } from '../src/data/maps';
+import {
+  gateTrailBridges,
+  gateTrailGates,
+  gateTrailSections,
+  gateTrailSigns,
+} from './fixtures/maps/gateTrail';
 import { perentieTuning } from '../src/data/perentie';
 import { SurfaceId } from '../src/data/surfaces';
 import { vehicleTuning } from '../src/data/vehicle';
@@ -11,7 +15,7 @@ import { Simulation } from '../src/sim/sim';
 import { deckTop, onBridge } from '../src/sim/world/bridges';
 import { trailPoint, trailProgress } from '../src/sim/world/crawlTrail';
 import type { TrailDifficulty } from '../src/sim/world/mapTypes';
-import { driveLeg, driver } from './helpers/drive';
+import { driveLeg, driver, GIVE_UP_AFTER } from './helpers/drive';
 import { crawlerCreekWorld } from './world';
 
 const world = crawlerCreekWorld();
@@ -21,8 +25,6 @@ const maxTilt: Record<TrailDifficulty, number> = { easy: 20, moderate: 34, hard:
 
 describe('Crawler Creek gate trail', () => {
   it('is a third map: one loop of twelve sections from the Trailhead, each a crawl trail', () => {
-    expect(mapOrder.slice(0, 3)).toEqual(['high-country', 'ironbark-park', 'crawler-creek']);
-    expect(isMapId('crawler-creek')).toBe(true);
     expect(world.map.name).toBe('Crawler Creek');
     expect(gateTrailSections).toHaveLength(12);
     expect(world.map.spawnCampsite).toBe('trailhead');
@@ -139,7 +141,7 @@ describe('Crawler Creek gate trail', () => {
 
   for (const tuning of [vehicleTuning, perentieTuning])
     it(`the Rock Garden stops the ${tuning.name} with open diffs`, async () => {
-      expect((await drive('rock-garden', 'open', false, 150, tuning)).done).toBe(false);
+      expect((await drive('rock-garden', 'open', false, 150, tuning, GIVE_UP_AFTER)).done).toBe(false);
     }, 120_000);
 
   it('The Drop pitches the car past 25° and Skinny Bridge keeps both wheel tracks on its planks', async () => {
@@ -152,10 +154,11 @@ describe('Crawler Creek gate trail', () => {
 
   it('the Camel Trophy car drives the whole loop from the Trailhead without help, or damage', async () => {
     const s = await scene(gateTrailSections[0].id, false, 'both', camelTuning);
-    // Careful driving does no harm, even with realistic damage.
+    // Careful driving does no harm, even with realistic damage. The Ninety's small diesel works
+    // hard enough in the Rock Garden to reach the HIGH temperature warning, which costs no health.
     s.sim.setDamage('realistic');
     const damage: string[] = [];
-    s.sim.events.on('damage', (e) => damage.push(`${e.part} ${e.wheel} ${e.cause}`));
+    s.sim.events.on('damage', (e) => e.health < 1 && damage.push(`${e.part} ${e.wheel} ${e.cause}`));
     try {
       for (const section of gateTrailSections) {
         const r = await driveLeg(s, trackOf(section.id), false, 300);

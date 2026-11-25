@@ -3,7 +3,12 @@ import * as THREE from 'three';
 import { environmentFor, lateAfternoon, timesOfDay } from '../src/data/environment';
 import { headlightTuning, nextHeadlightMode, type HeadlightMode } from '../src/data/headlights';
 import { camelTuning } from '../src/data/camel';
+import { hiluxTuning } from '../src/data/hilux';
 import { perentieTuning } from '../src/data/perentie';
+import { troopyTuning } from '../src/data/troopy';
+import { patrolTuning } from '../src/data/patrol';
+import { lc79Tuning } from '../src/data/lc79';
+import { unimogTuning } from '../src/data/unimog';
 import { vehicleTuning } from '../src/data/vehicle';
 import { keyBindings } from '../src/data/controls';
 import { VehicleModel } from '../src/render/vehicleModel';
@@ -80,7 +85,16 @@ describe('headlights', () => {
   });
 
   it('throws its beams ahead of the car, forward and a little down, high beam further than low', async () => {
-    for (const tuning of [vehicleTuning, camelTuning, perentieTuning]) {
+    for (const tuning of [
+      vehicleTuning,
+      camelTuning,
+      perentieTuning,
+      hiluxTuning,
+      unimogTuning,
+      troopyTuning,
+      patrolTuning,
+      lc79Tuning,
+    ]) {
       const s = await makeScene({ tuning });
       const model = new VehicleModel(tuning, true);
       const beams = model.beams!;
@@ -109,8 +123,11 @@ describe('headlights', () => {
       expect(high.head).toBeGreaterThan(low.head);
       expect(high.distance).toBeGreaterThan(low.distance);
       expect(high.dir.y).toBeGreaterThan(low.dir.y);
-      // Only the Camel Trophy car has roof lamps, and they come on with high beam.
-      expect(high.roof > 0, tuning.name).toBe(tuning === camelTuning);
+      // Only the Camel Trophy car's roof lamps and the Patrol's and LC79's driving lamps light
+      // up, with high beam.
+      expect(high.roof > 0, tuning.name).toBe(
+        tuning === camelTuning || tuning === patrolTuning || tuning === lc79Tuning,
+      );
       expect(low.roof).toBe(0);
       model.dispose();
       s.physics.world.free();

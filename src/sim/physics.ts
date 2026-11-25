@@ -10,9 +10,19 @@ export type Rapier = typeof RAPIER;
 
 let loading: Promise<Rapier> | null = null;
 
-/** Load the Rapier WASM module once (works in browsers and in Node for tests). */
+/**
+ * Load the Rapier WASM module once (works in browsers and in Node for tests). The browser
+ * build fetches it as a file of its own (vite.config.ts); since v1.46 that can start on the
+ * title screen, so a failed download is forgotten and the next call tries again.
+ */
 export function loadRapier(): Promise<Rapier> {
-  loading ??= RAPIER.init().then(() => RAPIER);
+  loading ??= RAPIER.init().then(
+    () => RAPIER,
+    (err: unknown) => {
+      loading = null;
+      throw err;
+    },
+  );
   return loading;
 }
 
@@ -34,6 +44,12 @@ export interface GroundQuery {
   surfaceAt(x: number, z: number): SurfaceId;
   waterSurfaceAt(x: number, z: number): number | null;
   heightAt?(x: number, z: number): number;
+  /** Velocity of running water at a point (m/s, horizontal); still water when absent. */
+  waterFlowAt?(x: number, z: number, out: { x: number; z: number }): { x: number; z: number };
+  /** Depth (m) of a pothole or washout at a point, 0 where there is none. */
+  holeAt?(x: number, z: number): number;
+  /** Laid smooth (the concrete strips), with no sharp stones on it. */
+  smoothAt?(x: number, z: number): boolean;
 }
 
 export const flatDirt: GroundQuery = {
@@ -58,17 +74,16 @@ export class Physics {
 
   /** 1 m heightfield collider matching Terrain exactly. */
   addTerrain(terrain: Terrain): RAPIER.Collider {
-    const res = terrain.res;
-    const n = terrain.size;
-    // Rapier stores heights x-major (column-major rows = z); Terrain is z-major.
-    const h = new Float32Array(res * res);
-    for (let iz = 0; iz < res; iz++)
-      for (let ix = 0; ix < res; ix++) h[ix * res + iz] = terrain.solidSample(ix, iz);
+    const { resX, resZ, sizeX, sizeZ } = terrain;
+    // Rapier stores heights x-major (column-major, rows along z); Terrain is z-major.
+    const h = new Float32Array(resX * resZ);
+    for (let iz = 0; iz < resZ; iz++)
+      for (let ix = 0; ix < resX; ix++) h[ix * resZ + iz] = terrain.solidSample(ix, iz);
     const desc = this.R.ColliderDesc.heightfield(
-      n,
-      n,
+      sizeZ,
+      sizeX,
       h,
-      { x: n, y: 1, z: n },
+      { x: sizeX, y: 1, z: sizeZ },
       this.R.HeightFieldFlags.FIX_INTERNAL_EDGES,
     )
       .setFriction(0.8)
@@ -82,9 +97,9 @@ export class Physics {
       patch.heights.forEach((y, k) =>
         vertices.set(
           [
-            patch.ix0 - terrain.half + (k % w) / DETAIL_SUB,
+            patch.ix0 - terrain.halfX + (k % w) / DETAIL_SUB,
             y,
-            patch.iz0 - terrain.half + Math.floor(k / w) / DETAIL_SUB,
+            patch.iz0 - terrain.halfZ + Math.floor(k / w) / DETAIL_SUB,
           ],
           k * 3,
         ),
@@ -104,15 +119,14 @@ export class Physics {
     return this.terrainCollider;
   }
 
-  /** Invisible walls at ±halfExtent (SPEC §5 fallback). */
-  addWalls(halfExtent: number, height = 2000): void {
+  /** Invisible walls at ±halfX east–west and ±halfZ north–south (SPEC §5 fallback). */
+  addWalls(halfX: number, halfZ = halfX, height = 2000): void {
     const t = 5;
-    const L = halfExtent + t;
     const walls = [
-      [halfExtent + t, 0, 0, t, height, L],
-      [-halfExtent - t, 0, 0, t, height, L],
-      [0, 0, halfExtent + t, L, height, t],
-      [0, 0, -halfExtent - t, L, height, t],
+      [halfX + t, 0, 0, t, height, halfZ + t],
+      [-halfX - t, 0, 0, t, height, halfZ + t],
+      [0, 0, halfZ + t, halfX + t, height, t],
+      [0, 0, -halfZ - t, halfX + t, height, t],
     ];
     for (const [x, y, z, hx, hy, hz] of walls) {
       this.world.createCollider(

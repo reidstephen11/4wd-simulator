@@ -15,29 +15,78 @@ export function collectErrors(page: Page): string[] {
   return errors;
 }
 
+/** Open episode setup through the console title, retaining a saved camp for gameplay checks. */
+export async function openJourney(page: Page): Promise<void> {
+  await page.locator('.welcome').waitFor({ state: 'visible' });
+  const begin = page.locator('[data-title-begin]');
+  if (await begin.isVisible()) await begin.click();
+  const journey = page.locator('[data-title-journey]');
+  if (await journey.isVisible()) {
+    await journey.click();
+    const resume = page.locator('[data-group="start"][data-value="resume"]');
+    if (await resume.isVisible()) await resume.click();
+  }
+}
+
 /**
- * Press Drive on the welcome screen (it starts on the saved choices), then wait until the
- * world is loaded and the engine has started (it cranks for about a second). After a map
- * change from the pause menu the game loads without the welcome screen.
+ * Press Drive on the welcome screen (it starts on the saved choices), then Drive again on
+ * the episode briefing once the map has built, and wait until the engine has started (it
+ * cranks for about a second).
  */
 export async function waitReady(page: Page): Promise<void> {
-  await page.waitForFunction(
-    () => window.__game?.ready === true || document.querySelector('[data-welcome-drive]') !== null,
-    null,
-    { timeout: 120_000 },
-  );
-  const drive = page.locator('[data-welcome-drive]');
-  if (await drive.count()) await drive.click();
-  await page.waitForFunction(() => window.__game?.ready === true, null, { timeout: 120_000 });
+  await openJourney(page);
+  await page.locator('[data-welcome-drive]').click({ timeout: 120_000 });
+  await driveFromBriefing(page);
+}
+
+/**
+ * Physics steps run per frame in the browser tests. The software renderer takes seconds
+ * to draw a frame of the 6 km map, so at real time the game would crawl.
+ */
+export const TEST_STEPS_PER_FRAME = 24;
+
+/** Wait for the briefing's Drive button (the map has built), press it and wait for the engine. */
+export async function driveFromBriefing(page: Page): Promise<void> {
+  await page.locator('[data-briefing-drive]:not(.hidden)').click({ timeout: 300_000 });
+  await page.waitForFunction(() => window.__game?.ready === true, null, { timeout: 300_000 });
+  await page.evaluate((n) => window.__game!.setStepsPerFrame(n), TEST_STEPS_PER_FRAME);
   await waitEngine(page);
 }
 
-/** Wait until the engine has caught after starting (on arrival or after a vehicle swap). */
-export async function waitEngine(page: Page): Promise<void> {
-  await page.waitForFunction(() => window.__game!.vehicle().engineRunning, null, {
-    timeout: 300_000,
-    polling: 100,
+/**
+ * Start without a save on the low graphics preset (the 6 km map is slow on the software
+ * renderer). Leaves any save a test wrote itself alone.
+ */
+export async function lowGraphics(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('4wdsim.save.v2'))
+      localStorage.setItem(
+        '4wdsim.save.v2',
+        JSON.stringify({
+          version: 1,
+          settings: { quality: 'low' },
+        }),
+      );
   });
+}
+
+/**
+ * Wait until the engine has caught after starting (on arrival or after a vehicle swap). On a
+ * touch screen a history note stops the game until it's tapped, so tap any that shows.
+ */
+export async function waitEngine(page: Page): Promise<void> {
+  // The engine is off on arrival until the pedal is pressed: start it as the pedal would.
+  await page.evaluate(() => {
+    if (window.__game!.vehicle().engineOff) window.__game!.startEngine();
+  });
+  await page.waitForFunction(
+    () => {
+      document.querySelector<HTMLElement>('.history-card.reading')?.click();
+      return window.__game!.vehicle().engineRunning;
+    },
+    null,
+    { timeout: 300_000, polling: 100 },
+  );
 }
 
 /**
@@ -48,7 +97,7 @@ export async function shot(page: Page, milestone: string, name: string): Promise
   const wanted = (process.env.SCREENSHOTS ?? '').split(',').includes(milestone);
   const dir = wanted ? `docs/screenshots/${milestone}` : `test-results/screenshots/${milestone}`;
   mkdirSync(dir, { recursive: true });
-  await page.screenshot({ path: `${dir}/${name}.png` });
+  await page.screenshot({ path: `${dir}/${name}.png`, animations: 'disabled' });
 }
 
 /**
@@ -65,16 +114,47 @@ export async function waitSim(page: Page, seconds: number, timeoutMs = 300_000):
 }
 
 /**
- * Wait until the browser has drawn `frames` more frames, so stats read afterwards describe
- * the current view (the software renderer takes seconds per frame).
+ * Every visible piece of text in the interface with its size as drawn on screen (CSS px):
+ * the font size times any CSS transform on the way, and SVG lettering's font size times its
+ * drawing's scale (as scripts/ui-audit.ts measures it).
  */
-export async function waitFrames(page: Page, frames = 2): Promise<void> {
-  await page.evaluate(
-    (n) =>
-      new Promise<void>((done) => {
-        const next = (left: number) => requestAnimationFrame(() => (left > 1 ? next(left - 1) : done()));
-        next(n);
-      }),
-    frames,
-  );
+export function drawnText(page: Page): Promise<{ px: number; text: string; cls: string }[]> {
+  return page.evaluate(() => {
+    const seen = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) return false;
+      if (r.right < 0 || r.bottom < 0 || r.left > innerWidth || r.top > innerHeight) return false;
+      for (let e: Element | null = el; e; e = e.parentElement) {
+        const s = getComputedStyle(e);
+        if (s.display === 'none' || s.visibility === 'hidden' || Number(s.opacity) < 0.05) return false;
+      }
+      return true;
+    };
+    const out: { px: number; text: string; cls: string }[] = [];
+    const walker = document.createTreeWalker(document.getElementById('ui')!, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const t = n.textContent?.trim();
+      const el = n.parentElement;
+      if (!t || !el || el.closest('svg') || !seen(el)) continue;
+      // offsetHeight is whole pixels: a ratio within 3% of 1 is rounding, not a transform.
+      const r = el.offsetHeight > 0 ? el.getBoundingClientRect().height / el.offsetHeight : 1;
+      const k = Math.abs(r - 1) < 0.03 ? 1 : r;
+      out.push({
+        px: parseFloat(getComputedStyle(el).fontSize) * k,
+        text: t,
+        cls: el.className || el.tagName,
+      });
+    }
+    for (const el of document.querySelectorAll<SVGTextElement>('#ui svg text')) {
+      if (!el.textContent?.trim() || !seen(el)) continue;
+      const m = el.getScreenCTM();
+      const k = m ? Math.hypot(m.a, m.b) : 1;
+      out.push({
+        px: parseFloat(getComputedStyle(el).fontSize) * k,
+        text: el.textContent.trim(),
+        cls: `svg ${el.getAttribute('class') ?? ''}`,
+      });
+    }
+    return out;
+  });
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  defaultConditions,
+  environmentAt,
   environmentFor,
   lateAfternoon,
   timesOfDay,
@@ -9,7 +11,11 @@ import {
 import { SurfaceId, surfaceGrip } from '../src/data/surfaces';
 import { choiceFromSave } from '../src/core/launch';
 import { loadRapier } from '../src/sim/physics';
-import { defaultSettings, loadSave, writeSave, type KeyValueStore } from '../src/sim/save/save';
+import { loadSave, writeSave } from '../src/sim/save/save';
+import { startCheckpoint } from '../src/sim/episode';
+import { ironbarkLevel } from '../src/data/levels/ironbark';
+import { vehicleLoadout } from '../src/data/vehicles';
+import { MemoryStore, saveData } from './helpers/saves';
 import { Simulation } from '../src/sim/sim';
 import { testWorld } from './world';
 
@@ -26,6 +32,12 @@ const saturation = (hex: string) => {
 describe('time of day and weather', () => {
   it('keeps late afternoon in clear weather exactly as it was', () => {
     expect(environmentFor({ time: 'afternoon', weather: 'clear' })).toEqual(lateAfternoon);
+    // A copy, not the preset: the simulation writes the rain into the environment it is given,
+    // and a storm set in test mode stayed in the shared preset, so Clear kept the rain (v0.22).
+    const given = environmentFor({ time: 'afternoon', weather: 'clear' });
+    expect(given).not.toBe(lateAfternoon);
+    given.rain = 1;
+    expect(environmentFor({ time: 'afternoon', weather: 'clear' }).rain).toBe(0);
   });
 
   it('puts the sun where it is in Australia at each time of day', () => {
@@ -69,42 +81,62 @@ describe('time of day and weather', () => {
     sim.physics.free();
   });
 
-  it('remembers the welcome screen’s choices, and falls back for older or broken saves', () => {
-    const data = new Map<string, string>();
-    const s: KeyValueStore = { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => void data.set(k, v) };
-    const exploration = { discovered: [], lastCampsite: '' };
-    writeSave(
-      {
-        version: 1,
-        exploration,
-        settings: defaultSettings,
-        map: 'ironbark-park',
-        vehicle: 'perentie',
-        conditions: { time: 'dusk', weather: 'rain' },
-      },
-      s,
-    );
+  it('starts the welcome screen on the last level and vehicle, carrying on a run under way', () => {
+    const s = new MemoryStore();
+    const standard = ironbarkLevel.loadout;
+    // Every vehicle is open (since v2.06): the saved one is kept. A playground's time and
+    // weather are always picked, so with none saved the choice starts on the defaults.
+    writeSave(saveData({ vehicle: 'perentie' }), s);
     expect(choiceFromSave(loadSave(s))).toEqual({
-      map: 'ironbark-park',
+      episode: 'ironbark',
       vehicle: 'perentie',
-      conditions: { time: 'dusk', weather: 'rain' },
+      resume: false,
+      replay: defaultConditions,
+      load: vehicleLoadout(standard, 'perentie'),
     });
     expect(choiceFromSave(null)).toEqual({
-      map: 'high-country',
+      episode: 'ironbark',
       vehicle: 'shortie',
-      conditions: { time: 'afternoon', weather: 'clear' },
+      resume: false,
+      replay: defaultConditions,
+      load: vehicleLoadout(standard, 'shortie'),
     });
-    const [key] = [...data.keys()];
-    data.set(
-      key,
-      JSON.stringify({
-        version: 1,
-        exploration,
-        settings: {},
-        conditions: { time: 'noon', weather: 'snow' },
-      }),
+    const checkpoint = startCheckpoint(ironbarkLevel, 'first-camp', 'shortie');
+    writeSave(saveData({ episodes: { ironbark: { completed: false, checkpoint } } }), s);
+    expect(choiceFromSave(loadSave(s)).resume).toBe(true);
+    // The conditions picked last are kept, finished or not (a playground never is); broken
+    // ones are dropped, and the choice goes back to the defaults.
+    writeSave(saveData({ replay: { time: 'dusk', weather: 'rain' } }), s);
+    expect(choiceFromSave(loadSave(s)).replay).toEqual({ time: 'dusk', weather: 'rain' });
+    s.setItem(
+      [...s.data.keys()][0],
+      JSON.stringify({ version: 1, settings: {}, replay: { time: 'noon', weather: 'snow' } }),
     );
-    expect(loadSave(s)!.conditions).toEqual({ time: 'afternoon', weather: 'clear' });
+    expect(loadSave(s)!.replay).toBeNull();
+    expect(choiceFromSave(loadSave(s)).replay).toEqual(defaultConditions);
     expect(weathers).toEqual(['clear', 'wet', 'rain']);
+  });
+
+  it('moves the sun with an episode’s clock: midday high in the north, dusk low in the west, then night', () => {
+    const noon = environmentAt(12.5, 'clear');
+    const afternoon = environmentAt(16.5, 'clear');
+    const dusk = environmentAt(17.9, 'clear');
+    const night = environmentAt(20, 'clear');
+    expect(noon.sun.elevationDeg).toBeGreaterThan(55);
+    expect(afternoon.sun.elevationDeg).toBeLessThan(noon.sun.elevationDeg);
+    expect(dusk.sun.elevationDeg).toBeLessThan(10);
+    expect(night.stars).toBe(1);
+    // Halfway between the presets the light is halfway between them, turning the short way round.
+    const mid = environmentAt(14.5, 'clear');
+    expect(mid.sun.elevationDeg).toBeCloseTo((noon.sun.elevationDeg + afternoon.sun.elevationDeg) / 2, 5);
+    const az = (mid.sun.azimuthDeg + 360) % 360;
+    expect(az > 300 || az < 10).toBe(true);
+    // The headlights light the ground from dusk, and the weather still greys the sky.
+    expect(environmentAt(17.4, 'clear').lampBeams).toBe(false);
+    expect(environmentAt(17.6, 'clear').lampBeams).toBe(true);
+    expect(environmentAt(13, 'wet').wetness).toBeGreaterThan(0.5);
+    expect(saturation(environmentAt(13, 'wet').sky.zenith)).toBeLessThan(
+      saturation(environmentAt(13, 'clear').sky.zenith),
+    );
   });
 });

@@ -1,12 +1,12 @@
 # 4WD Simulator
 
-A relaxed, single-player off-road exploration and rock-crawling game that runs in the browser. Drive a detailed, 1970s Land Cruiser 40 Series-inspired short-wheelbase 4WD (plain, or in Camel Trophy yellow), the Army green Land Rover 110 Perentie from the _Bush Tucker Man_ TV series, or a GQ Patrol wagon, through a patch of Australian high country, round a purpose-built 4WD park, along an RC crawler-style gate trail or up a steep range you have to winch your way up, using low range, lockers, a winch, planks and careful line choice to get over rough ground. No races — just the drive, what's over the next hill, and optional scored runs on the rock trails if you want them.
+A single-player 4WD playground that runs in the browser and can be installed from Chrome on Android. There is no route and nothing to finish: each level is a small piece of country packed with climbs, creek crossings, bog holes and rock, and you drive whichever lines you like, in whatever order, in any of thirteen vehicles. Low range, diff locks, tyre pressures, a winch and planks are there to get you through.
 
-Built with Three.js, Rapier physics and TypeScript. Everything, including leaf textures, terrain detail and sound, is generated in code; there are no downloaded asset files. Graphics use smooth terrain lighting, fine eucalyptus foliage, reflective water and detailed vehicle materials. High quality uses the full resolution of displays with up to 2× pixel density.
+From v0.22 the game runs on the code of [Over the Cape](https://github.com/reidstephen11/over-the-cape), the Cape York game that grew out of the first 4WD Simulator: its vehicles, physics, HUD, menus, phone controls and headset mode, without its story. Three.js, Rapier physics and TypeScript; the terrain, trees, vehicles and sound are generated in code.
 
 ## Play
 
-**Online:** https://reidstephen11.github.io/4wd-simulator/ (deployed from `main` by GitHub Actions).
+**Online:** https://reidstephen11.github.io/4wd-simulator/ (deployed from `main` by GitHub Actions). On Android Chrome, Install app / Add to Home screen opens it as a standalone app. A new version downloads in the background; it takes over on the title screen, and during a drive it waits for **Pause → Restart for the new version**. After one visit the game also starts offline.
 
 **Locally** (Node 20 or newer):
 
@@ -15,296 +15,257 @@ npm install
 npm run dev        # then open http://localhost:5173
 ```
 
-Other scripts:
+| Script              | What it does                                                                     |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `npm run build`     | Type-checks and builds the static site into `dist/`                              |
+| `npm run preview`   | Serves `dist/` at http://localhost:4173                                          |
+| `npm run lint`      | ESLint and Prettier check                                                        |
+| `npm test`          | Unit and headless physics tests (Vitest); `npm test -- --shard=1/3` runs a third |
+| `npm run typecheck` | Type-check everything, tests and scripts included (the build checks only `src`)  |
+| `npm run test:e2e`  | Browser tests (Playwright; builds first)                                         |
 
-| Script             | What it does                                                                                       |
-| ------------------ | -------------------------------------------------------------------------------------------------- |
-| `npm run build`    | Type-checks and builds the static site into `dist/`                                                |
-| `npm run preview`  | Serves `dist/` at http://localhost:4173                                                            |
-| `npm run lint`     | ESLint and Prettier check                                                                          |
-| `npm test`         | Unit and headless physics tests (Vitest)                                                           |
-| `npm run test:e2e` | Browser tests (Playwright; builds first). Set `SCREENSHOTS=M1,M2,…` to refresh `docs/screenshots/` |
+The game opens on a title screen. **Press any button** (or **Tap to begin**) brings up three choices:
 
-The game opens on a **welcome screen**: choose the world, the vehicle, the time of day and the weather, then press **Drive** (or Enter; arrow keys or the d-pad move between choices). It starts on whatever you chose last time. Sound starts with that Drive press (browsers only allow sound after a click or key press). **Pause menu → Main menu** comes back to it.
+- **Continue** carries on from the last camp you drove into, in the same vehicle and conditions, without another screen. It is greyed out until a drive has been started.
+- **New drive** opens the setup page: the level, the vehicle, the damage setting, the time of day and the weather. **Load level** builds the map; a card names the level and the conditions, with **About this level** and **Controls** to open if you want them, then **Drive**.
+- **Settings**: graphics, cockpit mirrors and head motion, volume, controller type, speed units, UI size, HUD style and, on a phone, the driving scheme and joystick side.
 
-## Time of day and weather
+The engine is off as you arrive: the first press of the accelerator starts it. **Pause → Main menu** goes back to the title.
 
-| Choice         | What it does                                                                                                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Morning        | Low, cool-gold sun from the east-north-east                                                                                                                                                              |
-| Midday         | High sun from the north, short shadows                                                                                                                                                                   |
-| Late afternoon | Warm low sun from the west-north-west (the original lighting)                                                                                                                                            |
-| Dusk           | Sun on the horizon, pink and orange sky, long shadows; the headlights come on as you arrive                                                                                                              |
-| Night          | Faint blue moonlight from the north-east and a sky full of stars; you need the headlights. The birds are quiet and crickets chirp                                                                        |
-| Clear          | Dry ground and sunshine                                                                                                                                                                                  |
-| After rain     | Overcast, soft shadows, dark damp ground; tyres grip less (on dirt about three quarters as well), no dust, the creeks up 5 cm, a few puddles on the tracks                                               |
-| Raining        | Rain falling (not inside the cab), heavier haze, wetter ground with less grip still (on dirt about two thirds), the creeks up 12 cm, many more puddles; rain hisses outside and drums on the roof inside |
+The version number (v0.22 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
 
-On wet ground hard braking takes longer and can lock the wheels: a locked tyre slides, scrubs and loses most of its steering grip, so ease off the brake to steer. From 60 km/h on dirt the cars stop in about 16–17 m dry, 18–19 m after rain and 20–23 m in the rain. Puddles lie on the flat stretches of the dirt and gravel tracks (never on the park's obstacle lines); driving through one splashes and sounds like the creek, and the muddy bottom is slippery.
+## Ironbark Creek
 
-Your speed and gear show in the status strip (bottom left), in km/h or mph (**Pause menu → Settings → Units**). When the crawl gauges are showing (low range, precision crawl, or with I), the speed moves into them; in the driver's seat the dash speedometer reads km/h, as on the real car.
+The first level is half a kilometre square. A 25 m knoll stands in the middle with the **Knoll track** looping right round it. **Ironbark Creek** runs north to south down the west side in a gully about five metres below the plain, and the **West bank track** follows its far side. You start at **Ironbark camp** on the west bank; **Top paddock camp** is across the knoll, off the loop's north-east corner. Every line is signed at both ends, and the far sign says which way it can be driven. The ground between the lines is open eucalypt woodland and can be driven too. The paper map (M) shows the tracks and the places you have found.
 
-The engine starts as you arrive: the starter cranks for about a second (a little longer for the diesel) and the car stays put until the engine catches. The same happens after swapping vehicles and when restarting a flooded engine.
+**On the knoll** (each line leaves the Knoll track or comes back down to it):
 
-The version number (for example v0.17) is on the loading screen and the pause menu, and goes up by 0.01 with every update merged into `main`. Hover over it to see the exact build.
+- **Rock climb**: straight up the south face on rock: broken granite, a staircase of ledges, an off-camber slab, a notch between two whalebacks, then split ledges near half a metre high and a full-width ledge below the top. Up only. Low range, both lockers and precision crawl. It has eight scored gates (below).
+- **Switchbacks**: up the east face in four legs joined by three tight hairpins. Swing wide, use full lock, and back up for a second go if you need to. Either way.
+- **Side slope**: round the west flank, leaning the car out past 20°. Crawl, steer smoothly and never turn downhill. Either way.
+- **The drop**: down the north-west face and off a near-vertical rock lip about three metres high into a mud hole. Low range, wheels straight, crawl off the lip and let the nose drop. Down only.
+- **Steep descent**: straight down the north face past 28°, through erosion ruts. Low range, straddle the ruts, never lock the wheels on the clay. Down only.
+- **Axle twisters**: fourteen holes under alternate wheels, each with a mound under the other wheel, south-east of the top. Lock the rear diff, or both. Either way.
+- **Bog trench**: a long bog sunk a metre and a half between clay walls, north-east of the top. Once in, the only way out is along it; marked rocks on the banks are there to winch from. Either way.
 
-## Headlights
+**On the creek** (each crossing runs from the Knoll track's west leg to the West bank track):
 
-**N** switches the headlights: off, low beam, high beam, then off again (gamepad: tool menu → Headlights; touch: LIGHTS, top left). At dusk and night they come on, on low beam, as you arrive. Low beam lights the ground for about 20 m ahead and spreads wide, which suits slow work among rocks and trees; high beam reaches the trees about 40 m away, in a narrower beam. The Camel Trophy 4WD's four roof lamps come on with high beam. In daylight the lamps glow but light nothing, as in the real world. A green lamp in the status strip shows the headlights are on, blue for high beam; in the driver's seat the dials light up (ivory markings, red at the redline, bright needles) and the dash has a blue high-beam lamp.
+- **The ford** (middle): under half a metre of water over gravel, on easy ramps. Any vehicle, any gear.
+- **The deep crossing** (north): over 1.2 m deep on the straight line. Crawl it: above walking pace the bow wave reaches the air intake and floods the engine. Just downstream (to your left going west) a gravel bar carries about half the depth, with boulders to weave between and two scour holes. The banks are laid back for 40 m, so both lines share the way in.
+- **The chute** (south): about eight metres of clay at 30° down to the water, with an erosion rut to straddle, then eleven metres at 26° out with a step of rock at the lip. Marked boulders stand above the climb out to winch from. Going west it can be crawled with both lockers; coming back east, up the chute itself, takes the winch.
+
+**On the west bank:**
+
+- **The bog hole**: a side loop through two deep holes of sticky black mud, end to end, shallower towards their edges, with trees to winch from.
+- **The rock garden**: a side loop over granite steps, slabs and boulders. Put a wheel on each rock rather than straddling it.
+
+How hard they are, measured with the autopilot crawling in low range in the short-wheelbase 4WD on a dry day: with both diff locks every line can be driven except back up the chute. With open diffs the car stops on the rock climb, the axle twisters, the bog trench, the deep crossing, the chute, the bog hole and the rock garden (driven clockwise); the ford, the side slope, the drop and the steep descent need no lockers. Rain makes the clay and the mud a good deal harder.
+
+**Scored rock climb.** Drive through gate 1 at the foot of the rock climb to start a run: red flag on the left, blue on the right, eight gates uphill. A run starts with 1000 points; touching a flag costs 25, missing a gate 100, each reverse or knock on the body 5, and hooking the winch 50. Time breaks ties. The best score is kept for each vehicle.
+
+**Notes.** The first time you reach an obstacle, a small card says what it is and which control helps there, worded for the keyboard, controller or phone you are using. **Pause → Trip journal** keeps the notes you have seen.
+
+**Camps.** Driving into either camp repairs the car, puts the spare wheel and tyre plugs back (one spare and three plugs) and makes that the camp you return to. **Pause → Restart from last camp** goes back to it. No fuel is used in a playground level.
+
+## Conditions
+
+Chosen on the New drive page, and kept for next time.
+
+| Choice         | What it does                                                                          |
+| -------------- | ------------------------------------------------------------------------------------- |
+| Morning        | Low, cool-gold sun from the east-north-east                                           |
+| Midday         | High sun from the north, short shadows                                                |
+| Late afternoon | Warm low sun from the west-north-west (the default)                                   |
+| Dusk           | Sun on the horizon, long shadows; the headlights come on as you arrive                |
+| Night          | Faint blue moonlight and stars; you need the headlights                               |
+| Clear          | Dry ground and sunshine                                                               |
+| After rain     | Overcast; the ground is wet, the clay and mud are slippery, puddles lie on the tracks |
+| Raining        | Rain falling, heavier haze, wetter ground with less grip still, more puddles          |
+
+Wet clay, mud, track dirt and grass cut up where the wheels spin, and the churned ground shows as dark wet patches: each failed attempt at a climb makes the next one slipperier.
 
 ## Damage
 
-**Pause menu → Settings → Damage** chooses how much harm hard driving does: Off, Mild (the default) or Realistic. The body dents and gets dirty whatever you choose.
+**New drive → Damage** (also pause menu → Settings → Damage). The body dents and gets dirty whatever you choose.
 
-What does damage, with Mild or Realistic:
+| Setting   | Damage                                                                                       | What sends you back to camp                                             |
+| --------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Off       | None                                                                                         | Nothing                                                                 |
+| Mild      | Tyres go soft, corners bend, the engine loses power; tool menu → Field repair fixes it all   | Being swept away by the creek                                           |
+| Realistic | Punctures and torn sidewalls, bent corners, the engine can be wrecked; plug or fit the spare | Swept away, a flat with no spare or plug that fits, or a wrecked engine |
 
-- **A tyre** is cut when it lands hard on rock: a drop of about a metre or more, or a jump. It goes soft (Mild) or flat (Realistic): less grip, that corner sits lower and the car pulls towards it.
-- **A suspension corner** bends on a heavy landing, about a 1.6 m drop. It sags, and a bent front corner pulls the steering towards its side.
-- **The engine** is hurt by a crash on the nose (from about 25 km/h into something solid), a heavy knock underneath (a drop onto the belly, not the scrapes of crawling) or running upside down. It loses power and, badly hurt, smokes from under the bonnet. With Mild it keeps at least 70% of its power; with Realistic it can be wrecked, after which it cranks but won't run, and water drawn in through the air intake damages it too.
-
-Crawling up, over and down the trails' rocks does no damage: every trail and park line has been driven with Realistic damage on without a scratch.
-
-| Setting   | Repairs                                                                                                                |
-| --------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Mild      | Tool menu → **Field repair**: stopped, about 6 s, and everything is put right                                          |
-| Realistic | Tool menu → **Fit the spare**: stopped, about 8 s, for one tyre; there's one spare. Everything else is fixed at a camp |
-
-Driving into any campsite, or **pause menu → Return to last campsite**, repairs everything and puts the spare back. A small car outline in the status strip shows what's damaged, amber then red, and a prompt tells you when a repair can be done. Changing the setting to Off puts everything right.
+Working the engine hard overheats it, fastest when bogged with the wheels spinning; airflow and water cool it. Watch the TEMP gauge: hot, it loses power and starts to be damaged.
 
 ## Vehicles
 
-Pick one on the welcome screen, or from **pause menu → Vehicle** while driving. The new vehicle appears where you are, with the winch and planks back on board, and the game remembers your choice.
+Pick one on the New drive page, or from **pause menu → Vehicle** while driving (the new vehicle starts from your last camp). Every vehicle is open from the start, and each has its own cab, dials and engine sound.
 
-| Vehicle                 | Based on                                                                  | Engine and gearbox                                                | Notes                                                                                                  |
-| ----------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Short-wheelbase 4WD     | 1970s Land Cruiser 40 Series                                              | 4.2 L petrol six, three-speed automatic                           | 2.3 m wheelbase, lifted on leaf springs, roof rack                                                     |
-| Camel Trophy 4WD        | The short-wheelbase 4WD in Camel Trophy dress                             | Same as the short-wheelbase 4WD                                   | Sandglow yellow, door and bonnet decals, four roof lamps, snorkel                                      |
-| Land Rover 110 Perentie | Les Hiddins' Army Land Rover 48-001 in the first _Bush Tucker Man_ series | 3.9 L Isuzu four-cylinder diesel, LT95A four-speed with low range | 2.79 m wheelbase, coil springs, 7.50R16 tyres, canvas tilt, bull bar, spare wheel under the rear floor |
-| GQ Patrol               | A Nissan GQ Patrol wagon set up for touring, late 1980s–90s               | 4.2 L TD42 six-cylinder diesel, five-speed with low range         | 2.97 m wheelbase, coil springs, 31-inch tyres, bull bar with driving lamps, snorkel, roof rack         |
+| Vehicle                    | Based on                                                                           | Engine and gearbox                                                |
+| -------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| FJ40                       | 1970s Land Cruiser 40 Series                                                       | 4.2 L petrol six, three-speed automatic                           |
+| Short-wheelbase 4WD        | The earlier hand-coded 40 Series body, same mechanicals as the FJ40                | 4.2 L petrol six, three-speed automatic                           |
+| Camel Trophy Land Rover 90 | The 1986 Camel Trophy Land Rover Ninety, left-hand drive, with a snorkel and winch | 2.5 L diesel four, LT77 five-speed with low range                 |
+| Land Rover 110 Perentie    | The Australian Army's Land Rover 110                                               | 3.9 L Isuzu four-cylinder diesel, LT95A four-speed with low range |
+| Hilux single cab           | 1979–83 Toyota Hilux 4WD with the styleside tub                                    | 2.0 L petrol four, four-speed manual with low range               |
+| Unimog UL1700L             | The Australian Army's Mercedes-Benz Unimog 4-tonne truck                           | 5.7 L turbo-diesel six, four road gears and four field gears      |
+| Troop Carrier              | 1990s Toyota LandCruiser 75 Series Troop Carrier                                   | 4.2 L diesel six, five-speed manual with low range                |
+| GQ Patrol                  | Late 1980s–90s Nissan GQ Patrol wagon, set up for touring                          | 4.2 L TD42 diesel six, five-speed manual with low range           |
+| LC79 V8                    | Current Toyota LandCruiser 79 single cab, built up hard                            | 4.5 L twin-turbo diesel V8, tuned; five-speed with low range      |
+| 80 Series — Sooty MkII     | Modified 80 Series inspired by Shaun Whale's MkII                                  | 4.2 L turbo-diesel six, five-speed with low range                 |
+| 60 Series wagon            | 1986 Toyota LandCruiser HJ60 Standard wagon, Australian, with a bull bar and rack  | 4.0 L 2H diesel six, five-speed manual with low range             |
+| Range Rover two-door       | Early-1980s two-door Range Rover, Australian-delivered, with a roo bar and rack    | 3.5 L Rover V8, LT77 five-speed, full-time 4WD with a centre lock |
+| Hilux SR5 Xtra Cab         | 1985 Toyota Pickup (Hilux) SR5 Xtracab 4x4, left-hand drive, black, on 31s         | 2.4 L injected petrol four, five-speed manual with low range      |
 
-The Camel Trophy 4WD drives exactly like the short-wheelbase 4WD. The only difference you'll feel is its snorkel: the engine breathes from the top of the left windscreen pillar, about 2 m off the ground, so it wades much deeper water before it floods. (The real Camel Trophy cars were Land Rovers; the 1986 event, run in Australia from Cooktown to Darwin, used Land Rover 90s.)
+## Transfer cases
 
-The GQ Patrol is the biggest and heaviest (about 2.4 t): steady and roomy, with the TD42's slow diesel knock, a snorkel for deep water and the longest wheelbase, so mind its belly on crests. Like the others it changes gear itself.
+Every vehicle starts in **4H**, with its front hubs locked and, on full-time vehicles, the centre diff locked. **L** (controller **△ / Y**, or the phone's **4WD → transfer** button) cycles **2H → 4H → 4L → 2H** on the 40, 40 ute, 60, Hilux, Troopy, MQ, GQ and 79. Stop before entering or leaving 4L; 2H → 4H works below 20 km/h with the hubs locked. The HUD and phone button show the current mode. In 2H only the rear wheels drive.
 
-The Perentie shifts its own gears like the other vehicle (the game has no clutch). Its longer wheelbase makes it steadier on the fire trail and harder on crests: it climbs The Chute, but coming down it the chassis grounds on a rock step.
+On these part-time vehicles, select 2H and stop on level ground to **Lock / Unlock front hubs** from TOOLS. It takes 20 seconds, with the car held still and progress shown. With the hubs free, a shift into four-wheel drive waits until they are locked. The 79 has automatic hubs. The 80, Perentie, Camel Trophy Land Rover, Unimog and Range Rover have full-time drive: L switches 4H / 4L, and TOOLS offers **Lock / Unlock centre diff**. Stop to engage it. With the centre open, an axle losing grip limits drive at both axles; locking it keeps the other axle pulling.
 
-## Maps
-
-Pick one on the welcome screen, or from **pause menu → Location** while driving. The game reloads into the new map at its last campsite, in the vehicle you're driving, and each map keeps its own progress.
-
-**High Country** is the original open map: creeks, an escarpment, the high plain and Granite Spur's eight obstacles, described below.
-
-**Ironbark 4WD Park** is a purpose-built park. A gravel loop (green markers) rings Ironbark Hill, a flat-topped hill with steep faces, and eleven numbered, signposted stations hang off it. Each station has an easier and a harder line that leave the loop and rejoin it (or the ring track on the hilltop), so the loop is always the way round. Start at Park HQ on the south side.
-
-| Station           | Easier line                                        | Harder line                                                                |
-| ----------------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
-| 1. Mud Pits       | Two shallow bog holes (easy)                       | Three deep bog holes with churned ruts; much slower without lockers (hard) |
-| 2. Axle Twisters  | Shallow holes under alternate wheels (moderate)    | Holes beside mounds that lift diagonal tyres; needs a locker (hard)        |
-| 3. Log Crossing   | Small logs at an angle (easy)                      | Logs as tall as the chassis rails, and a doubled pair (hard)               |
-| 4. Ditch Crossing | Two broad dips (moderate)                          | Three short, steep ditches that test approach and departure angles (hard)  |
-| 5. Rock Garden    | Scattered stones (easy)                            | Tyre-high boulders packed tight; needs both lockers (extreme)              |
-| 6. Water Crossing | A wide gravel ford (easy)                          | A deep hole between steep banks; mind the air intake (hard)                |
-| 7. Hill Climb     | Slanting up the north face at about 18° (moderate) | Straight up it at 30° (hard). One way, uphill                              |
-| 8. Steep Descent  | Slanting down the south face (moderate)            | Straight down 28° through erosion ruts (hard). One way, downhill           |
-| 9. Side Slope     | Low on an earth bank, leaning about 15° (moderate) | High on it, leaning about 25° (hard)                                       |
-| 10. Rock Steps    | Low steps slanting up the west face (moderate)     | Tall split ledges straight up it (hard). One way, uphill                   |
-| 11. Whoa-boys     | Low drainage humps (moderate)                      | Tall humps with ditches behind, some angled (hard)                         |
-
-Every line is drive-tested with both vehicles. The scored runs work on every line, and the paper map labels each station once you've found it.
-
-**Crawler Creek** is an RC crawler-style trail at full size: one 1.3 km loop from the Trailhead, marked by 52 numbered gates. Each gate is a pair of flags, red on your left and blue on your right, with its number on a board on the red flag's stake. Drive through them in number order. The trail crosses Crawler Creek twice and climbs Knuckle Ridge, an escarpment north of the creek. The gates are counted: under the compass, **Gate 14 / 52** shows the next one to drive through. Each gate passed rings a soft bell; driving round a gate, or skipping ahead, shows "Missed gate 13" and counts it, and passing gate 52 shows how many you made in order. The count starts at the first gate you drive through, so joining the trail part way round misses nothing. Touching a flag with the body or a tyre knocks its stake, shows which flag it was and adds to the count (**Gate 14 / 52 · 2 flags**); each flag counts once a lap. The lap result at gate 52 lists gates missed and flags touched. The scored runs work on every section.
-
-| Section           | Gates | Grade    | What it is                                                                |
-| ----------------- | ----- | -------- | ------------------------------------------------------------------------- |
-| 1. Start Chute    | 1–6   | easy     | A slalom between boulders north of the Trailhead                          |
-| 2. Mud Holes      | 7–10  | moderate | Three mud holes in a row, each deeper than the last                       |
-| 3. Creek Bridge   | 11–13 | easy     | A 14 m timber bridge with kerbs over the creek, gated narrow at both ends |
-| 4. Log Run        | 14–17 | moderate | Five logs across the track at the foot of the ridge                       |
-| 5. Switchbacks    | 18–27 | hard     | Five legs and four tight hairpins up the ridge face, gated at every turn  |
-| 6. Summit Rocks   | 28–31 | moderate | Granite ledges, boulders and slabs along the top of the ridge             |
-| 7. The Drop       | 32–33 | hard     | Down the ridge's steep east end at 24°, nearer 30° over the ruts. One way |
-| 8. Skinny Bridge  | 34–36 | hard     | Two planks over a bog, one under each wheel track                         |
-| 9. Water Crossing | 37–40 | moderate | A wide gravel ford, gated mid-stream                                      |
-| 10. Ramp Bridge   | 41–42 | moderate | An up-and-over timber ramp, 1.2 m high                                    |
-| 11. Rock Garden   | 43–48 | hard     | Two fields of tyre-high boulders in a dry creek bed; needs lockers        |
-| 12. Last Splash   | 49–52 | easy     | A last mud hole and the finish gate back at the Trailhead                 |
-
-Every section is drive-tested with both vehicles in low range, the hard ones with both lockers, and the Camel Trophy 4WD drives the whole loop without stopping. The switchbacks' hairpins are tight enough that you may need to stop, back up and turn again, especially in the Land Rover. The paper map shows the bridges and every gate's flags.
-
-**Stringybark Range** is big, steep country, 2 km across. The Stringybark River runs along the valley; north of it the land climbs in two steps, about 60 m to The Shelf and about 70 m more to the range top, where Stringybark Peak has a fire tower and Eagle Rock stands on cliffs. South of the river is Wombat Hill. Start at River Camp. Gravel fire trails (green markers) zig-zag up both steps and reach every campsite, the peak, the ford and the Wombat Hill lookout without winching.
-
-Eight **winch climbs** take the direct way up. Each zig-zags up the slope in short, steep pitches, each ending on a level landing, with a marked boulder straight ahead of every pitch. You can't drive up any of them, even in low range with both lockers. At the bottom, select low range (L), lock both diffs and press E: quick attach hooks the marked boulder ahead. Hold R to reel in with a little throttle, and steer to keep the nose on the boulder. On the landing, let go (E), turn to face the next pitch, stop and press E again. Eagle Rock's lookout and the old Stockman's Hut on Clay Knoll can only be reached this way.
-
-| Climb          | Surface  | Pitches | Leads to           |
-| -------------- | -------- | ------- | ------------------ |
-| Granite Steps  | Granite  | 8       | The Shelf          |
-| Slippery Dip   | Wet clay | 6       | The Shelf          |
-| Greasy Pole    | Wet clay | 8       | The Shelf          |
-| Devil's Ladder | Granite  | 8       | The range top      |
-| Goat Track     | Granite  | 8       | The range top      |
-| Eagle Rock     | Granite  | 5       | Eagle Rock lookout |
-| Hut Spur       | Wet clay | 4       | Stockman's Hut     |
-| Bullock Track  | Wet clay | 5       | Top of Wombat Hill |
-
-The granite pitches have rock steps 0.7 m tall every 5 m, too tall for a tyre on a slope that steep. The clay pitches are about 25–29°, and wet clay grips about half as well as dirt, so the tyres just spin. Every climb is tested with all four vehicles, winching up and failing to drive up.
+Part-time 4WD, or a locked centre diff, winds up in tight turns on firm rock, concrete or bridge timber. Steering gets heavier, the tyres scrub and wear, and a creak and **WIND-UP** lamp warn you. Select 2H or unlock the centre; loose ground also releases the strain. Camp saves remember mode, hubs and centre lock for that vehicle. Older saves start in 4H.
 
 ## Controls
 
-| Action                         | Keyboard                                              | Gamepad                                              |
-| ------------------------------ | ----------------------------------------------------- | ---------------------------------------------------- |
-| Accelerate                     | W / ↑                                                 | RT                                                   |
-| Brake / reverse                | S / ↓ (hold when stopped to reverse)                  | LT                                                   |
-| Steer                          | A D / ← →                                             | Left stick                                           |
-| Handbrake on / off             | Space (press again to let it off)                     | X / Square                                           |
-| Toggle high/low range          | L (below 20 km/h)                                     | Y / Triangle                                         |
-| Front / rear diff lock         | Z / X (below 5 km/h to engage)                        | Hold LB → front / rear diff                          |
-| Precision crawl                | P                                                     | Hold LB → precision crawl                            |
-| Winch quick attach / detach    | E                                                     | RB                                                   |
-| Winch in / out                 | R / F                                                 | D-pad up / down                                      |
-| Tool menu (recovery, crawling) | Hold Q, point with the mouse, arrows or WASD, release | Hold LB, point with the left stick or d-pad, release |
-| Interact (pick up planks)      | E (when prompted)                                     | A / Cross                                            |
-| Right vehicle                  | Hold J (when prompted)                                | Hold B / Circle                                      |
-| Orbit camera                   | Mouse drag (left or right button), or Num 4/6/8/2     | Right stick                                          |
-| Camera distance                | Scroll                                                | D-pad left/right while driving                       |
-| Recenter camera                | V or Num 5, or the Reset view button                  | Right stick click                                    |
-| Cycle crawler / driver views   | C, or the View button                                 | Hold LB + click right stick                          |
-| Crawl gauges: auto / on / off  | I                                                     | Shown in low range                                   |
-| Horn                           | H                                                     | Left stick click                                     |
-| Headlights: off / low / high   | N                                                     | Hold LB → headlights                                 |
-| Map                            | M (scroll to zoom, drag to move it)                   | View / Select                                        |
-| Pause                          | Esc                                                   | Start / Options                                      |
+The table shows PlayStation labels; choose Xbox or Generic in Settings to change the in-game prompts and Controls help. Generic buttons are numbered 1–12 in standard gamepad order.
 
-Winch quick attach (E) hooks the best anchor ahead within reach of the 30 m cable: it prefers marked boulders (a ring bolt and a paint mark on top) to trees and skips anything closer than 7 m. To choose an anchor yourself, use **Winch** in the tool menu.
+| Action                                     | Keyboard                                              | PS4 controller                                                                        |
+| ------------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Accelerate (first press starts the engine) | W / ↑                                                 | R2                                                                                    |
+| Brake / reverse                            | S / ↓ (hold when stopped to reverse)                  | L2                                                                                    |
+| Steer                                      | A D / ← →                                             | Left stick                                                                            |
+| Handbrake on / off                         | Space (press again to let it off)                     | □ (Square)                                                                            |
+| Cycle transfer case                        | L (stop for low range)                                | △ (Triangle)                                                                          |
+| Front / rear diff lock                     | Z / X (below 5 km/h to engage)                        | Hold L1 → front / rear diff                                                           |
+| Precision crawl                            | P                                                     | Hold L1 → precision crawl                                                             |
+| Winch quick attach / detach                | E                                                     | R1                                                                                    |
+| Winch in / out                             | R / F                                                 | D-pad up / down                                                                       |
+| Tool menu                                  | Hold Q, point with the mouse, arrows or WASD, release | Hold L1, point with the right stick or d-pad, release                                 |
+| Interact (planks, hitch)                   | E (when prompted)                                     | ✕ (Cross)                                                                             |
+| Right vehicle                              | Hold J (when prompted)                                | Hold ○ (Circle)                                                                       |
+| Orbit camera                               | Mouse drag (left or right button), or Num 4/6/8/2     | Right stick                                                                           |
+| Camera distance                            | Scroll                                                | D-pad left/right while driving (Automatic gearbox)                                    |
+| Shift up / down (manual gearbox)           | —                                                     | D-pad right / left                                                                    |
+| Recenter camera                            | V or Num 5, or the Reset view button                  | Right stick click                                                                     |
+| Cycle crawler / driver views               | C, or the View button                                 | Hold L1 + click right stick                                                           |
+| Crawl gauges: auto / on / off              | I                                                     | Shown in low range                                                                    |
+| Horn                                       | H                                                     | Left stick click                                                                      |
+| Headlights: off / low / high               | N                                                     | Hold L1 → headlights                                                                  |
+| Map                                        | M (scroll to zoom, drag to move it)                   | SHARE                                                                                 |
+| Pause                                      | Esc                                                   | OPTIONS                                                                               |
+| Menus                                      | Arrows, Enter to choose, Esc to go back               | D-pad or left stick: up / down a row, left / right change a setting; ✕ choose, ○ back |
 
-Placing planks: choose **Place planks** in the tool menu, move them with W/S, turn them with A/D, place with E, cancel with Esc. Prompts on screen switch between keyboard and gamepad glyphs depending on what you last touched.
+**Menus with a controller.** Up and Down move a row at a time; Left and Right change the highlighted setting (or move across buttons that stand side by side); ✕ chooses and ○ goes back.
+
+**Tool menu.** Hold Q (or L1 / LB and aim the right stick), then release to use the selection. It holds the winch (attach, detach, single line or snatch block), the front and rear diff locks, precision crawl, tyre pressures, the planks, the headlights, the hubs or centre diff, and the repair the car needs (Field repair, Plug the tyre or Fit a spare). An option that can't be used now is greyed out; picking it says why.
+
+**Tyre pressures.** Open **Tools → Tyres** while stopped and choose **18 psi** for rock and mud, **24 psi** for trails or **36 psi** for the road. Lower pressures improve off-road grip and protect against sharp stones, but a soft tyre can roll off its rim in a hard corner. Letting down from 36 to 18 takes 12 seconds; the compressor takes 60 seconds to put that air back.
+
+**Planks.** Choose **Place planks** in the tool menu, move them with W/S, turn them with A/D and place them with E; **Recall planks** brings them back.
+
+**Manual gearbox (controller only).** Settings → **Gearbox** picks **Automatic** (the default) or **Manual** (you change gear with D-pad right and left and the clutch is worked for you). The row shows only while a controller is connected on a computer; the keyboard and touch always drive automatic.
+
+**HUD.** A small group of dials (speedometer with the gear in a window, TEMP and FUEL), a compass, and warning lamps that show what is on (LOW, F LOCK, R LOCK, CRAWL, BRAKE, lights, WINCH) and what is wrong (STALLED, FLOODING, TEMP HIGH, a flat tyre, engine and body damage). Settings → **HUD style** picks Dash cluster, Edge lines or Field kit; **UI size** scales the whole interface; **Frame rate** picks 60 or the screen's own rate.
 
 ### Phones and tablets
 
-On a touch screen the game shows on-screen controls. They work held sideways (landscape) or upright (portrait).
+On a touch screen the game shows on-screen controls, held sideways or upright. Settings → **Phone driving** chooses **Joystick only** (left and right steer, forward and back are throttle and brake; the default) or **Steer and pedals** (a steering stick plus GAS and BRAKE). **Joystick side** swaps the stick and the buttons. Graphics start on Low.
 
-| Action                                | Touch                                                                                  |
-| ------------------------------------- | -------------------------------------------------------------------------------------- |
-| Steer                                 | Joystick, bottom left (push part way for part lock)                                    |
-| Accelerate / brake and reverse        | GAS / BRAKE, bottom right (hold BRAKE when stopped to reverse)                         |
-| Handbrake on / off                    | HAND                                                                                   |
-| High / low range                      | 4WD, then LOW                                                                          |
-| Precision crawl, diff locks           | 4WD, then CRAWL, F LOCK, R LOCK (tap 4WD again to tuck them away)                      |
-| Winch attach / detach, pick up planks | USE                                                                                    |
-| Winch in / out                        | Hold IN / OUT (shown while the winch is attached)                                      |
-| Right vehicle                         | Hold UPRIGHT (shown when needed)                                                       |
-| Tool menu                             | TOOLS, then tap an option (tap the space around it to close)                           |
-| Placing planks / choosing anchor      | Joystick, then USE to confirm or BACK to cancel                                        |
-| Orbit camera                          | Drag a finger on the view                                                              |
-| Camera distance                       | Pinch with two fingers on the view                                                     |
-| Cycle views / recenter camera         | View and Reset view (⟲ when the phone is upright), top right                           |
-| Map / pause                           | MAP and II, top left (pinch to zoom the map, drag to move it, tap outside to close it) |
-| Full screen                           | ⛶, top left, where the browser allows it                                               |
-| Headlights                            | LIGHTS, top left: off, low beam, high beam                                             |
+| Action                         | Touch                                                               |
+| ------------------------------ | ------------------------------------------------------------------- |
+| Steer                          | Joystick, bottom left, or right if swapped (part way for part lock) |
+| Accelerate / brake and reverse | GAS / BRAKE, or the joystick forward / back in Joystick only        |
+| Handbrake on / off             | HAND                                                                |
+| Transfer case                  | 4WD, then 2H / 4H / 4L                                              |
+| Precision crawl, diff locks    | 4WD, then CRAWL, F LOCK, R LOCK (tap 4WD again to tuck away)        |
+| Winch, planks, hitch a trailer | USE (with several anchors: stick or tap to pick one, USE to hook)   |
+| Winch in / out                 | Hold IN / OUT (shown while the winch is attached)                   |
+| Right vehicle                  | Hold UPRIGHT (shown when needed)                                    |
+| Tool menu                      | TOOLS, then tap an option (tap the space around it to close)        |
+| Orbit camera / camera distance | Drag a finger on the view / pinch with two fingers                  |
+| Cycle views / recenter camera  | View and Reset view, top right (icons when the phone is sideways)   |
+| Map / pause / full screen      | MAP, II and ⛶, top left (lights are in TOOLS)                       |
 
-Pause → Controls lists these touch controls when the menu was opened by touch. On a phone the map opens zoomed in on the car. LOW, CRAWL and the diff locks sit in a pile behind the 4WD button, which opens them in a row above it; while it's closed, its letters L, C, F and R light up for each one that's on. Held upright, the view widens so the car and the windscreen don't fill the screen, and prompts such as "USE Attach winch" sit just above the buttons on the right rather than over the car. The controls appear on phones and tablets, and whenever the screen is touched; pressing a key or using a gamepad hides them. A phone or tablet with no saved settings starts on the Low graphics preset. Add `?touch` to the address to show the touch controls on a desktop browser.
+### Headsets
 
-## Rock crawling
+The headset game has its own address: on a headset with its own browser (Meta Quest 3 or 3S), open **https://reidstephen11.github.io/4wd-simulator/vr**. Choose a drive as usual; the **Drive** press on the loading card puts the headset on. You sit in the driver's seat and drive with the hand controllers; menus stay in the browser window. The ordinary address never offers a headset.
 
-The **Camp Rock Course** is about 40 m east of River Flat Camp; follow the sign beside camp. Three marked lines progress from low warm-up steps to cross-axle rocks and a harder ledge line. Each line has entrance and exit markers, a difficulty sign and nearby driving hints. The course also appears on the map once discovered.
+| Action                         | Headset controllers                                |
+| ------------------------------ | -------------------------------------------------- |
+| Accelerate / brake and reverse | Right trigger / left trigger                       |
+| Steer                          | Left stick                                         |
+| Handbrake on / off             | X                                                  |
+| Transfer: 2H / 4H / 4L         | Y                                                  |
+| Use (winch, planks, notes)     | A                                                  |
+| Right vehicle / back           | Hold B / B                                         |
+| Tool menu                      | Hold left grip, point with the right stick, let go |
+| Winch attach / detach          | Right grip                                         |
+| Winch in / out                 | Right stick up / down                              |
+| Horn                           | Right stick click                                  |
+| Pause                          | Left stick click                                   |
 
-Select **low range (L)**, then toggle **precision crawl (P)**. It works like a crawl-control system: hold W for a forward target of 6 km/h; S still brakes normally while moving forwards, then targets 5 km/h in reverse once stopped. Precision mode adjusts throttle and brakes to control descents while retaining full engine effort for climbing. Analogue triggers vary the target speed; half input targets 3 km/h forwards or 2.5 km/h in reverse. Use lighter trigger input or feather W on taller ledges to avoid catching the belly. Release the controls and it brakes to a stop; press P again for normal driving.
+## Driving tips
 
-The drivetrain behaves like a real automatic. The throttle sets how hard the engine pulls, so a light, steady pedal settles at a steady speed (in low range about 7 km/h at 10% throttle) and the revs build over a moment. A torque converter sits between engine and gearbox: in gear the car creeps at idle (about 4 km/h in low range), so brake to stop when precision crawl is off. Engine braking comes through the converter and rises with the revs, and the gearbox holds its gear when you coast downhill. Pulling away on a slope, hill-start assist holds the brakes until the drive has built up. If the car slips back down a rock, W still drives forwards, fighting the roll, instead of braking.
+- Stop, then select **low range (L)** and **precision crawl (P)** before a climb or a descent: hold the accelerator and the car walks.
+- Lock the diffs (Z front, X rear) below 5 km/h, before you need them. Unlock them on firm ground: a locked car does not want to turn.
+- Spinning the wheels digs you in and cuts the ground up. Back off, pick another line, let the tyres down.
+- **C** cycles the views: the front views look across the tyres to place a wheel, and the driver's seat has working mirrors.
+- The winch (E) reaches any tree or marked rock within about 30 m. With more than one in reach, choose the one that pulls you along the line you want.
+- Take water slowly. Above walking pace in deep water the bow wave floods the engine through the air intake; a flooded engine has to be cranked clear.
+- A flat tyre pulls the car off line. Stop and fix it from the tool menu, or drive into a camp.
+- Termite mounds are as hard as rock.
 
-Toggle the **rear locker with X** and **front locker with Z**. A locked axle keeps using the grounded tyre when its partner lifts. Engage below 5 km/h; unlocking is always allowed. Front lock increases the turning radius, so unlock it for tight manoeuvres. The status buttons show each axle's state and can also be clicked. On gamepad, hold LB, point the left stick at the front locker, rear locker or precision crawl option, then release LB to select it.
+## Test mode
 
-Low range also softens the springs and anti-roll bars, adds 6 cm of suspension droop and adjusts the dampers. The tyres can stay loaded over diagonal rocks while parked body height and bump clearance stay the same. Returning to high range restores the normal suspension support.
-
-Press **C** or click **View** to cycle Follow → Front left → Front right → Rear close → Driver. The front views look low across the tyres for placing a wheel on a rock; the rear view helps judge the belly and rear axle. The driver view sits in the right-hand seat and tilts with the body; drag (or the right stick) turns your head. The steering wheel turns with the front wheels, and the dash works: speedometer, tachometer and oil pressure, plus lamps for low range, each locker, crawl control, a stalled engine and the handbrake. The handbrake lever (or the pull handle under the 40 Series-style dash) moves when you pull it on. In the driver's seat the on-screen panels shrink, turn partly see-through and sit low in the corners, clear of the windscreen and mirrors. Mouse drag, right-stick orbit and zoom still work. **V / R3 / Reset view** returns to follow and restores its previous zoom. On gamepad, hold **LB and click R3** to cycle views without choosing a tool.
-
-The **handbrake** stays on once pulled (Space or X/Square), until you press it again. A red **P** shows in the status strip while it's on; it ratchets on and clunks off, and if you try to drive away with it on, a prompt tells you to let it off.
-
-**Crawl gauges** appear at the bottom right in low range, with precision crawl or in the driver view (**I** cycles auto / always / off). The inclinometer shows pitch and roll and turns red near tipping angles (about 32° pitch, 28° roll). The tyre diagram shades each tyre by how much weight it carries, draws a lifted tyre as a dashed outline and a spinning one in orange, and marks locked axles. It warns when the belly is on a rock, and shows gear (L1, H2, R…), speed and revs.
-
-**Scored runs (optional):** drive into either end of a crawl trail's technical line (Granite Link or any Granite Spur obstacle) and a clock starts under the compass. Each time the car backs up costs 1 point, each time the chassis knocks a rock 1 point, and hooking up the winch 5 points (except on Stringybark Range's winch climbs, which need it). Reach the far end to see your time and points; your best per trail (fewest points, then quickest) is saved. Leaving the line or rolling ends the run; drifting past an entrance just cancels it.
-
-**Sound** follows what the car is doing: the inline six's burble changes with revs and load, low range adds transfer-case whine, tyres chirp when they spin on rock, the springs squeak as the axles flex, and the chassis grinds and knocks when it touches rock. Range changes clunk, the air lockers click and hiss, and selecting drive or reverse clunks. In rain there is a broad hiss and a closer patter outside, and the rain drums on the roof in the driver's seat.
-
-The **Granite Link** starts just east of the camp course. Follow the amber markers through about 70 m of split rocks, an off-camber shelf and granite ledges. Marked boulders beside the trail provide winch anchors. The wider, green-marked gravel bypass connects the same entrance and exit, making a loop back to camp. Both routes work in either direction; section hints explain the obstacle nearby. The rocks' chamfered surfaces use the same vertices for rendering and collision.
-
-Continue past Granite Link to **Granite Spur**, a granite hill with eight obstacles modelled on real tracks: the clay climbs, rock steps, shale sidlings and washouts of the Victorian High Country (Billy Goat Bluff, Blue Rag Range), and the boulder gullies and chutes of the Rubicon and Moab. A gravel **fire trail** (green markers) climbs the north face to the summit and rings the foot of the hill, so you can reach both ends of every obstacle without lockers. Marker colours show the grade: blue easy, amber moderate, red hard, black extreme.
-
-- **Creek Bed — easy:** a dry creek cut a metre into the foot of the hill, floored with rounded stones that rock the car. Open diffs in low range will do.
-- **Whoa-boys — moderate:** a 17° clay climb over three earth drainage humps, each with a ditch dug behind it. Take them square and slow so the belly doesn't hang on a crest; the angled ones lift diagonal wheels.
-- **Rock Steps — moderate:** granite ledges up the steep pinch onto the summit, two of them split so one front tyre climbs first. Low range gets up with open diffs; high range stalls. Coming down is harder.
-- **Log Step — moderate:** three fallen snow gums across the summit, about as tall as the chassis rails. Cross at a slight angle so one wheel climbs at a time.
-- **The Sidling — hard:** a narrow side-cut on loose shale above a gully, leaning the car 20–25° towards the drop. A washout under the low-side tyres and a rock shelf under the high side add to it. Never turn downhill.
-- **Boulder Gully — hard:** a gully cut up to 3 m into the south face and choked with boulders bigger than the tyres. Both lockers get through; a rear locker alone takes nearly three times as long; open diffs and high range stall.
-- **The Chute — extreme:** a granite V-notch that climbs about 10 m in 20 m onto the summit. Its walls swap high and low every wheelbase, so one front and the opposite rear tyre are always lifting. It needs both lockers and low range.
-- **Washout Ruts — hard:** a steep clay descent gouged by erosion ruts up to half a metre deep. Straddle the middle rut, and cross the others at an angle one wheel at a time.
-
-The suggested order runs round the hill from Granite Link: Creek Bed, Whoa-boys, Rock Steps and Log Step to the summit, down The Sidling, along the foot of the hill, up Boulder Gully and The Chute, and down Washout Ruts. Every obstacle also works the other way. Signs at both ends and nearby hints name the obstacle and how to drive it, and the summit and all eight obstacles appear on the paper map once found. Ruts and drainage humps are fine ground detail (0.25 m) laid over the 1 m terrain; like the rocks and logs, what you see is exactly what the car collides with.
+Add `?dev` to the address: https://reidstephen11.github.io/4wd-simulator/?dev. A panel on the right lets you set the clock and the weather, fine-tune the rain, the wet ground and how far the creek is up, start from any place on the map, change vehicle where you are, and hitch a box trailer (empty or with two drums) behind the car. Nothing is saved in test mode.
 
 ## Debug mode
 
-Add `?debug` to the URL (for example `http://localhost:5173/?debug` or `https://reidstephen11.github.io/4wd-simulator/?debug`). You get:
-
-- An overlay with FPS (the real frame rate, however slow), a frame-time graph, draw calls, triangles, main-thread time (simulation and rendering), vehicle state (speed, gear, rpm, surface and load per wheel), winch, flooding, dirt, sound levels and particle counts.
-- A panel with: free-fly camera (also the **backtick key**), physics collider wireframes and wheel contact points, a teleport button for every place on the map, buttons to play each bird call, and live sliders for the main vehicle tuning values (including the torque converter). The overlay's audio line names the engine sound in use (`synth` = the AudioWorklet engine) and the chassis scrape level.
+Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, sound levels) and a panel with a free-fly camera (also the backtick key), collider wireframes, a teleport button for every place and live vehicle tuning sliders. Add `?bench` for the phone test: the car parks on the Knoll track and the frame rate is timed with one thing turned off at a time and on each graphics setting.
 
 ## What to test
 
-The v0.1 checklist (SPEC §16), plus things that can only be judged by playing:
+**v0.22**
 
-- [ ] It loads from the Pages link in current Chrome, Firefox and Edge.
-- [ ] Starting at River Flat Camp, you can drive to every place on the map using only the vehicle and its tools (25 places; the map fills in as you find them).
-- [ ] **Camp logs:** select low range (L) and crawl over both logs without a run-up. Try reverse and a line with only one wheel on each axle crossing the log; the tyres should climb before the body touches.
-- [ ] **Granite Link:** follow the amber trail through all three rock sections, then return on the green gravel bypass. Try C / View at a diagonal obstacle to see the axle flex; confirm V restores follow. Try the loop in the opposite direction.
-- [ ] **Granite Spur:** from Granite Link, drive the obstacles in order (Creek Bed, Whoa-boys, Rock Steps, Log Step, The Sidling, Boulder Gully, The Chute, Washout Ruts), then the fire trail up and round the hill with open diffs. Try Boulder Gully and The Chute with open diffs, then the rear locker, then both. Watch the roll gauge on The Sidling (C → Driver), and try straddling the ruts versus dropping a wheel in.
-- [ ] **Deep Crossing:** drive into the deep channel and sit there — the engine sputters after about 5 s under water and stalls at 10 s. It restarts on throttle once the air intake has been clear for 20 s.
-- [ ] **The Staircase:** the rocky climb needs low range (press L while slow); high range shouldn't make it.
-- [ ] **Washout Gully:** the car can't cross the 1.2 m gap on its own. Lay both planks across it (tool menu → Place planks) or take the detour around the top end.
-- [ ] **Bog Hole:** in high range the car gets stuck; attach the winch to a nearby tree or marked boulder (E) and reel in (R) to get out.
-- [ ] Roll the car on a steep side slope, then right it by holding J.
-- [ ] The compass shows discovered places within 400 m; the paper map (M) labels only what you've found; both survive a page reload, and you restart at the last campsite you visited.
-- [ ] Pause menu → Return to last campsite works; settings (graphics quality, volumes, units) apply straight away and are remembered.
-- [ ] Frame rate on Medium: open `?debug` and check the overlay holds 60 fps while driving around (the target is a 2022 laptop with integrated graphics).
-- [ ] Feel: steering response, how much the body leans, braking distance, how easily it rolls, how hard the Staircase and Bog Hole are, camera distance and lag. The main numbers are in `src/data/vehicle.ts` and `src/data/camera.ts`, and the vehicle ones can be changed live in the debug panel.
-- [ ] Sound: the engine cranks and catches on your first key press; idle lopes; revs and load change the note (try a full-throttle stall against a rock in low range, then lift off at high revs for the overrun burble). Low range adds a gear whine that rises with speed. Tyre noise changes between dirt, gravel, mud and water; tyres chirp when spinning on rock; springs squeak while articulating; the chassis grinds and knocks on rock in the Boulder Field. Range changes, lockers and selecting reverse each make their own clunk. Winch whine, wind up high, creek water, bird calls, the map rustle and the discovery chime. Check the three volume sliders.
-- [ ] Driving feel: in low range with precision crawl off, a light steady throttle should settle at a steady crawl; releasing W creeps rather than stopping (brake with S); a 20–25° climb from a standstill pulls away without rolling back; coasting down a steep slope in low range holds the speed back.
-- [ ] Crawl gauges and driver view: pitch/roll and lifted tyres match what you see (try C → Driver on the Off-camber Slab); I cycles the gauges.
-- [ ] Scored runs: complete a Granite Spur obstacle, then try to beat your points or time; back up once and check it costs a point.
-- [ ] **Welcome screen:** on launch, choose each world, vehicle, time of day and weather in turn; check the light and weather look right, rain stays out of the cab (C → Driver), the ground looks wet and the tyres slip more. Pause menu → Main menu should come back to the welcome screen with your choices kept.
-- [ ] **Engine start:** hold W from the moment the game loads; the car should stay put until the starter has finished cranking and the engine has caught.
-- [ ] **Pitch gauge:** drive up a slope in low range (I shows the gauges); the side-view outline's nose should point up.
-- [ ] **Ironbark 4WD Park:** pause menu → Location → Ironbark 4WD Park. Drive the loop from Park HQ, then try the easier and harder line at each station. The harder Axle Twisters and Rock Garden should stop you with open diffs; Side Slope should lean about 15° and 25°. Change back to the High Country and check your progress there is kept.
-- [ ] **Handbrake:** press Space; the red P and dash lamp come on and stay on. Try to drive off (the car drags and a prompt appears), then press Space again.
-- [ ] **Driver's seat panels:** C → Driver in both vehicles; the windscreen and mirrors should be clear.
-- [ ] **Crawler Creek:** choose it on the welcome screen. From the Trailhead, drive the gates in number order all the way round. Check the hairpins on the Switchbacks (can you make each one in one go?), that both bridges' boards feel solid and the tyres sound like timber on them, that slipping a wheel off the Skinny Bridge drops it into the bog, and that the Rock Garden stops you with open diffs. Open the paper map to see the gates.
-- [ ] **Night and headlights:** choose Night on the welcome screen. The headlights should be on (green lamp in the status strip) as you arrive. Press N for high beam (blue lamp; the beam reaches the trees) and again for off; with them off you should only just make out the track by moonlight. In the driver's seat (C) the dials light up so you can read them, and the blue lamp lights on high beam. In the Camel Trophy 4WD the four roof lamps light with high beam. Listen for crickets instead of birds.
-- [ ] **Damage:** pause menu → Settings → Damage → Realistic. Drive off a ledge of a metre or more onto rock, or into a tree at 30 km/h; check the message, the car outline in the status strip, the sagging corner or flat tyre, the pull to one side and the smoke. Fit the spare from the tool menu (stopped), then drive into a campsite and check everything is put right. Then drive a trail carefully with Realistic on and check nothing breaks. Try Mild too: nothing should stop you.
-- [ ] **Signs and messages:** every sign should read straight from both sides, with no second board crossing it (Crawler Creek's section signs show it best). Messages, "Discovered" cards and run results should appear in the top right corner, not over the track ahead; on a phone, below the View and Reset view buttons.
-- [ ] **Camel Trophy 4WD:** pause menu → Vehicle → Camel Trophy 4WD. Check the yellow paint and decals, the roof lamps and the snorkel, and that it drives through deep water (the High Country's Deep Crossing) that stalls the plain short-wheelbase 4WD.
-- [ ] **v0.19 phone layout:** on a phone held upright, choose Crawler Creek. The gate count sits on its own line under the compass, not over it. In the driver's seat (View → Driver) the status strip stays a small box under the compass and View / ⟲ stay in the top right corner, in both orientations, and the windscreen fills the middle of the screen. Press LOW: the course hint shrinks to its title beside the gauges. Stopped with an anchor in reach, "USE Attach winch" shows just above the buttons on the right. Held sideways, the compass no longer runs under the ⛶ button. Tap 4WD: LOW, CRAWL, F LOCK and R LOCK open in a row above it and stay open while you use them; tap 4WD again to close them, and check its letters show what's on.
-- [ ] **v0.18 flag touches:** on Crawler Creek, clip a gate's flag on the way through: a knock plays, "Touched gate N's red flag" (or blue) shows and the gate count adds "· 1 flag". Back up and touch the same flag again: it doesn't count twice. Drive the middle of the gates and nothing is counted. Finish a lap and check the result card lists the flags.
-- [ ] **v0.17 playtest fixes:** Settings → Units → mph changes the speed in the status strip and the crawl gauges. The High Country start faces along the track past the Camp Rock Course, and no shrub pokes through the bonnet in the driver's seat. Drive into a tree at 60 km/h: the car stops against it instead of spinning away or rolling. On Crawler Creek, the gate count under the compass goes up gate by gate, and driving round a gate shows "Missed gate …". On a phone held upright, the top buttons don't overlap; the welcome screen opens at the top; the map opens zoomed on the car (pinch and drag work); Pause → Controls lists the touch controls. At 1024×600 and on a phone held sideways the pause menu fits without scrolling, and the tool menu doesn't cover the compass. Dust looks like soft puffs, and the headlight pool fades out at its edges.
-- [ ] **v0.21 signs and frame rate:** all the lettering on the signs is now drawn together. On each map, check every sign still reads straight from both sides with the right words (Crawler Creek's section signs and the High Country's trail signs have the most). With `?debug` on Medium, drive the High Country's north side, where many signs are in view, and note the fps and draw calls in the overlay.
-- [ ] **v0.20 Stringybark Range:** choose it on the welcome screen. Drive the fire trails from River Camp up to Shelf Camp, Range Top Camp and Stringybark Peak, and across the ford to Wombat Hill; none of them should need the winch or low range. Then try the winch climbs: first try to drive up (the clay should just spin, and the rock steps should stop you), then winch up from anchor to anchor. Check E picks the boulder straight ahead each time, not the one you just reached or a tree, that every next anchor is in reach from the landing, and that the mud looks and feels slippery. Winch up to Eagle Rock and Stockman's Hut. Check the scored run on a climb doesn't add points for the winch. Check the frame rate on Medium with `?debug`; this map has the most trees.
-- [ ] **v0.20 GQ Patrol:** pause menu → Vehicle → GQ Patrol. Check its look (white over charcoal, bull bar with driving lamps, snorkel, roof rack, white steel wheels), the TD42 idle and knock, the driver's seat (C → Driver) and the dials, and the pull handbrake under the dash. It should wade deeper water than the short-wheelbase 4WD.
-- [ ] **Land Rover 110:** pause menu → Vehicle → Land Rover 110 Perentie. Check the look against the _Bush Tucker Man_ vehicle, the diesel clatter at idle and its starter (no turbo-like whistle as it speeds up), the driver's view (C → Driver), and the Granite Spur loop. Reload the page and it should still be the Land Rover.
+- The title, **New drive** and the loading card: they should say nothing about episodes, missions, fuel or packing.
+- Each vehicle loads and drives, with its own cab (C cycles the views).
+- The ford, in high range with open diffs.
+- The deep crossing on the straight line, crawling; then the bar downstream.
+- The chute going west with both lockers, then back east with the winch.
+- The bog hole on a clear day, then **After rain**: it should need the winch.
+- The rock climb's eight gates: a score shows at the top and the best is kept per vehicle.
+- The drop, the steep descent and the side slope.
+- Damage on Realistic: cut a tyre, then drive into a camp: it should be repaired and the spare and plugs restocked.
+- **Pause → Restart from last camp** returns to the camp you last drove into.
+- The note on first reaching an obstacle: small, top right, and kept under **Pause → Trip journal**.
+- On a phone: the on-screen controls, the 4WD buttons, TOOLS, and Install app.
+- Night and Dusk: the headlights (N).
 
 ## Project layout
 
-```
-src/
-  core/    game loop (fixed 60 Hz physics + interpolated rendering), game orchestration, test hook
-  data/    every tuning number: palette, environment, map, vehicle, surfaces, tools, camera, quality, audio, particles
-  sim/     headless simulation (no rendering, UI or audio imports): world generation, physics, vehicle, tools, saving
-  render/  Three.js: terrain, vegetation, water, sky, vehicle model, particles, chase camera
-  ui/      HUD, compass, paper map, menus, tool menu
-  audio/   Web Audio synthesis (engine/ holds the AudioWorklet engine synthesiser)
-  debug/   overlay, free camera, debug panel
-scripts/   dev helpers: engine-lab (renders the engine to WAV with levels and spectra), drivetrain-lab, crawl-lab, obstacle-lab and drive-lab (headless measurements), shoot and vehicle-shots (screenshots)
-tests/     Vitest unit and headless physics tests
-e2e/       Playwright browser tests (one file per milestone)
-docs/      DECISIONS.md (choices made where the spec was open) and screenshots per milestone
-```
+| Path                | What is in it                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| `src/core`          | The game loop, launch, saving, the HUD's state and the test hook                                  |
+| `src/sim`           | The simulation: vehicle, drivetrain, tyres, damage, tools (winch, planks, jack), world generation |
+| `src/render`        | Three.js drawing: terrain, water, vegetation, every vehicle body, cameras, particles              |
+| `src/ui`            | Title and setup screens, loading card, HUD, pause menu, tool menu, paper map, touch controls      |
+| `src/audio`         | Engine synthesis, tyres, winch, ambience                                                          |
+| `src/data`          | Tuning and content: vehicles, surfaces, controls, environment, and `levels/` (the maps)           |
+| `src/data/levels`   | Ironbark Creek: `ironbarkKnoll.ts`, `ironbarkCreek.ts`, `ironbarkMap.ts`, `ironbark.ts`           |
+| `src/debug`         | Test mode panel, debug overlay, free camera, the phone benchmark                                  |
+| `tests`             | Unit and headless physics tests; `tests/ironbark.test.ts` drives every line of the level          |
+| `e2e`               | Browser tests (Playwright)                                                                        |
+| `scripts`           | Dev helpers, run with `npx vite-node scripts/<name>.ts` (below)                                   |
+| `docs/DECISIONS.md` | What was asked for and decided, version by version                                                |
+
+Level-building helpers: `level-drive.ts` drives each line with the autopilot, locked and open, and prints how it went; `level-heights.ts` prints the heights where lines join the loop; `track-profile.ts` prints a track's grade, water and surface every few metres; `map-preview.ts` draws the map from above; `shoot.ts` and `flow-shots.ts` take screenshots of the game and of the screens on the way into a drive.
+
+The engine keeps Over the Cape's names: a level is an `EpisodeDef` (`src/data/episodes.ts`), and a playground is one with no `goal`. This keeps engine changes easy to carry across from that game.
 
 ## Deployment
 
-`.github/workflows/deploy.yml` runs lint, unit tests and the production build on every pull request and on every push to `main`. A push to `main` then deploys `dist/` to GitHub Pages. Deploy stays on `main` only: the Pages environment rejects other branches, and the Pages setup step fails the job until the site exists (that missing site is what turned the 16–17 Oct 2026 runs red after a successful build). Pages has to be switched on once in the repository settings: **Settings → Pages → Source: GitHub Actions**. The build uses relative asset paths, so it works under the repository's Pages URL.
+GitHub Actions builds and deploys `main` to GitHub Pages (`.github/workflows/deploy.yml`). Every update adds 0.01 to `GAME_VERSION` in `src/core/buildInfo.ts`.
+
+## What's next
+
+- Pushing the graphics on small levels: tyre marks left on the ground, finer detail on rock and mud.
+- More playground levels.

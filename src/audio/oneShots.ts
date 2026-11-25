@@ -283,3 +283,47 @@ export function clunk(
     if (kind === 'lockOn') thud(ctx, out, at + 0.2, 90, C.locker * 0.5, 0.08);
   }
 }
+
+/** A tree coming down ahead: splintering cracks as it goes, then the crash of it landing `fall` s later. */
+export function treeFall(ctx: BaseAudioContext, out: AudioNode, noise: NoiseBank, fall: number): void {
+  const at = ctx.currentTime;
+  const L = audioTuning.surprise.treeGain;
+  for (let k = 0; k < 4; k++) {
+    const t = at + k * 0.18 * (1 + Math.random());
+    const n = burst(ctx, noise.crunch, t, 0.25);
+    const f = filter(ctx, 'bandpass', 1100 + Math.random() * 900, 1.2);
+    const g = gain(ctx, out);
+    n.connect(f).connect(g);
+    pluck(g.gain, t, L * (0.35 + 0.15 * k), 0.002, 0.12);
+  }
+  const land = at + fall;
+  thud(ctx, out, land, 46, L, 0.45);
+  const n = burst(ctx, noise.brown, land, 1.2);
+  const f = filter(ctx, 'lowpass', 600);
+  const g = gain(ctx, out);
+  n.connect(f).connect(g);
+  pluck(g.gain, land, L * 0.8, 0.01, 0.6);
+  // Leaves and branches settling.
+  const leaves = burst(ctx, noise.white, land + 0.05, 1.4);
+  const lf = filter(ctx, 'highpass', 2500);
+  const lg = gain(ctx, out);
+  leaves.connect(lf).connect(lg);
+  pluck(lg.gain, land + 0.05, L * 0.12, 0.05, 0.9);
+}
+
+/** Rocks coming off a bank: a gritty rumble for `seconds` and a run of knocks. */
+export function rockSlide(ctx: BaseAudioContext, out: AudioNode, noise: NoiseBank, seconds: number): void {
+  const at = ctx.currentTime;
+  const L = audioTuning.surprise.rockGain;
+  const n = burst(ctx, noise.brown, at, seconds + 0.6);
+  const f = filter(ctx, 'lowpass', 500);
+  const g = gain(ctx, out);
+  n.connect(f).connect(g);
+  g.gain.setValueAtTime(0, at);
+  g.gain.linearRampToValueAtTime(L * 0.7, at + 0.3);
+  g.gain.setTargetAtTime(0, at + seconds, 0.2);
+  for (let k = 0; k < 7; k++) {
+    const t = at + 0.2 + Math.random() * seconds;
+    thud(ctx, out, t, 70 + Math.random() * 50, L * (0.3 + Math.random() * 0.4), 0.12);
+  }
+}

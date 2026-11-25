@@ -1,0 +1,51 @@
+.tool-preview-bar {
+  position: fixed;
+  top: calc(24 * var(--u));
+  right: calc(24 * var(--u));
+  z-index: 40;
+  display: flex;
+  gap: calc(6 * var(--u));
+  align-items: center;
+}
+.tool-preview-bar button,
+.tool-preview-bar a {
+  color: #d7e2d7;
+  background: #10211f;
+  border: 1px solid #65786b;
+  border-radius: calc(4 * var(--u));
+  padding: calc(9 * var(--u)) calc(11 * var(--u));
+  font:
+    500 calc(12 * var(--u)) 'Barlow',
+    sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+}
+.tool-preview-bar [aria-pressed='true'] {
+  color: #1e261e;
+  background: #edbd6f;
+  border-color: #edbd6f;
+}
+.tool-preview-status {
+  position: fixed;
+  z-index: 40;
+  bottom: calc(16 * var(--u));
+  right: calc(24 * var(--u));
+  color: #f0d8a2;
+  font:
+    500 calc(12 * var(--u)) 'Barlow',
+    sans-serif;
+  pointer-events: none;
+}
+@media (max-width: 1000px) {
+  .tool-preview-bar {
+    top: auto;
+    bottom: calc(70 * var(--u));
+    left: calc(12 * var(--u));
+    right: calc(12 * var(--u));
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .tool-preview-status {
+    bottom: calc(46 * var(--u));
+  }
+}

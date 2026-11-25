@@ -1,0 +1,661 @@
+/* The approved camp-at-dusk opening. The scene stays behind live, accessible UI. */
+.welcome,
+.loading {
+  --title-gold: #ecb15e;
+  --title-white: #f8ebd4;
+  --title-muted: #c5c5c8;
+  color: var(--title-white);
+  background: #091425;
+  isolation: isolate;
+}
+
+.welcome::before,
+.loading::before {
+  content: '';
+  position: fixed;
+  inset: -2%;
+  z-index: -2;
+  background: url('./assets/camp-dusk.webp') center / cover no-repeat;
+  animation: camp-drift 32s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.welcome::after,
+.loading::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, transparent 35%, #060c1933 65%, #060c1959);
+  pointer-events: none;
+}
+
+@keyframes camp-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.035) translateX(-0.4%);
+  }
+}
+
+.welcome {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: safe center;
+  padding: calc(44 * var(--u)) 6vw;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.title-home {
+  width: min(37vw, calc(600 * var(--u)));
+  text-align: center;
+  margin-top: -4vh;
+  animation: camp-reveal 0.8s ease both;
+}
+
+@keyframes camp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(calc(8 * var(--u)));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.title-compass {
+  width: clamp(calc(38 * var(--u)), 4.5vw, calc(72 * var(--u)));
+  height: clamp(calc(38 * var(--u)), 4.5vw, calc(72 * var(--u)));
+  color: var(--title-gold);
+  margin-bottom: calc(20 * var(--u));
+  filter: drop-shadow(0 calc(2 * var(--u)) calc(6 * var(--u)) #0005);
+}
+
+.welcome .title-logo h1 {
+  font:
+    900 clamp(calc(52 * var(--u)), 7.6vw, calc(128 * var(--u))) / 0.87 Georgia,
+    'Times New Roman',
+    serif;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  color: var(--title-white);
+  text-shadow: 0 calc(3 * var(--u)) calc(20 * var(--u)) #0005;
+  margin: 0;
+}
+
+.title-logo h1 span {
+  display: block;
+}
+.title-logo h1 span:last-child {
+  font-size: 0.69em;
+  margin-top: calc(8 * var(--u));
+  white-space: nowrap;
+}
+
+.title-rule {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 76%;
+  margin: calc(22 * var(--u)) auto calc(46 * var(--u));
+  color: var(--title-gold);
+  font-size: calc(12 * var(--u));
+}
+.title-rule::before,
+.title-rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--title-gold));
+}
+.title-rule::after {
+  transform: rotate(180deg);
+}
+
+.title-menu {
+  display: grid;
+  gap: calc(6 * var(--u));
+  width: max-content;
+  margin: 0 auto;
+  text-align: left;
+}
+.title-menu button,
+.title-begin {
+  position: relative;
+  background: transparent;
+  border: 0;
+  color: var(--title-white);
+  cursor: pointer;
+  font:
+    700 clamp(calc(16 * var(--u)), 1.5vw, calc(25 * var(--u))) / 1.3 Georgia,
+    serif;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  padding: calc(14 * var(--u)) calc(6 * var(--u));
+  min-height: calc(48 * var(--u));
+  text-align: left;
+  transition:
+    color 0.2s,
+    transform 0.2s;
+}
+.title-menu button::before {
+  content: '';
+  position: absolute;
+  width: calc(30 * var(--u));
+  height: calc(2 * var(--u));
+  background: var(--title-gold);
+  left: calc(-40 * var(--u));
+  top: 50%;
+  opacity: 0;
+}
+.title-menu button:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+.welcome .title-menu button:focus-visible {
+  outline: none;
+}
+.title-menu button.focused,
+.title-menu button:hover:not(:disabled) {
+  color: var(--title-gold);
+  transform: translateX(calc(3 * var(--u)));
+}
+.title-menu button.focused::before,
+.title-menu button:hover:not(:disabled)::before {
+  opacity: 1;
+}
+.welcome .title-begin:focus-visible {
+  outline: 1px solid var(--title-gold);
+  outline-offset: calc(6 * var(--u));
+}
+.title-begin {
+  font: 700 calc(13 * var(--u)) var(--font);
+  letter-spacing: 0.22em;
+  text-align: center;
+  animation: title-prompt 3s ease-in-out infinite;
+}
+@keyframes title-prompt {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.title-version,
+.title-input-hint {
+  position: fixed;
+  bottom: max(calc(24 * var(--u)), env(safe-area-inset-bottom));
+  margin: 0;
+  font-size: calc(11 * var(--u));
+  color: var(--title-muted);
+}
+.title-version {
+  left: max(calc(28 * var(--u)), env(safe-area-inset-left));
+}
+.title-input-hint {
+  right: max(6vw, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: calc(12 * var(--u));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.title-input-hint b {
+  display: inline-block;
+  padding: calc(4 * var(--u)) calc(7 * var(--u));
+  border: 1px solid #f8ebd488;
+  border-radius: calc(4 * var(--u));
+  font-size: calc(10 * var(--u));
+  color: var(--title-white);
+  font-weight: 400;
+}
+
+.title-input-hint b[role='img'] {
+  min-width: calc(24 * var(--u));
+  padding: calc(2 * var(--u)) calc(5 * var(--u));
+  border-radius: 50%;
+  font-size: calc(16 * var(--u));
+  line-height: 1;
+  text-align: center;
+}
+
+.title-panel {
+  background: #080f1de8;
+  border: 1px solid #c5c5c833;
+  border-radius: calc(5 * var(--u));
+  box-shadow: 0 calc(18 * var(--u)) calc(70 * var(--u)) #0005;
+  backdrop-filter: blur(calc(10 * var(--u)));
+}
+.welcome[data-screen='journey'],
+.welcome[data-screen='settings'] {
+  align-items: center;
+}
+.welcome[data-screen='journey']::after,
+.welcome[data-screen='settings']::after {
+  background: #03091644;
+}
+.welcome .welcome-card {
+  width: min(calc(940 * var(--u)), 100%);
+  padding: calc(22 * var(--u)) calc(28 * var(--u));
+  margin: auto 0;
+}
+.title-back {
+  padding: calc(8 * var(--u)) 0;
+  min-height: calc(44 * var(--u));
+  display: block;
+  border: 0;
+  background: transparent;
+  color: var(--title-muted);
+  font: 400 calc(14 * var(--u)) var(--font);
+  cursor: pointer;
+}
+.title-eyebrow {
+  color: var(--title-gold);
+  text-transform: uppercase;
+  font-size: calc(10 * var(--u));
+  letter-spacing: 0.22em;
+  margin: calc(12 * var(--u)) 0 calc(4 * var(--u));
+}
+.welcome-card .title-eyebrow {
+  text-align: left;
+}
+.welcome .welcome-card h1 {
+  font:
+    400 calc(34 * var(--u)) Georgia,
+    serif;
+  margin: 0 0 calc(24 * var(--u));
+  text-align: left;
+}
+.welcome .welcome-section h2 {
+  font-family: Georgia, serif;
+  font-size: calc(21 * var(--u));
+}
+.welcome .welcome-grid {
+  gap: calc(28 * var(--u));
+}
+.welcome .welcome-trip {
+  background: transparent;
+  border-left: 1px solid #c5c5c833;
+  border-radius: 0;
+  padding: calc(12 * var(--u)) 0 calc(12 * var(--u)) calc(28 * var(--u));
+}
+.welcome .welcome-trip h2 {
+  font-size: calc(28 * var(--u));
+}
+.welcome .welcome-kicker {
+  color: var(--title-gold);
+}
+.welcome .welcome-route,
+.welcome .welcome-note,
+.welcome .welcome-upcoming,
+.welcome .welcome-later,
+.welcome .welcome-rules,
+.welcome .build-label,
+.welcome .welcome-setup-toggle span:last-child {
+  color: var(--title-muted);
+}
+.welcome .welcome-option {
+  background: #e6d4ad0a;
+  border: 1px solid #d3c9b144;
+  color: var(--title-white);
+  border-radius: calc(3 * var(--u));
+  font-size: calc(14 * var(--u));
+  min-height: calc(44 * var(--u));
+}
+.welcome .welcome-option small {
+  color: var(--title-muted);
+  font-size: calc(11 * var(--u));
+  margin-top: calc(3 * var(--u));
+}
+.welcome .welcome-option.on {
+  background: #ecb15e1c;
+  border-color: var(--title-gold);
+  color: var(--title-gold);
+}
+.welcome .welcome-option:disabled {
+  opacity: 0.4;
+}
+.welcome .welcome-setup-toggle {
+  color: var(--title-white);
+  border-top-color: #c5c5c833;
+}
+.welcome .welcome-drive,
+.loading .welcome-drive {
+  background: var(--title-gold);
+  border: 1px solid var(--title-gold);
+  border-radius: calc(3 * var(--u));
+  color: #171a20;
+  font: 800 calc(15 * var(--u)) var(--font);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  min-height: calc(48 * var(--u));
+}
+.welcome .welcome-option.focused,
+.welcome .welcome-option:hover:not(:disabled),
+.welcome .welcome-drive.focused,
+.welcome .welcome-drive:hover,
+.welcome .welcome-setup-toggle.focused,
+.welcome button:focus-visible {
+  outline: calc(2 * var(--u)) solid var(--title-gold);
+  outline-offset: calc(3 * var(--u));
+}
+.welcome .pack-row {
+  display: grid;
+  grid-template-columns: 1fr calc(44 * var(--u)) calc(64 * var(--u)) calc(44 * var(--u));
+  align-items: center;
+  gap: calc(8 * var(--u));
+  margin: calc(6 * var(--u)) 0;
+}
+.welcome .pack-label {
+  color: var(--title-white);
+  font-size: calc(14 * var(--u));
+}
+.welcome .pack-step {
+  display: grid;
+  place-items: center;
+  font-size: calc(20 * var(--u));
+  padding: 0;
+  text-align: center;
+}
+.welcome .pack-count {
+  text-align: center;
+  font-weight: 700;
+  color: var(--title-white);
+}
+.welcome .pack-weight {
+  display: grid;
+  gap: calc(6 * var(--u));
+  margin: calc(12 * var(--u)) 0 calc(4 * var(--u));
+  color: var(--title-white);
+  font-size: calc(13 * var(--u));
+}
+.welcome .pack-bar {
+  display: block;
+  height: calc(6 * var(--u));
+  border-radius: calc(3 * var(--u));
+  background: #e6d4ad22;
+  overflow: hidden;
+}
+.welcome .pack-bar i {
+  display: block;
+  height: 100%;
+  background: var(--title-gold);
+}
+.welcome summary:focus-visible,
+.loading summary:focus-visible {
+  outline-color: var(--title-gold);
+}
+
+.title-settings {
+  width: min(calc(520 * var(--u)), 100%);
+  padding: calc(22 * var(--u)) calc(30 * var(--u)) calc(34 * var(--u));
+  margin: auto 0;
+}
+.title-settings-version {
+  margin: calc(28 * var(--u)) 0 0;
+  font-size: calc(12 * var(--u));
+  color: var(--title-muted);
+}
+.title-settings h2 {
+  margin: 0 0 calc(30 * var(--u));
+  font:
+    400 calc(34 * var(--u)) Georgia,
+    serif;
+}
+.title-setting {
+  margin-top: calc(26 * var(--u));
+}
+.title-setting h3,
+.title-setting label {
+  font-size: calc(14 * var(--u));
+  font-weight: 700;
+  margin: 0 0 calc(10 * var(--u));
+}
+.title-setting label {
+  display: flex;
+}
+.title-setting output {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--title-muted);
+}
+.title-setting input {
+  width: 100%;
+  accent-color: var(--title-gold);
+  min-height: calc(32 * var(--u));
+  margin: 0;
+}
+.title-setting input:focus-visible,
+.title-setting input.focused {
+  outline: calc(2 * var(--u)) solid var(--title-gold);
+  outline-offset: calc(4 * var(--u));
+}
+
+/* A big screen read from the couch has the height of a small one once everything on it is
+   drawn larger (576 units at 1080p). Each setting is one line there, its name on the left and
+   its options on the right, so the page fits the screen instead of running to three (v1.84). */
+:root[data-short] .title-settings {
+  width: min(calc(580 * var(--u)), 100%);
+  padding: calc(14 * var(--u)) calc(26 * var(--u)) calc(16 * var(--u));
+}
+:root[data-short] .title-settings .title-eyebrow {
+  display: none;
+}
+:root[data-short] .title-settings h2 {
+  margin: 0 0 calc(8 * var(--u));
+  font-size: calc(28 * var(--u));
+}
+:root[data-short] .title-setting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(4 * var(--u)) calc(14 * var(--u));
+  margin-top: calc(7 * var(--u));
+}
+:root[data-short] .title-setting h3,
+:root[data-short] .title-setting label {
+  margin: 0;
+}
+:root[data-short] .title-setting label {
+  flex: 1;
+  padding-right: calc(10 * var(--u));
+}
+:root[data-short] .title-setting input {
+  width: 46%;
+  min-height: calc(26 * var(--u));
+}
+:root[data-short] .title-setting .welcome-options {
+  flex: 0 1 auto;
+  margin: 0;
+}
+:root[data-short] .title-setting .welcome-option {
+  min-height: 0;
+  padding: calc(6 * var(--u)) calc(14 * var(--u));
+}
+:root[data-short] .title-setting .welcome-note {
+  flex-basis: 100%;
+  margin: 0;
+}
+:root[data-short] .title-settings-version {
+  margin-top: calc(10 * var(--u));
+}
+
+/* With a keyboard or a controller the hint sits clear of the panel, which is on the right:
+   it lay over the panel's own buttons (v1.84). */
+.welcome[data-screen='settings']:not([data-input='touch']) .title-input-hint,
+.welcome[data-screen='journey']:not([data-input='touch']) .title-input-hint {
+  right: auto;
+  left: max(calc(28 * var(--u)), env(safe-area-inset-left));
+}
+
+.loading {
+  justify-items: end;
+  padding: calc(36 * var(--u)) 6vw;
+}
+.loading .loading-card.paper {
+  background: #080f1ddd;
+  border: 1px solid #c5c5c833;
+  border-radius: calc(5 * var(--u));
+  box-shadow: 0 calc(18 * var(--u)) calc(70 * var(--u)) #0005;
+  backdrop-filter: blur(calc(10 * var(--u)));
+  width: min(calc(560 * var(--u)), 90vw);
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: calc(28 * var(--u));
+}
+.loading .loading-brand {
+  color: var(--title-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font: 400 calc(11 * var(--u)) var(--font);
+}
+.loading .briefing h2 {
+  font-family: Georgia, serif;
+  font-size: calc(26 * var(--u));
+}
+.loading .briefing-route,
+.loading .briefing-conditions,
+.loading .briefing-resume,
+.loading .launch-controls,
+.loading .launch-details,
+.loading .progress-label,
+.loading .build-label {
+  color: var(--title-muted);
+}
+.loading .progress {
+  border: 0;
+  height: calc(3 * var(--u));
+  border-radius: 0;
+  background: #f8ebd422;
+  margin-top: calc(26 * var(--u));
+}
+.loading .progress-fill {
+  background: var(--title-gold);
+}
+.loading .progress-label {
+  text-align: center;
+}
+.loading .launch-details,
+.loading .briefing-facts {
+  border-color: #c5c5c833;
+}
+.loading.continuing .briefing-route,
+.loading.continuing .briefing-mission,
+.loading.continuing .briefing-conditions,
+.loading.continuing .launch-controls,
+.loading.continuing .launch-details {
+  display: none;
+}
+.loading.continuing .briefing-resume {
+  margin-top: calc(18 * var(--u));
+}
+
+@media (max-width: 720px) {
+  .welcome {
+    padding: calc(28 * var(--u)) calc(24 * var(--u)) calc(64 * var(--u));
+  }
+  .welcome::before,
+  .loading::before {
+    background-position: 35% center;
+  }
+  .welcome::after {
+    background: linear-gradient(180deg, #030b1c66, #030b1c11 48%, #030b1ccc);
+  }
+  .title-home {
+    width: 100%;
+    margin: auto 0;
+  }
+  .title-compass {
+    width: calc(42 * var(--u));
+    height: calc(42 * var(--u));
+    margin-bottom: calc(16 * var(--u));
+  }
+  .welcome .title-logo h1 {
+    font-size: clamp(calc(66 * var(--u)), 20vw, calc(110 * var(--u)));
+  }
+  .title-rule {
+    width: 60%;
+    margin-bottom: calc(36 * var(--u));
+  }
+  .title-menu {
+    padding-left: calc(24 * var(--u));
+  }
+  .title-menu button {
+    font-size: calc(18 * var(--u));
+    padding: calc(15 * var(--u)) calc(6 * var(--u));
+  }
+  .title-input-hint {
+    right: calc(24 * var(--u));
+  }
+  .welcome .welcome-card {
+    padding: calc(16 * var(--u)) calc(20 * var(--u));
+  }
+  .welcome .welcome-grid {
+    gap: calc(18 * var(--u));
+  }
+  .welcome .welcome-trip {
+    padding: 0 0 calc(18 * var(--u));
+    border-left: 0;
+    border-bottom: 1px solid #c5c5c833;
+  }
+  .title-settings {
+    padding: calc(16 * var(--u)) calc(22 * var(--u)) calc(28 * var(--u));
+  }
+  .loading {
+    justify-items: center;
+    padding: calc(20 * var(--u));
+  }
+  .loading .loading-card.paper {
+    padding: calc(22 * var(--u));
+  }
+}
+
+@media (min-width: 721px) and (max-height: 500px) {
+  .welcome {
+    padding: calc(20 * var(--u)) 5vw calc(45 * var(--u));
+  }
+  .title-home {
+    width: 40vw;
+    margin-top: 0;
+  }
+  .title-compass {
+    width: calc(30 * var(--u));
+    height: calc(30 * var(--u));
+    margin-bottom: calc(10 * var(--u));
+  }
+  .welcome .title-logo h1 {
+    font-size: calc(60 * var(--u));
+  }
+  .title-rule {
+    margin: calc(12 * var(--u)) auto calc(18 * var(--u));
+  }
+  .title-menu {
+    gap: 0;
+  }
+  .title-menu button {
+    padding: calc(9 * var(--u)) calc(6 * var(--u));
+    min-height: calc(38 * var(--u));
+    font-size: calc(15 * var(--u));
+  }
+  .welcome .welcome-card {
+    padding: calc(14 * var(--u)) calc(22 * var(--u));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome::before,
+  .loading::before,
+  .title-home,
+  .title-begin {
+    animation: none;
+  }
+  .title-menu button {
+    transition: none;
+  }
+}

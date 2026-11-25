@@ -9,7 +9,9 @@ import type { AmbienceFrame } from './ambience';
 import type { CrawlFrame } from './crawlSounds';
 import type { EngineFrame } from './engineSound';
 import type { WheelSound } from './mix';
+import type { TrailerFrame } from './trailerSound';
 import type { WinchFrame } from './winchSound';
+import type { Trailer } from '../sim/trailer';
 
 /** Everything the audio layer reads from the game each frame. */
 export interface AudioFrame {
@@ -23,9 +25,14 @@ export interface AudioFrame {
   wheels: readonly WheelSound[];
   /** Selected gear (-1 = reverse), for the clunk of selecting drive or reverse. */
   gear: number;
+  /** Manual gearbox settings: in neutral, and every change of gear clunks. */
+  neutral?: boolean;
+  manualGearbox?: boolean;
   crawl: CrawlFrame;
   horn: boolean;
   winch: WinchFrame;
+  /** The trailer on the back, if any. */
+  trailer: TrailerFrame | null;
   ambience: AmbienceFrame;
 }
 
@@ -39,12 +46,11 @@ export function buildAudioFrame(
   interior = false,
   rain = 0,
   night = false,
+  trailer: Trailer | null = null,
 ): AudioFrame {
   const p = v.body.translation();
   const d = v.drivetrain;
   const t = world.terrain;
-  const ix = Math.min(t.res - 1, Math.max(0, Math.round(p.x + t.half)));
-  const iz = Math.min(t.res - 1, Math.max(0, Math.round(p.z + t.half)));
   const falls = world.pois.find((q) => q.id === audioTuning.ambience.falls.poi);
   const maxPull = winchTuning.maxForceFactor * v.tuning.mass * 9.81;
   const flood = v.condition.flood;
@@ -77,6 +83,8 @@ export function buildAudioFrame(
     speed: v.speed,
     wheels: v.wheels,
     gear: d.gear,
+    neutral: d.neutral,
+    manualGearbox: v.manualGearbox,
     crawl: {
       dt,
       body: v.bodyContact,
@@ -86,10 +94,17 @@ export function buildAudioFrame(
     },
     horn: v.horn,
     winch: { attached: winch.attached, motor: winch.motor, load: winch.tension / maxPull },
+    trailer: trailer
+      ? {
+          speed: v.speed,
+          roughness: trailer.wheels.reduce((sum, w) => sum + (w.contact ? Math.abs(w.compression) : 0), 0),
+          drums: trailer.drums,
+        }
+      : null,
     ambience: {
       dt,
       altitude: p.y,
-      creekDistance: world.features.creekDistance[iz * t.res + ix],
+      creekDistance: world.features.creekDistance[t.index(p.x, p.z)],
       fallsDistance: falls ? Math.hypot(falls.x - p.x, falls.z - p.z) : Infinity,
       rain,
       interior,

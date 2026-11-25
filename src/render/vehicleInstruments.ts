@@ -214,29 +214,34 @@ function buildHandbrake(hb: CabinLayout['handbrake']): THREE.BufferGeometry {
 }
 
 /**
- * A thin black rim with a horn boss on three brushed spokes (left, right and down), or
- * four black ones in a shallow X like the Land Rover's.
+ * A thin black rim with a horn boss on three brushed spokes (left, right and down), four
+ * black ones in a shallow X like the Land Rover's, or two broad black ones a little below
+ * level with a wide horn pad, like a 1970s Toyota's.
  */
 function buildSteeringWheel(wheel: CabinLayout['steeringWheel']): THREE.BufferGeometry {
   const b = new VehicleBuilder();
   const r = wheel.radius;
-  const four = wheel.spokes === 4;
+  const four = wheel.spokes === 4,
+    two = wheel.spokes === 2;
   b.ring(0, 0, 0, r, four ? 0.016 : 0.014, dark, M.Rubber);
   const spokes = four
     ? [Math.PI * 0.36, -Math.PI * 0.36, Math.PI * 0.64, -Math.PI * 0.64]
-    : [Math.PI * 0.56, -Math.PI * 0.56, Math.PI];
+    : two
+      ? [Math.PI * 0.56, -Math.PI * 0.56]
+      : [Math.PI * 0.56, -Math.PI * 0.56, Math.PI];
   for (const angle of spokes) {
     // Spokes dip slightly towards the column, like a shallow dish.
     b.rod(
       { x: Math.sin(angle) * 0.045, y: Math.cos(angle) * 0.045, z: -0.012 },
       { x: Math.sin(angle) * (r - 0.008), y: Math.cos(angle) * (r - 0.008), z: 0 },
-      four ? 0.009 : 0.007,
-      four ? dark : metal,
-      four ? M.Rubber : M.Metal,
+      four ? 0.009 : two ? 0.012 : 0.007,
+      four || two ? dark : metal,
+      four || two ? M.Rubber : M.Metal,
     );
   }
   b.slot = M.Rubber;
   b.push().rotate(Math.PI / 2, 0, 0);
+  if (two) b.scale(1.5, 1, 1);
   b.geometry(new THREE.CylinderGeometry(four ? 0.065 : 0.05, four ? 0.07 : 0.056, 0.035, 20), dark);
   b.pop();
   b.slot = M.Metal;

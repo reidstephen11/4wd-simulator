@@ -1,4 +1,4 @@
-import { crawlScoring as S } from '../data/challenges';
+import { crawlScoring as S } from '../data/crawlScoring';
 import type { CrawlTrailDef } from './world/mapTypes';
 import type { TrackInfo } from './world/features';
 import { trailProgress } from './world/crawlTrail';
@@ -65,8 +65,7 @@ export function betterRun(
  * Optional competition-style scoring on the crawl trails, like a rock-crawling event:
  * driving into either end of a trail's technical line starts the clock; each time the
  * car backs up, the chassis knocks a rock or the winch is hooked on costs penalty
- * points (except the winch on a winch climb, which needs it); reaching the far end
- * finishes. Leaving the line or rolling ends the run.
+ * points; reaching the far end finishes. Leaving the line or rolling ends the run.
  */
 export class CrawlRuns {
   run: CrawlRun | null = null;
@@ -104,7 +103,7 @@ export class CrawlRuns {
       r.knocks++;
       this.sinceKnock = 0;
     }
-    if (i.winchAttached && !this.winchWas && !r.trail.winchClimb) r.winches++;
+    if (i.winchAttached && !this.winchWas) r.winches++;
     this.winchWas = i.winchAttached;
     // Backing up: dropping back from the furthest point counts once, until it moves on again.
     if (this.armed) {

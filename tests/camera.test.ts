@@ -192,6 +192,21 @@ describe('vehicle camera orbit', () => {
     expect(camera.position.x).toBeCloseTo(t.position.x);
     expect(camera.position.z).toBeGreaterThan(t.position.z);
   });
+
+  it('stands further back and higher for the big vehicles, at the same angle', () => {
+    const { camera, chase, settle } = fixture();
+    const small = camera.position.clone();
+    expect(vehicles.unimog.cameraScale).toBeGreaterThan(1.2);
+    expect(vehicles.lc79.cameraScale).toBeGreaterThan(1.1);
+    chase.scale = vehicles.unimog.cameraScale!;
+    chase.reset();
+    settle();
+    const big = camera.position.clone();
+    expect(big.z).toBeGreaterThan(small.z * 1.3);
+    expect(big.y).toBeGreaterThan(small.y * 1.2);
+    // Zoom stays in the player's units: the same steps go further out on the big vehicle.
+    expect(chase.distance).toBe(C.distance);
+  });
 });
 
 describe('field of view', () => {
@@ -236,12 +251,26 @@ function inputFixture() {
     buttons: Array.from({ length: 16 }, () => ({ pressed: false, value: 0 })),
   };
   vi.stubGlobal('navigator', { getGamepads: () => [pad] });
+  // The first poll only records what is held (v1.23); presses count from the next.
+  input.poll();
   return { input, send, pad };
 }
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('camera keyboard and controller input', () => {
+  it('selects tools only with the right stick and keeps the left stick for steering and placement', () => {
+    const { input, pad } = inputFixture();
+    pad.axes = [1, -1, 0.08, -0.1];
+    input.poll();
+    expect(input.toolStick()).toEqual({ x: 0, y: 0 });
+    expect(input.stick()).toEqual({ x: 1, y: -1 });
+    pad.axes = [0, 0, -1, 1];
+    input.poll();
+    expect(input.toolStick()).toEqual({ x: -1, y: 1 });
+    expect(input.vehicleInput(0.1).steer).toBe(0);
+  });
+
   it('uses the right stick for orbit without steering or zooming, and ignores stick drift', () => {
     const { input, pad } = inputFixture();
     pad.axes = [0, 0, 0.08, -0.1];

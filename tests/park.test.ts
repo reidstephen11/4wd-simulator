@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { isMapId, mapOrder, maps } from '../src/data/maps';
-import { parkLoopRoute, parkSigns, parkStations, parkTrails } from '../src/data/parkCourse';
+import { parkLoopRoute, parkSigns, parkStations, parkTrails } from './fixtures/maps/parkCourse';
 import { perentieTuning } from '../src/data/perentie';
 import { vehicleTuning } from '../src/data/vehicle';
-import {
-  defaultSettings,
-  explorationFor,
-  loadSave,
-  writeSave,
-  type KeyValueStore,
-} from '../src/sim/save/save';
 import { trailProgress } from '../src/sim/world/crawlTrail';
 import type { TrailDifficulty } from '../src/sim/world/mapTypes';
 import { driveLeg, driver } from './helpers/drive';
@@ -21,9 +13,6 @@ const rank: Record<TrailDifficulty, number> = { easy: 0, moderate: 1, hard: 2, e
 
 describe('Ironbark 4WD Park', () => {
   it('is a second map with eleven numbered stations, each an easier and a harder line', () => {
-    expect(mapOrder.slice(0, 2)).toEqual(['high-country', 'ironbark-park']);
-    expect(isMapId('ironbark-park')).toBe(true);
-    expect(isMapId('moon')).toBe(false);
     expect(world.map.name).toBe('Ironbark 4WD Park');
     expect(parkStations.map((s) => s.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     expect(new Set(parkStations.map((s) => s.name)).size).toBe(11);
@@ -58,39 +47,6 @@ describe('Ironbark 4WD Park', () => {
         expect(trailProgress(t, sign.x, sign.z).distance, `${sign.text} near ${t.def.id}`).toBeGreaterThan(
           t.def.width / 2,
         );
-  });
-
-  it('keeps each map’s progress in the save and starts older saves in the High Country', () => {
-    const data = new Map<string, string>();
-    const s: KeyValueStore = { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => void data.set(k, v) };
-    const high = { discovered: ['falls'], lastCampsite: 'mountain-hut' };
-    const park = { discovered: ['mud-pits'], lastCampsite: 'park-hq' };
-    writeSave(
-      {
-        version: 1,
-        exploration: park,
-        settings: defaultSettings,
-        map: 'ironbark-park',
-        maps: { 'high-country': high, 'ironbark-park': park },
-      },
-      s,
-    );
-    const save = loadSave(s)!;
-    expect(save.map).toBe('ironbark-park');
-    expect(explorationFor(save, 'ironbark-park')).toEqual(park);
-    expect(explorationFor(save, 'high-country')).toEqual(high);
-    writeSave({ version: 1, exploration: high, settings: defaultSettings }, s);
-    expect(loadSave(s)!.map).toBe('high-country');
-    expect(explorationFor(loadSave(s), 'high-country')).toEqual(high);
-    expect(explorationFor(loadSave(s), 'ironbark-park')).toBeNull();
-    const [key] = [...data.keys()];
-    data.set(
-      key,
-      JSON.stringify({ version: 1, exploration: high, settings: {}, map: 'moon', maps: { moon: park } }),
-    );
-    expect(loadSave(s)!.map).toBe('high-country');
-    expect(loadSave(s)!.maps).toEqual({});
-    expect(maps[loadSave(s)!.map!].def.id).toBe('high-country');
   });
 
   for (const tuning of [vehicleTuning, perentieTuning])

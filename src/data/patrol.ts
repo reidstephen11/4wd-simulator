@@ -14,6 +14,7 @@ const MOUNT_Y = 0.32;
 
 export const patrolTuning: VehicleTuning = {
   id: 'patrol',
+  transfer: 'partTime',
   name: 'GQ Patrol',
   // About 2.4 t with two people, fuel, a bull bar, winch and roof rack. The centre of
   // mass sits about 0.8 m up: high, but the wide track keeps it on its wheels in a
@@ -52,7 +53,7 @@ export const patrolTuning: VehicleTuning = {
     // Bull bar with the winch, the rear bar, and the spare wheel on the rear door.
     { cx: 0, cy: 0.33, cz: -2.36, hx: 0.92, hy: 0.36, hz: 0.1 },
     { cx: 0, cy: 0.04, cz: 2.52, hx: 0.9, hy: 0.08, hz: 0.08 },
-    { cx: -0.3, cy: 0.5, cz: 2.61, hx: 0.39, hy: 0.39, hz: 0.13 },
+    { cx: 0.28, cy: 0.6, cz: 2.61, hx: 0.39, hy: 0.39, hz: 0.13 },
   ],
   bumpRadius: 0.25,
   bodyFriction: 0.45,
@@ -86,10 +87,13 @@ export const patrolTuning: VehicleTuning = {
     friction: { base: 22, perRpm: 0.013, pumpingPerRpm: 0.006 },
     inertia: 0.55,
     engineBrake: 150,
+    // The GQ wagon's 95 L tank.
+    fuel: { tankLitres: 95, idleLitresPerHour: 1.1, efficiency: 0.38, energyMJPerLitre: 38.6 },
   },
-  // The game drives the gears itself; this coupling stands in for the clutch.
+  // Automatic mode's coupling: the game changes gear itself and this stands in for the clutch.
   converter: { capacity: 95, stallRatio: 1.25, couplingPoint: 0.8 },
   gearbox: {
+    kind: 'manual',
     ratios: [4.556, 2.625, 1.519, 1.0, 0.836],
     reverse: 4.991,
     finalDrive: 4.111,
@@ -138,7 +142,7 @@ export const patrolTuning: VehicleTuning = {
   },
   // Snorkel head beside the left windscreen pillar, a little above the roof.
   intakeHeight: 1.95,
-  intake: { x: -0.9, y: 1.95 - R - 0.12, z: -0.58 },
+  intake: { x: 0.9, y: 1.95 - R - 0.12, z: -0.58 },
   winchMount: { x: 0, y: 0.1, z: -2.43 },
   towPoint: { x: 0, y: 0.02, z: 2.6 },
 };

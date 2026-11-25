@@ -2,16 +2,17 @@
   "name": "4wd-simulator",
   "version": "0.1.0",
   "private": true,
-  "description": "A relaxed single-player off-road exploration game for the browser.",
+  "description": "A single-player 4WD playground for the browser: climbs, crossings, bog holes and rock.",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit -p tsconfig.app.json && vite build",
     "preview": "vite preview",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.21.0",
@@ -25,10 +26,12 @@
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
     "globals": "16.5.0",
+    "iwer": "2.8.0",
     "prettier": "3.9.10",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.2",
     "vite": "7.3.7",
+    "vite-plugin-pwa": "2.0.0",
     "vitest": "3.2.7"
   }
 }

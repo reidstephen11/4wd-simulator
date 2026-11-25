@@ -84,17 +84,30 @@ export class MeshBuilder {
     return this.tri(a, c, d, color);
   }
 
-  /** A textured branch cluster, transformed like the other builder shapes. */
-  foliageCard(width: number, height: number, color: THREE.Color): this {
+  /**
+   * A textured leaf card, transformed like the other builder shapes. `quadrant` picks the
+   * quarter of the foliage texture (render/foliage.ts): eucalyptus sprays by default.
+   * `anchor` 'base' puts the card's bottom edge on the origin (a frond on its stem).
+   */
+  foliageCard(
+    width: number,
+    height: number,
+    color: THREE.Color,
+    quadrant: readonly [number, number] = [0, 0],
+    anchor: 'centre' | 'base' = 'centre',
+  ): this {
     const start = this.uvs.length;
+    const y0 = anchor === 'base' ? 0 : -height / 2;
     this.quad(
-      { x: -width / 2, y: -height / 2, z: 0 },
-      { x: width / 2, y: -height / 2, z: 0 },
-      { x: width / 2, y: height / 2, z: 0 },
-      { x: -width / 2, y: height / 2, z: 0 },
+      { x: -width / 2, y: y0, z: 0 },
+      { x: width / 2, y: y0, z: 0 },
+      { x: width / 2, y: y0 + height, z: 0 },
+      { x: -width / 2, y: y0 + height, z: 0 },
       color,
     );
-    this.uvs.splice(start, 12, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1);
+    const [u0, v0] = [quadrant[0] * 0.5, quadrant[1] * 0.5];
+    const [u1, v1] = [u0 + 0.5, v0 + 0.5];
+    this.uvs.splice(start, 12, u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1);
     return this;
   }
 

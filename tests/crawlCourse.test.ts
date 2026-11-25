@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { campCrawlCourse } from '../src/data/crawlCourse';
+import { campCrawlCourse } from './fixtures/maps/crawlCourse';
 import { lateAfternoon } from '../src/data/environment';
 import { SurfaceId } from '../src/data/surfaces';
 import { vehicleTuning } from '../src/data/vehicle';

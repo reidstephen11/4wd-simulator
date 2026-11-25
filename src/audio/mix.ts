@@ -33,8 +33,10 @@ export function surfaceLayer(surface: SurfaceId): TyreLayer {
     case SurfaceId.Rock:
       return 'rock';
     case SurfaceId.Mud:
+    case SurfaceId.BlackSoil:
       return 'mud';
     case SurfaceId.Water:
+    case SurfaceId.SoftBed:
       return 'water';
     case SurfaceId.Wood:
       return 'wood';
@@ -136,4 +138,18 @@ export function squeakRate(articulation: number, speed: number): number {
   const q = audioTuning.squeak;
   if (Math.abs(speed) > q.maxSpeed) return 0;
   return q.rate * clamp01(articulation / q.fullArticulation);
+}
+
+/** A trailer's rattle (0..1): its springs working over rough ground, louder the faster it goes. */
+export function trailerRattleLevel(roughness: number, speed: number, drums: number): number {
+  const T = audioTuning.trailer;
+  const level = Math.sqrt(clamp01(roughness / T.fullRoughness)) * clamp01(Math.abs(speed) / T.rattleSpeed);
+  return level * (drums > 0 ? T.loadedRattle : 1);
+}
+
+/** Loudness (0..1) of the trailer banging over a hit; 0 below the threshold. */
+export function trailerBumpLevel(speed: number): number {
+  const T = audioTuning.trailer;
+  if (speed < T.bumpFrom) return 0;
+  return 0.2 + 0.8 * clamp01((speed - T.bumpFrom) / (T.bumpFull - T.bumpFrom));
 }

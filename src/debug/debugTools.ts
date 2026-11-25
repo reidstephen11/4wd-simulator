@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { SurfaceId, surfaces } from '../data/surfaces';
 import type { VehicleTuning } from '../data/vehicle';
+import { gearLabel } from '../sim/vehicle/drivetrain';
 import type { Simulation } from '../sim/sim';
 import type { Vehicle } from '../sim/vehicle/vehicle';
 import type { PoiDef } from '../sim/world/mapTypes';
@@ -13,6 +14,10 @@ const SURFACE_COLORS: Record<number, number> = {
   [SurfaceId.Mud]: 0x6b4a33,
   [SurfaceId.Water]: 0x4e7c86,
   [SurfaceId.Wood]: 0xc58b5c,
+  [SurfaceId.Clay]: 0xa4452a,
+  [SurfaceId.BlackSoil]: 0x3b3a2c,
+  [SurfaceId.Sand]: 0xd2bf97,
+  [SurfaceId.SoftBed]: 0x7c9a86,
 };
 
 interface SliderDef {
@@ -46,6 +51,7 @@ export class DebugTools {
       teleport: (poi: PoiDef) => void;
       toggleFreeCam: () => boolean;
       bird: (kind: 'kookaburra' | 'magpie') => void;
+      addTime: (hours: number) => void;
     },
   ) {
     this.panel = document.createElement('div');
@@ -53,6 +59,7 @@ export class DebugTools {
     this.panel.innerHTML = `<details open><summary>Debug</summary>
       <div class="debug-row"><button data-act="free">Free camera (backtick)</button><button data-act="coll">Colliders</button></div>
       <details><summary>Teleport</summary><div class="debug-teleports"></div></details>
+      <div class="debug-row"><button data-act="time">Clock +30 min</button></div>
       <details><summary>Sounds</summary><div class="debug-row"><button data-bird="kookaburra">Kookaburra</button><button data-bird="magpie">Magpie</button></div></details>
       <details><summary>Vehicle tuning</summary><div class="debug-sliders"></div></details>
     </details>`;
@@ -66,6 +73,7 @@ export class DebugTools {
     }
     for (const b of this.panel.querySelectorAll<HTMLButtonElement>('[data-bird]'))
       b.addEventListener('click', () => actions.bird(b.dataset.bird as 'kookaburra' | 'magpie'));
+    this.panel.querySelector('[data-act="time"]')?.addEventListener('click', () => actions.addTime(0.5));
     const freeBtn = this.panel.querySelector('[data-act="free"]') as HTMLButtonElement;
     freeBtn.addEventListener('click', () => freeBtn.classList.toggle('on', actions.toggleFreeCam()));
     const collBtn = this.panel.querySelector('[data-act="coll"]') as HTMLButtonElement;
@@ -272,7 +280,7 @@ export class DebugTools {
     const p = v.body.translation();
     const d = v.drivetrain;
     return [
-      `speed ${(v.speed * 3.6).toFixed(1)} km/h  ${d.range === 'high' ? 'H' : 'L'} gear ${d.gear < 0 ? 'R' : d.gear + 1}  ${d.rpm.toFixed(0)} rpm`,
+      `speed ${(v.speed * 3.6).toFixed(1)} km/h  ${d.range === 'high' ? 'H' : 'L'} gear ${gearLabel(d)}  ${d.rpm.toFixed(0)} rpm`,
       `throttle ${v.throttle.toFixed(2)} brake ${v.brake.toFixed(2)}  tilt ${v.tiltDeg().toFixed(0)}°`,
       `wheels ${v.wheels.map((w) => (w.contact ? surfaces[w.surface].name.split(' ')[0] : '—')).join(' | ')}`,
       `load ${v.wheels.map((w) => (w.load / 1000).toFixed(1)).join(' ')} kN  spin ${v.wheels.map((w) => w.spin.toFixed(1)).join(' ')}`,

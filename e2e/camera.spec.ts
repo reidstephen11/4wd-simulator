@@ -1,11 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { collectErrors, shot, waitReady } from './helpers';
+import { openJourney, collectErrors, shot, waitReady } from './helpers';
 
+/** The camera's bearing from the vehicle, relative to its heading (the parked car can creep round). */
 async function bearing(page: Page): Promise<number> {
   return page.evaluate(() => {
     const c = window.__game!.camera().position;
     const v = window.__game!.vehicle();
-    return Math.atan2(c[0] - v.x, c[2] - v.z);
+    return Math.atan2(c[0] - v.x, c[2] - v.z) + (v.heading * Math.PI) / 180;
   });
 }
 
@@ -16,15 +17,12 @@ test('orbit camera: mouse, zoom, recenter button and menu isolation', async ({ p
   await page.route('**/favicon.ico', (route) => route.fulfill({ status: 204, body: '' }));
   await page.addInitScript(() =>
     localStorage.setItem(
-      '4wdsim.save.v1',
-      JSON.stringify({
-        version: 1,
-        exploration: { discovered: [], lastCampsite: '' },
-        settings: { quality: 'low', masterVolume: 0 },
-      }),
+      '4wdsim.save.v2',
+      JSON.stringify({ version: 1, settings: { quality: 'low', masterVolume: 0 } }),
     ),
   );
-  await page.goto('/');
+  await page.goto('/?surprises=off&track=reopened');
+  await openJourney(page);
   await waitReady(page);
   await page.evaluate(() => window.__game!.setInput({ handbrake: true }));
   await expect(page.locator('.camera-help')).toBeVisible();

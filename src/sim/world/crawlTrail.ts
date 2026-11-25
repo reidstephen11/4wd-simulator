@@ -15,12 +15,15 @@ export function trailPoint(track: TrackInfo, at: number, lateral = 0) {
   };
 }
 
+const scratch = { d: 0, t: 0, side: 0 };
+
 export function trailProgress(track: TrackInfo, x: number, z: number) {
   const p = track.poly;
   let distance = Infinity,
     along = 0;
+  const hit = scratch;
   for (let i = 0; i < p.count - 1; i++) {
-    const hit = segmentDistance(x, z, p.xs[i], p.zs[i], p.xs[i + 1], p.zs[i + 1]);
+    segmentDistance(x, z, p.xs[i], p.zs[i], p.xs[i + 1], p.zs[i + 1], hit);
     if (hit.d < distance) {
       distance = hit.d;
       along = p.s[i] + (p.s[i + 1] - p.s[i]) * hit.t;
@@ -118,20 +121,31 @@ export function trailStones(
 ): StaticRock[] {
   const track = tracks.find((t) => t.def.id === trail.trackId);
   if (!track) throw new Error(`Missing crawl trail track ${trail.trackId}`);
-  return trail.sections.flatMap((section) =>
-    (section.stones ?? []).map((stone) => {
-      const p = trailPoint(track, stone.at, stone.lateral);
-      const h = terrain.heightAt(p.x, p.z);
-      const a = (p.headingDeg * Math.PI) / 180;
-      const ground = (s: number) => terrain.heightAt(p.x + Math.sin(a) * s, p.z - Math.cos(a) * s) - h;
-      return {
-        x: p.x,
-        y: h + (stone.base ?? 0),
-        z: p.z,
-        ...stoneMesh(stonePoints(stone, p.headingDeg, ground)),
-      };
-    }),
+  return placeStones(
+    track,
+    trail.sections.flatMap((section) => section.stones ?? []),
+    terrain,
   );
+}
+
+/** Stones set along a track (a crawl trail's, or a track's own rock steps and boulders). */
+export function placeStones(
+  track: TrackInfo,
+  stones: readonly TrailStoneDef[],
+  terrain: Terrain,
+): StaticRock[] {
+  return stones.map((stone) => {
+    const p = trailPoint(track, stone.at, stone.lateral);
+    const h = terrain.heightAt(p.x, p.z);
+    const a = (p.headingDeg * Math.PI) / 180;
+    const ground = (s: number) => terrain.heightAt(p.x + Math.sin(a) * s, p.z - Math.cos(a) * s) - h;
+    return {
+      x: p.x,
+      y: h + (stone.base ?? 0),
+      z: p.z,
+      ...stoneMesh(stonePoints(stone, p.headingDeg, ground)),
+    };
+  });
 }
 
 export function trailLogs(trail: CrawlTrailDef, tracks: readonly TrackInfo[], terrain: Terrain): StaticLog[] {

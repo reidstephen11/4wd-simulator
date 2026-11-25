@@ -4,9 +4,11 @@ import {
   cameraPresets,
   cameraPresetOrder,
   cockpit,
+  headMotion as H,
   type CameraPreset,
 } from '../data/camera';
 import { vehicles, type CabinLayout } from '../data/vehicles';
+import { CockpitHeadMotion } from './cockpitHeadMotion';
 
 export interface ChaseTarget {
   position: THREE.Vector3;
@@ -17,6 +19,8 @@ export interface ChaseTarget {
   slopeDeg: number;
   /** Vehicle orientation (for the driver's-seat view). */
   rotation?: THREE.Quaternion;
+  /** Interpolation between physics steps, shared with the vehicle model. */
+  alpha?: number;
 }
 
 /** Returns the clear distance from `from` along unit `dir` up to `max`. */
@@ -28,6 +32,8 @@ export type Blocker = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => 
  * crawling, and pushes forward along the view line instead of clipping into terrain.
  */
 export class ChaseCamera {
+  readonly headMotion = new CockpitHeadMotion();
+  headMotionEnabled = true;
   distance = C.distance;
   preset: CameraPreset = 'follow';
   private followDistance = C.distance;
@@ -35,6 +41,11 @@ export class ChaseCamera {
   toolView = false;
   /** Driver's eye in the vehicle frame and its resting downward look (from the vehicle's cabin). */
   seat: Pick<CabinLayout, 'eye' | 'pitch'> = vehicles.shortie.cabin;
+  /** Vehicle size: the outside views stand back and look higher by this much (1 = short 4WD). */
+  scale = 1;
+  /** A trailer on the back: the outside views stand further back and higher to show it. */
+  towing = false;
+  private towBlend = 0;
   private toolBlend = 0;
   private yaw = 0;
   private orbitYaw = 0;
@@ -48,6 +59,8 @@ export class ChaseCamera {
   private readonly look = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly dir = new THREE.Vector3();
+  private readonly desired = new THREE.Vector3();
+  private readonly camPos = new THREE.Vector3();
   private slopeSmoothed = 0;
   private speedSmoothed = 0;
   /** Smoothed height of the look target. */
@@ -63,6 +76,8 @@ export class ChaseCamera {
 
   private readonly headQ = new THREE.Quaternion();
   private readonly lookQ = new THREE.Quaternion();
+  private readonly motionQ = new THREE.Quaternion();
+  private readonly headOffset = new THREE.Vector3();
   private readonly euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
   /** Driver's seat: moves and tilts with the body; the head turns with the orbit input. */
@@ -72,11 +87,15 @@ export class ChaseCamera {
     this.viewPitch += (this.orbitPitch - this.viewPitch) * k;
     const q = t.rotation as THREE.Quaternion;
     const eye = this.seat.eye;
-    this.tmp.set(eye.x, eye.y, eye.z).applyQuaternion(q).add(t.position);
+    if (this.headMotionEnabled) this.headMotion.sample(t.alpha ?? 1, this.headOffset);
+    else this.headOffset.set(0, 0, 0);
+    this.tmp.copy(eye).add(this.headOffset).applyQuaternion(q).add(t.position);
     this.camera.position.copy(this.tmp);
     this.euler.set(this.seat.pitch + this.viewPitch, -this.viewYaw, 0);
     this.lookQ.setFromEuler(this.euler);
-    this.headQ.copy(q).multiply(this.lookQ);
+    this.euler.set(this.headOffset.z * H.pitchPerMetre, 0, -this.headOffset.x * H.rollPerMetre);
+    this.motionQ.setFromEuler(this.euler);
+    this.headQ.copy(q).multiply(this.motionQ).multiply(this.lookQ);
     this.camera.quaternion.copy(this.headQ);
     // Leaving the seat starts the follow camera from scratch.
     this.initialised = false;
@@ -108,6 +127,7 @@ export class ChaseCamera {
 
   /** Ease back behind the vehicle, keeping the selected zoom distance. */
   recenter(): void {
+    this.headMotion.reset();
     if (this.preset !== 'follow') {
       this.preset = 'follow';
       this.distance = this.followDistance;
@@ -117,6 +137,7 @@ export class ChaseCamera {
   }
 
   selectPreset(preset: CameraPreset): void {
+    this.headMotion.reset();
     if (this.preset === 'follow') this.followDistance = this.distance;
     this.preset = preset;
     this.distance = preset === 'follow' ? this.followDistance : cameraPresets[preset].distance;
@@ -175,12 +196,14 @@ export class ChaseCamera {
     this.manualBlend += ((this.manualView ? 1 : 0) - this.manualBlend) * orbitK;
 
     this.toolBlend += ((this.toolView ? 1 : 0) - this.toolBlend) * Math.min(1, dt * 3);
+    this.towBlend += ((this.towing ? 1 : 0) - this.towBlend) * Math.min(1, dt * 2);
+    const scale = this.scale * (1 + C.towScale * this.towBlend);
     const speedF = Math.min(1, this.speedSmoothed / C.speedRef);
-    let dist = this.distance * (1 + C.speedPullback * speedF);
+    let dist = this.distance * scale * (1 + C.speedPullback * speedF);
     if (this.speedSmoothed < C.crawlSpeed)
       dist *= C.crawlCloser + (1 - C.crawlCloser) * (this.speedSmoothed / C.crawlSpeed);
     let height =
-      profile.height * (dist / profile.distance) ** 0.8 +
+      profile.height * (dist / (profile.distance * scale)) ** 0.8 * scale +
       C.slopeLift * Math.min(1, this.slopeSmoothed / 30) * (this.preset === 'follow' ? 1 : 0.25);
     const toolLift = this.toolBlend * (1 - this.manualBlend);
     height += toolLift * 4.5;
@@ -205,8 +228,8 @@ export class ChaseCamera {
     this.targetY += (t.position.y - this.targetY) * Math.min(1, dt * C.targetHeightRate);
     // Never let the smoothed target fall far behind (big drops, jack, teleports).
     this.targetY = THREE.MathUtils.clamp(this.targetY, t.position.y - 0.6, t.position.y + 0.6);
-    this.look.y = this.targetY + profile.targetHeight;
-    const desired = new THREE.Vector3().copy(this.look).addScaledVector(back, radius * Math.cos(elevation));
+    this.look.y = this.targetY + profile.targetHeight * scale;
+    const desired = this.desired.copy(this.look).addScaledVector(back, radius * Math.cos(elevation));
     desired.y += radius * Math.sin(elevation);
 
     const first = !this.initialised;
@@ -217,7 +240,7 @@ export class ChaseCamera {
 
     // Keep the view line clear: push the camera towards the target if anything is in the
     // way (straight away), then ease back out once it clears so it doesn't pop.
-    const camPos = this.pos.clone();
+    const camPos = this.camPos.copy(this.pos);
     this.dir.copy(camPos).sub(this.look);
     const full = this.dir.length();
     if (full > 1e-3) {

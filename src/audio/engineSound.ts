@@ -178,6 +178,7 @@ class OscillatorEngine implements EngineVoice {
   private mutedUntil = 0;
   private cylinders = 6;
   private engine = vehicleTuning.engine;
+  private vehicle: VehicleId = 'shortie';
 
   constructor(
     private readonly ctx: AudioContext,
@@ -266,11 +267,21 @@ class OscillatorEngine implements EngineVoice {
     // Stalling: the pitch follows the rpm down and the level fades with it.
     if (!e.running) level *= Math.min(1, e.rpm / 600);
     if (e.powerCut) level *= E.sputterGain;
+    // Fallback path only: a cheap bounce at the limiter on the two engines that have one.
+    if (
+      (this.vehicle === 'shortie' || this.vehicle === 'forty' || this.vehicle === 'lc79') &&
+      e.rpm >= eng.redlineRpm &&
+      e.throttle > 0.35
+    ) {
+      const hz = this.vehicle === 'lc79' ? 11 : 16;
+      level *= 0.42 + 0.58 * (Math.floor(t * hz) % 2);
+    }
     if (t < this.mutedUntil) level = 0;
     this.out.gain.setTargetAtTime(level, t, e.powerCut ? 0.015 : 0.05);
   }
 
   setVehicle(id: VehicleId): void {
+    this.vehicle = id;
     this.cylinders = engineSynthTunings[id].firingOrder.length;
     this.engine = vehicles[id].tuning.engine;
   }

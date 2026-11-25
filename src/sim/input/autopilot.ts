@@ -11,6 +11,10 @@ export class Autopilot {
   private rangeCooldown = 0;
   /** Prefer low range from the start. */
   lowRange = false;
+  /** Stay in low range on a climb once it has dropped into it, as a driver would. */
+  holdLowOnClimbs = false;
+  /** Look-ahead along the path (m). 0 = the default speed-based 5–12 m. */
+  lookAhead = 0;
   done = false;
 
   constructor(
@@ -40,7 +44,7 @@ export class Autopilot {
       }
     }
     this.index = best;
-    const look = Math.min(12, Math.max(5, 4 + Math.abs(v.speed) * 0.8));
+    const look = this.lookAhead > 0 ? this.lookAhead : Math.min(12, Math.max(5, 4 + Math.abs(v.speed) * 0.8));
     let target = path[path.length - 1];
     for (let i = this.index; i < path.length; i++) {
       if (Math.hypot(path[i][0] - p.x, path[i][1] - p.z) >= look) {
@@ -51,6 +55,7 @@ export class Autopilot {
     if (this.remaining(v) < 2.5) this.done = true;
     const f = v.forward();
     const fx = f.x;
+    const fy = f.y;
     const fz = f.z;
     const fl = Math.hypot(fx, fz) || 1;
     const tx = target[0] - p.x;
@@ -75,9 +80,28 @@ export class Autopilot {
     if (inp.throttle > 0.9 && Math.abs(v.speed) < 1) this.stuckTime += dt;
     else this.stuckTime = Math.max(0, this.stuckTime - dt);
     const wantLow = this.lowRange || this.stuckTime > 2;
-    if (this.rangeCooldown <= 0 && wantLow !== (v.drivetrain.range === 'low') && Math.abs(v.speed) < 5) {
+    const climbing = this.holdLowOnClimbs && fy / Math.hypot(fx, fy, fz) > 0.08;
+    // Leaving low cycles through 2H on part-time cars. Reconnect 4H before driving
+    // on; the scripted driver always uses four-wheel drive, as its routes assume.
+    if (v.transfer.mode === '2H' && !v.rangeShiftReason()) {
       inp.toggleRange = true;
-      this.rangeCooldown = 3;
+      this.rangeCooldown = 0;
+      return inp;
+    }
+    if (
+      this.rangeCooldown <= 0 &&
+      wantLow !== (v.drivetrain.range === 'low') &&
+      Math.abs(v.speed) < 5 &&
+      (wantLow || !climbing)
+    ) {
+      if (Math.abs(v.speed) > 0.5) {
+        inp.throttle = 0;
+        inp.brake = 0;
+        inp.handbrake = true;
+      } else {
+        inp.toggleRange = true;
+        this.rangeCooldown = 3;
+      }
     }
     return inp;
   }

@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import type { VehicleTuning } from '../data/vehicle';
 import type { Vehicle } from '../sim/vehicle/vehicle';
-import { slerp } from '../sim/vehicle/math';
-import type { VehicleCondition } from '../sim/vehicle/condition';
+import { followBody } from './followBody';
+import { tyreDrop, type VehicleCondition } from '../sim/vehicle/condition';
 import { hash2 } from '../sim/world/rng';
 import { pal } from './colors';
 import { patchFog } from './fog';
 import { BodyZone, groupVehicleMaterials } from './vehicleGeometry';
-import { vehicleLooks } from './vehicleLooks';
+import { vehicleLooks, type VehicleLook } from './vehicleLooks';
 import { vehicles } from '../data/vehicles';
 import { VehicleSuspension } from './vehicleSuspension';
 import { VehicleInstruments } from './vehicleInstruments';
@@ -15,13 +15,16 @@ import { HeadlightBeams } from './headlights';
 import { headlightTuning } from '../data/headlights';
 export { BodyZone } from './vehicleGeometry';
 
+/** Wheel points closer to the axle than this (m) are the rim and hub, which a flat tyre doesn't change. */
+const RIM_RADIUS = 0.235;
+
 /** A detailed vehicle (its look picked by the tuning's id), driven by the simulation. */
 export class VehicleModel {
   readonly root = new THREE.Group();
   readonly bodyGroup = new THREE.Group();
   readonly body: THREE.Mesh;
   readonly rackPlanks = new THREE.Group();
-  readonly wheels: { pivot: THREE.Group; spin: THREE.Group }[] = [];
+  readonly wheels: { pivot: THREE.Group; spin: THREE.Group; mesh: THREE.Mesh; turned: boolean }[] = [];
   readonly bodyMaterial: THREE.MeshPhysicalMaterial;
   readonly suspension: VehicleSuspension;
   readonly instruments: VehicleInstruments;
@@ -32,10 +35,11 @@ export class VehicleModel {
   /** The dials' markings: lit with the headlights, each in its own colour. */
   private readonly dialMarksMaterial: THREE.MeshStandardMaterial;
   private readonly roofLampMaterial: THREE.MeshStandardMaterial;
-  /** The lamps' light on the ground, at dusk and night only. */
-  readonly beams: HeadlightBeams | null;
+  /** The lamps' light on the ground, made the first time it is dark (setBeams). */
+  private beamLights: HeadlightBeams | null = null;
+  private readonly lamps: VehicleLook['lamps'];
+  private readonly frontZ: number;
   private readonly glass: THREE.MeshPhysicalMaterial;
-  private readonly tmpQ = { x: 0, y: 0, z: 0, w: 1 };
   private readonly wheelGeo: THREE.BufferGeometry;
   private readonly basePos: Float32Array;
   private readonly baseCol: Float32Array;
@@ -45,6 +49,8 @@ export class VehicleModel {
   private lastDirtKey = '';
   private lastDentKey = '';
   private readonly spinExtra = [0, 0, 0, 0];
+  /** Each wheel's own copy of the wheel, squashed at the bottom while its tyre is down (made when first needed). */
+  private readonly flatWheels: (THREE.BufferGeometry | null)[] = [null, null, null, null];
 
   /** `beams`: it's dark enough for the headlights to light the ground (dusk and night). */
   constructor(
@@ -109,6 +115,7 @@ export class VehicleModel {
       this.headLampMaterial,
       this.roofLampMaterial,
       this.dialMarksMaterial,
+      patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.2, metalness: 0.8 })),
     ];
     this.wheelGeo = look.wheel(tuning);
     const geometry = look.body(tuning, this.wheelGeo);
@@ -120,8 +127,9 @@ export class VehicleModel {
     this.bodyGroup.add(this.body);
     this.root.add(this.bodyGroup);
     geometry.computeBoundingBox();
-    this.beams = beams ? new HeadlightBeams(look.lamps, geometry.boundingBox!.min.z) : null;
-    if (this.beams) this.bodyGroup.add(this.beams.group);
+    this.lamps = look.lamps;
+    this.frontZ = geometry.boundingBox!.min.z;
+    if (beams) this.setBeams(true);
     this.basePos = Float32Array.from(geometry.getAttribute('position').array);
     this.baseCol = Float32Array.from(geometry.getAttribute('color').array);
     this.baseNormals = Float32Array.from(geometry.getAttribute('normal').array);
@@ -145,17 +153,21 @@ export class VehicleModel {
     this.wheelBaseCol = Float32Array.from(this.wheelGeo.getAttribute('color').array);
     for (const wheel of tuning.wheels) {
       const pivot = new THREE.Group();
-      pivot.position.set(wheel.x, 0, wheel.z);
+      const x = tuning.drawnWheels ? Math.sign(wheel.x) * tuning.drawnWheels.halfTrack : wheel.x;
+      pivot.position.set(x, 0, wheel.z);
       const spin = new THREE.Group();
       const mesh = new THREE.Mesh(this.wheelGeo, materials);
       mesh.castShadow = true;
+      // A wheel with an inner and an outer face is drawn outer face to +x: turn the left ones.
+      const turned = look.handedWheels === true && x < 0;
+      if (turned) mesh.rotation.y = Math.PI;
       spin.add(mesh);
       pivot.add(spin);
       this.root.add(pivot);
-      this.wheels.push({ pivot, spin });
+      this.wheels.push({ pivot, spin, mesh, turned });
     }
-    this.suspension = new VehicleSuspension(tuning, materials, look.springs);
-    this.suspension.update([0, 0, 0, 0]);
+    this.suspension = new VehicleSuspension(tuning, materials, look.springs, look.suspension);
+    this.poseWheels([0, 0, 0, 0]);
     this.root.add(this.suspension.group);
   }
 
@@ -237,8 +249,57 @@ export class VehicleModel {
     }
   }
 
+  /**
+   * Wheel `i`'s squashed copy for a tyre `drop` metres down (and `flat`, 0..1, out of air),
+   * turned `angle` about its axle. The tyre is pressed flat `drop` above the bottom of the
+   * round tyre, where the ground is, and the rubber pushed out of the way bulges sideways;
+   * the rim is left as it is.
+   */
+  private squashWheel(i: number, angle: number, drop: number, flat: number): THREE.BufferGeometry {
+    let geo = this.flatWheels[i];
+    if (!geo) {
+      geo = new THREE.BufferGeometry();
+      for (const [name, attr] of Object.entries(this.wheelGeo.attributes))
+        geo.setAttribute(name, name === 'position' ? attr.clone() : attr);
+      geo.setIndex(this.wheelGeo.index);
+      for (const g of this.wheelGeo.groups) geo.addGroup(g.start, g.count, g.materialIndex);
+      this.wheelGeo.computeBoundingSphere();
+      geo.boundingSphere = this.wheelGeo.boundingSphere!.clone();
+      this.flatWheels[i] = geo;
+    }
+    const base = this.wheelGeo.getAttribute('position').array as Float32Array;
+    const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+    const out = pos.array as Float32Array;
+    const ground = -(this.tuning.wheelRadius - drop);
+    const halfWidth = (this.tuning.drawnWheels?.width ?? this.tuning.wheelWidth) / 2;
+    const [c, s] = [Math.cos(angle), Math.sin(angle)];
+    for (let k = 0; k < out.length; k += 3) {
+      const [x, y, z] = [base[k], base[k + 1], base[k + 2]];
+      out[k] = x;
+      out[k + 1] = y;
+      out[k + 2] = z;
+      // Height in the wheel's own (unspun) frame; the rim and hub stay round.
+      if (y * y + z * z < RIM_RADIUS * RIM_RADIUS) continue;
+      const h = y * c - z * s;
+      const under = ground - h;
+      if (under < -0.1) continue;
+      const bulge =
+        Math.min(0.07, 0.03 * flat * (1 - Math.max(0, -under) / 0.1) + 0.4 * Math.max(0, under)) *
+        Math.min(1, Math.abs(x) / halfWidth);
+      out[k] = x + Math.sign(x) * bulge;
+      if (under <= 0) continue;
+      // Pressed up to the ground, keeping a sliver of its order so faces don't fight.
+      const lift = under * 0.88;
+      out[k + 1] = y + lift * c;
+      out[k + 2] = z - lift * s;
+    }
+    pos.needsUpdate = true;
+    return geo;
+  }
+
   /** Free the GPU buffers and materials (when swapping to another vehicle). */
   dispose(): void {
+    for (const geo of this.flatWheels) geo?.dispose();
     const materials = new Set<THREE.Material>();
     this.root.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
@@ -246,6 +307,27 @@ export class VehicleModel {
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m);
     });
     for (const m of materials) m.dispose();
+  }
+
+  /** The lamps' light on the ground while it is dark (dusk and night), or null by day. */
+  get beams(): HeadlightBeams | null {
+    return this.beamLights?.group.parent === this.bodyGroup ? this.beamLights : null;
+  }
+
+  /**
+   * Add the lamps' light on the ground (dusk and night) or take it away, on this same model
+   * (v1.46: dusk used to build the whole car again). The two spot lights are only in the
+   * scene while it is dark, so daylight frames don't light every pixel for lamps that are
+   * off; the caller warms the shaders for them first (GameRenderer.showLights).
+   */
+  setBeams(on: boolean): HeadlightBeams | null {
+    if (!on) {
+      this.beamLights?.group.removeFromParent();
+      return null;
+    }
+    this.beamLights ??= new HeadlightBeams(this.lamps, this.frontZ);
+    this.bodyGroup.add(this.beamLights.group);
+    return this.beamLights;
   }
 
   /** From the driver's seat the tinted glass would fill the view; leave the windows clear. */
@@ -261,31 +343,42 @@ export class VehicleModel {
     });
   }
 
+  /** Fixed-length beams carry both hubs and tyre camber; steering turns inside that frame. */
+  poseWheels(heights: readonly number[], steering?: readonly number[]): void {
+    this.suspension.update(heights);
+    for (let i = 0; i < this.wheels.length; i++) {
+      const pivot = this.wheels[i].pivot;
+      pivot.position.copy(this.suspension.hubs[i]);
+      pivot.rotation.set(0, -(steering?.[i] ?? 0), this.suspension.rolls[i], 'ZYX');
+    }
+  }
+
   update(v: Vehicle, alpha: number, dt: number): void {
-    const p0 = v.prevPosition;
-    const p1 = v.body.translation();
-    this.root.position.set(
-      p0.x + (p1.x - p0.x) * alpha,
-      p0.y + (p1.y - p0.y) * alpha,
-      p0.z + (p1.z - p0.z) * alpha,
-    );
-    const q = slerp(v.prevRotation, v.body.rotation(), alpha, this.tmpQ);
-    this.root.quaternion.set(q.x, q.y, q.z, q.w);
+    followBody(this.root, v, alpha);
     const t = this.tuning;
+    this.poseWheels(
+      v.wheels.map((w, i) => t.wheels[i].y - w.suspension),
+      v.wheels.map((w) => w.steer),
+    );
     for (let i = 0; i < 4; i++) {
       const w = v.wheels[i];
       const ww = this.wheels[i];
-      ww.pivot.position.y = t.wheels[i].y - w.suspension + w.sink * 0.0;
-      ww.pivot.rotation.y = -w.steer;
-      // A tyre going down squashes: lower and longer, bulging at the sides.
-      const flat = 1 - v.condition.tyres[i];
-      ww.pivot.scale.set(1 + 0.06 * flat, 1 - 0.12 * flat, 1 + 0.05 * flat);
       // Extra spin when the wheel is spinning beyond grip.
       this.spinExtra[i] +=
         w.spin * dt * 25 * Math.sign(v.throttle > 0 ? (v.drivetrain.gear < 0 ? -1 : 1) : 0);
       ww.spin.rotation.x = -(w.rotation + this.spinExtra[i]);
+      // A tyre going down squashes flat where it meets the ground and bulges out at the sides.
+      const drop = tyreDrop(v.condition, i, w.rotation);
+      if (drop > 0.004)
+        // A turned wheel's own z points the other way, so its axle angle is the other sign.
+        ww.mesh.geometry = this.squashWheel(
+          i,
+          ww.turned ? -ww.spin.rotation.x : ww.spin.rotation.x,
+          drop,
+          1 - v.condition.tyres[i],
+        );
+      else ww.mesh.geometry = this.wheelGeo;
     }
-    this.suspension.update(this.wheels.map((w) => w.pivot.position.y));
     this.instruments.update(v, dt);
     const H = headlightTuning;
     const lit = v.lights !== 'off';

@@ -1,89 +1,94 @@
 import * as THREE from 'three';
 import type { VehicleTuning } from '../data/vehicle';
+import { BodyZone as Z, VehicleBuilder, VehicleMaterial as M } from './vehicleGeometry';
+import { extrudeZ } from './bodyShapes';
 import { pal } from './colors';
-import { BodyZone, VehicleBuilder, VehicleMaterial as M } from './vehicleGeometry';
-
-/** Rounded all-terrain carcass, separated tread rows, rim recess, vents, valve and six studs. */
+import { cleanGeometry } from './bodyRefinement';
+const steel = new THREE.Color('#93988F');
+/** Rounded tyre with two rows of staggered blocks, a dished six-stud rim with round vents. */
 export function buildVehicleWheel(
   tuning: VehicleTuning,
   rim = pal('vehicleRoof').clone().multiplyScalar(0.85),
 ): THREE.BufferGeometry {
   const b = new VehicleBuilder();
   const r = tuning.wheelRadius,
-    w = tuning.wheelWidth;
-  const tyre = new THREE.Color('#242725'),
-    steel = new THREE.Color('#91958F');
-  const dark = new THREE.Color('#303632');
+    w = tuning.drawnWheels?.width ?? tuning.wheelWidth;
+  const tyre = new THREE.Color('#232624');
+  const rimR = 0.215;
   b.slot = M.Rubber;
-  b.tag = BodyZone.Trim;
+  b.tag = Z.Trim;
   b.push().rotate(0, 0, -Math.PI / 2);
   const profile = [
-    [0.2, -w * 0.5],
-    [r * 0.72, -w * 0.53],
-    [r * 0.92, -w * 0.45],
-    [r * 0.98, -w * 0.27],
-    [r * 0.98, w * 0.27],
-    [r * 0.92, w * 0.45],
-    [r * 0.72, w * 0.53],
-    [0.2, w * 0.5],
+    [rimR - 0.01, -w * 0.47],
+    [r * 0.7, -w * 0.54],
+    [r * 0.9, -w * 0.5],
+    [r * 0.965, -w * 0.4],
+    [r * 0.965, w * 0.4],
+    [r * 0.9, w * 0.5],
+    [r * 0.7, w * 0.54],
+    [rimR - 0.01, w * 0.47],
   ].map(([x, y]) => new THREE.Vector2(x, y));
   b.geometry(new THREE.LatheGeometry(profile, 48), tyre);
   b.pop();
-  for (let i = 0; i < 36; i++)
-    for (const row of [-1, 0, 1]) {
-      const angle = ((i + (row === 0 ? 0 : 0.45)) / 36) * Math.PI * 2;
+  // Two rows of big staggered blocks that wrap onto the shoulders.
+  const blocks = 16;
+  for (let i = 0; i < blocks; i++) {
+    for (const side of [-1, 1]) {
+      const angle = ((i + (side > 0 ? 0.5 : 0)) / blocks) * Math.PI * 2;
       b.slot = M.Rubber;
       b.push()
-        .translate(row * w * 0.32, Math.cos(angle) * r * 0.98, Math.sin(angle) * r * 0.98)
-        .rotate(angle, row * 0.24, 0);
-      b.box(w * 0.29, 0.036, 0.044, tyre);
+        .translate(side * w * 0.25, Math.cos(angle) * r * 0.965, Math.sin(angle) * r * 0.965)
+        .rotate(angle, side * 0.15, 0);
+      b.box(w * 0.44, 0.036, 0.075, tyre);
       b.pop();
     }
+  }
   for (const side of [-1, 1]) {
-    b.ring(side * w * 0.51, 0, 0, r * 0.77, 0.004, tyre.clone().multiplyScalar(1.4), M.Rubber, 'x');
-    b.slot = M.Metal;
+    b.ring(side * w * 0.5, 0, 0, r * 0.74, 0.004, tyre.clone().multiplyScalar(1.4), M.Rubber, 'x');
+    // Rim flange, the dished centre with round vents, the hub and six wheel nuts.
+    b.ring(side * (w * 0.5 - 0.005), 0, 0, rimR, 0.013, rim, M.Paint, 'x');
+    const circle = (cx: number, cy: number, r: number, n: number) =>
+      Array.from(
+        { length: n },
+        (_, i) =>
+          new THREE.Vector2(
+            cx + r * Math.cos((i * Math.PI * 2) / n),
+            cy + r * Math.sin((i * Math.PI * 2) / n),
+          ),
+      );
+    const disc = new THREE.Shape(circle(0, 0, rimR - 0.01, 32));
+    for (let i = 0; i < 6; i++) {
+      const a = ((i + 0.5) * Math.PI) / 3;
+      disc.holes.push(new THREE.Path(circle(Math.cos(a) * 0.168, Math.sin(a) * 0.168, 0.022, 8).reverse()));
+    }
+    disc.holes.push(new THREE.Path(circle(0, 0, 0.051, 12).reverse()));
     b.push()
-      .translate(side * (w * 0.5 - 0.018), 0, 0)
-      .rotate(0, 0, -Math.PI / 2);
-    b.geometry(new THREE.CylinderGeometry(0.205, 0.205, 0.025, 40), dark);
+      .translate(side * (w * 0.5 - 0.03), 0, 0)
+      .rotate(0, Math.PI / 2, 0);
+    extrudeZ(b, disc, -0.01, 0.01, rim, M.Paint, Z.Trim, 0);
     b.pop();
-    b.ring(side * (w * 0.5 + 0.004), 0, 0, 0.205, 0.016, rim, M.Metal, 'x');
+    b.slot = M.Paint;
     b.push()
-      .translate(side * (w * 0.5 - 0.002), 0, 0)
+      .translate(side * (w * 0.5 - 0.012), 0, 0)
       .rotate(0, 0, -Math.PI / 2);
-    b.geometry(new THREE.CylinderGeometry(0.158, 0.177, 0.025, 40), rim);
+    b.geometry(new THREE.CylinderGeometry(0.12, 0.135, 0.03, 16), rim);
     b.pop();
     for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2;
-      const y = Math.cos(angle),
-        z = Math.sin(angle);
-      b.slot = M.Rubber;
-      b.push()
-        .translate(side * (w * 0.5 + 0.014), y * 0.145, z * 0.145)
-        .rotate(0, 0, -Math.PI / 2);
-      b.geometry(new THREE.CylinderGeometry(0.021, 0.021, 0.008, 10), dark);
-      b.pop();
+      const a = (i / 6) * Math.PI * 2;
       b.slot = M.Metal;
       b.push()
-        .translate(side * (w * 0.5 + 0.027), y * 0.093, z * 0.093)
+        .translate(side * (w * 0.5 + 0.008), Math.cos(a) * 0.0698, Math.sin(a) * 0.0698)
         .rotate(0, 0, -Math.PI / 2);
-      b.geometry(new THREE.CylinderGeometry(0.015, 0.018, 0.024, 6), steel);
+      b.geometry(new THREE.CylinderGeometry(0.0125, 0.015, 0.02, 6), steel);
       b.pop();
     }
+    // Free-wheeling hub cap in the middle.
     b.slot = M.Metal;
     b.push()
-      .translate(side * (w * 0.5 + 0.02), 0, 0)
+      .translate(side * (w * 0.5 + 0.022), 0, 0)
       .rotate(0, 0, -Math.PI / 2);
-    b.geometry(new THREE.CylinderGeometry(0.058, 0.065, 0.06, 24), dark);
+    b.geometry(new THREE.CylinderGeometry(0.05, 0.058, 0.05, 12), steel.clone().multiplyScalar(0.9));
     b.pop();
-    b.block(side * (w * 0.5 + 0.057), 0, 0, 0.013, 0.033, 0.064, steel, M.Metal, BodyZone.Trim);
-    b.rod(
-      { x: side * w * 0.54, y: 0.18, z: 0.05 },
-      { x: side * w * 0.6, y: 0.18, z: 0.05 },
-      0.006,
-      dark,
-      M.Rubber,
-    );
   }
-  return b.build();
+  return cleanGeometry(b.build());
 }

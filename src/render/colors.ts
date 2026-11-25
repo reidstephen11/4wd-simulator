@@ -1,16 +1,23 @@
 import * as THREE from 'three';
-import { colourVariation, palette, type PaletteToken } from '../data/palette';
+import { colourVariation, palette, type PaletteOverrides, type PaletteToken } from '../data/palette';
 
 const cache = new Map<string, THREE.Color>();
+let active: Record<PaletteToken, string> = { ...palette };
 
 /** Palette colour as a linear-space THREE.Color (cached; do not mutate). */
 export function pal(token: PaletteToken): THREE.Color {
   let c = cache.get(token);
   if (!c) {
-    c = new THREE.Color(palette[token]);
+    c = new THREE.Color(active[token]);
     cache.set(token, c);
   }
   return c;
+}
+
+/** Repaint tokens for the map being loaded; call before building its meshes. */
+export function usePalette(overrides: PaletteOverrides = {}): void {
+  active = { ...palette, ...overrides };
+  cache.clear();
 }
 
 /** Hex string to a new linear-space colour. */

@@ -1,13 +1,12 @@
-import { highCountryMap } from '../src/data/map';
-import { ironbarkParkMap } from '../src/data/park';
-import { crawlerCreekMap } from '../src/data/crawlerCreek';
-import { stringybarkMap } from '../src/data/stringybark';
+import { highCountryMap } from './fixtures/maps/map';
+import { ironbarkParkMap } from './fixtures/maps/park';
+import { crawlerCreekMap } from './fixtures/maps/crawlerCreek';
+import { ironbarkMap } from '../src/data/levels/ironbarkMap';
 import { buildWorld, type World } from '../src/sim/world/world';
 
 let cached: World | null = null;
 let park: World | null = null;
 let creek: World | null = null;
-let stringybark: World | null = null;
 
 /** Shared world for tests (generation takes a couple of seconds). */
 export function testWorld(): World {
@@ -27,8 +26,10 @@ export function crawlerCreekWorld(): World {
   return creek;
 }
 
-/** Stringybark Range, shared the same way. */
-export function stringybarkWorld(): World {
-  stringybark ??= buildWorld(stringybarkMap);
-  return stringybark;
+let ironbark: World | null = null;
+
+/** Ironbark Creek, the first playground level, shared the same way. */
+export function ironbarkWorld(): World {
+  ironbark ??= buildWorld(ironbarkMap);
+  return ironbark;
 }

@@ -109,7 +109,10 @@ export function pointAt(
   return { x, z, dx, dz, u };
 }
 
-/** Distance from (px, pz) to segment a→b; returns distance and t in [0,1]. */
+/**
+ * Distance from (px, pz) to segment a→b; returns distance and t in [0,1]. Pass `out` to have
+ * it filled instead of a new object (a loop over a long polyline).
+ */
 export function segmentDistance(
   px: number,
   pz: number,
@@ -117,6 +120,7 @@ export function segmentDistance(
   az: number,
   bx: number,
   bz: number,
+  out: { d: number; t: number; side: number } = { d: 0, t: 0, side: 0 },
 ): { d: number; t: number; side: number } {
   const vx = bx - ax;
   const vz = bz - az;
@@ -127,5 +131,8 @@ export function segmentDistance(
   t = t < 0 ? 0 : t > 1 ? 1 : t;
   const cx = ax + vx * t - px;
   const cz = az + vz * t - pz;
-  return { d: Math.sqrt(cx * cx + cz * cz), t, side: vx * wz - vz * wx };
+  out.d = Math.sqrt(cx * cx + cz * cz);
+  out.t = t;
+  out.side = vx * wz - vz * wx;
+  return out;
 }

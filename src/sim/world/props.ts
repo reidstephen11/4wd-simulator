@@ -16,9 +16,20 @@ export const propDims = {
   signpost: { h: 2.1 },
   logSeat: { l: 2.2, r: 0.22, y: 0.2, sides: 7 },
   cattleGrid: { w: 5, d: 2.4 },
+  powerPole: { h: 8.5, r: 0.13, arm: 2.2 },
+  /** A goldfields baker's oven: a stone base under a domed brick roof, its mouth at the front. */
+  bakerOven: { w: 2.4, d: 2.8, base: 0.9, dome: 0.8 },
+  /** The stone chimney left standing when a hut or hotel burnt or fell. */
+  chimney: { w: 1.5, d: 0.9, h: 3.6 },
+  headstone: { w: 0.5, h: 0.8, t: 0.09 },
+  /** A row of kerbstones along an old street: low, and driven over. */
+  stoneKerb: { l: 12, h: 0.16, w: 0.3 },
 } as const;
 
 const shapes: Record<PropKind, PropShape[]> = {
+  noticeBox: [{ type: 'box', x: 0, y: 0.45, z: 0, hx: 0.5, hy: 0.45, hz: 0.35 }],
+  // Upright; a leaning pole's lower part, the bit a vehicle can hit, is close enough.
+  powerPole: [{ type: 'cylinder', x: 0, y: 1.5, z: 0, r: 0.13, hh: 1.5, sides: 7 }],
   hut: [{ type: 'box', x: 0, y: 1.95, z: 0, hx: 3, hy: 1.95, hz: 2.3 }],
   waterTank: [{ type: 'cylinder', x: 0, y: 1.05, z: 0, r: 1.15, hh: 1.05 }],
   fireRing: [],
@@ -52,6 +63,10 @@ const shapes: Record<PropKind, PropShape[]> = {
     { type: 'box', x: -2.9, y: 0.6, z: 0, hx: 0.12, hy: 0.6, hz: 1.3 },
     { type: 'box', x: 2.9, y: 0.6, z: 0, hx: 0.12, hy: 0.6, hz: 1.3 },
   ],
+  bakerOven: [{ type: 'box', x: 0, y: 0.8, z: 0, hx: 1.2, hy: 0.8, hz: 1.4 }],
+  chimney: [{ type: 'box', x: 0, y: 1.8, z: 0, hx: 0.75, hy: 1.8, hz: 0.45 }],
+  headstone: [{ type: 'box', x: 0, y: 0.4, z: 0, hx: 0.25, hy: 0.4, hz: 0.06 }],
+  stoneKerb: [],
 };
 
 export interface PlacedShape {

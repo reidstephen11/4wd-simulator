@@ -1,3 +1,4 @@
+import { saveData } from './helpers/saves';
 import { describe, expect, it } from 'vitest';
 import { damageTuning, type DamageMode } from '../src/data/damage';
 import { lateAfternoon } from '../src/data/environment';
@@ -11,6 +12,7 @@ import { Simulation } from '../src/sim/sim';
 import { enginePowerMultiplier, tyreGripMultiplier } from '../src/sim/vehicle/condition';
 import { updateDamage, type DamageEvent } from '../src/sim/vehicle/damage';
 import { headingOf } from '../src/sim/vehicle/math';
+import { damageMessage } from '../src/core/damageMessages';
 import { makeScene, type Scene } from './helpers/scenes';
 import { testWorld } from './world';
 
@@ -67,6 +69,84 @@ describe('mechanical damage', () => {
     s.run(4, { throttle: 0.4 });
     expect(events).toEqual([]);
     s.physics.world.free();
+  });
+
+  it('pinches a tyre hitting a pothole at speed, not at a sensible pace', async () => {
+    // A 30 cm washout across the road 40 m ahead (the ground itself is flat).
+    const road = {
+      surfaceAt: () => SurfaceId.Dirt,
+      waterSurfaceAt: () => null,
+      holeAt: (_x: number, z: number) => (z < -40 && z > -41.5 ? 0.3 : 0),
+    };
+    const through = async (speed: number) => {
+      const { s, events } = await damageScene('realistic', { ground: road, speed });
+      // Hold the speed.
+      s.run(60 / speed, () => ({ throttle: s.vehicle.speed < speed ? 0.6 : 0 }));
+      expect(s.vehicle.position.z).toBeLessThan(-42);
+      s.physics.world.free();
+      return events;
+    };
+    // About 30 km/h: nothing. About 65 km/h: punctures, and the message says why.
+    expect(await through(8.5)).toEqual([]);
+    const fast = await through(18);
+    const tyres = fast.filter((e) => e.part === 'tyre');
+    expect(tyres.length).toBeGreaterThan(0);
+    expect(tyres.every((e) => e.cause === 'hole' && e.fault === 'puncture')).toBe(true);
+    expect(damageMessage(tyres[0], vehicleTuning, 'realistic')).toContain('pinched in a hole');
+  });
+
+  it('lets a let-down tyre take a harder landing, and rolls it off its rim in a hard corner', async () => {
+    // A 1.4 m drop onto rock cuts a pumped-up tyre but not a let-down one.
+    for (const low of [false, true]) {
+      const { s, events } = await damageScene('realistic', { ground: rock });
+      s.vehicle.condition.lowPressure = low;
+      drop(s, 1.4);
+      expect(events.some((e) => e.part === 'tyre')).toBe(!low);
+      s.physics.world.free();
+    }
+    const corner = async (low: boolean, kmh: number, steer: number) => {
+      const { s, events } = await damageScene('realistic', { speed: kmh / 3.6 });
+      s.vehicle.condition.lowPressure = low;
+      s.run(5, () => ({ throttle: s.vehicle.speed < kmh / 3.6 ? 0.7 : 0, steer }));
+      s.physics.world.free();
+      return events.filter((e) => e.part === 'tyre');
+    };
+    // A hard corner at 30 km/h rolls a soft tyre off; pumped up, or a gentler bend, it stays on.
+    const rolled = await corner(true, 30, 0.3);
+    expect(rolled.length).toBeGreaterThan(0);
+    expect(rolled.every((e) => e.fault === 'rim' && e.cause === 'corner')).toBe(true);
+    expect(damageMessage(rolled[0], vehicleTuning, 'realistic')).toContain('off its rim');
+    expect(await corner(false, 30, 0.3)).toEqual([]);
+    expect(await corner(true, 40, 0.15)).toEqual([]);
+  });
+
+  it('picks up a sharp stone now and then, less often let down, never on the concrete', async () => {
+    const S = damageTuning.tyre.sharpRockPerKm;
+    const usual = S.rock;
+    // Many times the real chance, so a short drive shows it.
+    S.rock = 8;
+    const drive = async (low: boolean, smooth = false) => {
+      let n = 0;
+      for (let k = 0; k < 10; k++) {
+        const ground = { ...rock, smoothAt: () => smooth };
+        const { s, events } = await damageScene('realistic', { ground, speed: 20 / 3.6 });
+        // Each run a different seed.
+        for (let r = 0; r < k * 7; r++) s.vehicle.rand();
+        s.vehicle.condition.lowPressure = low;
+        s.run(10, () => ({ throttle: s.vehicle.speed < 20 / 3.6 ? 0.5 : 0 }));
+        n += events.filter((e) => e.cause === 'sharp' && e.fault === 'puncture').length;
+        s.physics.world.free();
+      }
+      return n;
+    };
+    try {
+      const pumped = await drive(false);
+      expect(pumped).toBeGreaterThan(5);
+      expect(await drive(true)).toBeLessThan(pumped * 0.7);
+      expect(await drive(false, true)).toBe(0);
+    } finally {
+      S.rock = usual;
+    }
   });
 
   it('lets a realistic tyre go flat: that corner sits lower and drags the car towards it', async () => {
@@ -163,20 +243,35 @@ describe('mechanical damage', () => {
     run(1.5);
     expect([c.engine, c.suspension[2], c.tyreTarget[1]]).toEqual([1, 1, 1]);
 
+    // Realistic: a torn sidewall takes a spare, a puncture a plug.
     sim.setDamage('realistic');
+    c.spares = 1;
+    c.plugs = 1;
     c.tyres[3] = c.tyreTarget[3] = 0;
+    c.tyreFault[3] = 'sidewall';
     c.engine = 0.4;
     expect(sim.repairOption('p')).toEqual({ kind: 'spare', possible: true });
     sim.startRepair('p');
     run(damageTuning.repair.spareSeconds + 0.5);
-    expect([c.tyres[3], c.spare, c.engine]).toEqual([1, false, 0.4]);
+    expect([c.tyres[3], c.tyreFault[3], c.spares, c.engine]).toEqual([1, 'none', 0, 0.4]);
     c.tyreTarget[0] = 0;
-    expect(sim.repairOption('p')).toMatchObject({ kind: 'spare', possible: false });
+    c.tyreFault[0] = 'puncture';
+    expect(sim.repairOption('p')).toEqual({ kind: 'plug', possible: true });
+    sim.startRepair('p');
+    run(damageTuning.repair.plugSeconds + 0.5);
+    expect([c.tyreTarget[0], c.plugs]).toEqual([1, 0]);
+    // Nothing left for another torn sidewall.
+    c.tyreTarget[1] = 0;
+    c.tyreFault[1] = 'sidewall';
+    expect(sim.repairOption('p')).toMatchObject({ kind: 'spare', possible: false, reason: 'No spares left' });
     expect(sim.startRepair('p')).toBe(false);
 
+    // A camp fixes the engine but not a torn sidewall, and hands out no spares.
     sim.returnToCampsite('p', world.map.spawnCampsite);
-    expect([c.engine, c.tyreTarget[0], c.spare]).toEqual([1, 1, true]);
-    expect(repaired).toEqual(['field', 'spare', 'camp']);
+    expect([c.engine, c.tyreFault[1], c.spares]).toEqual([1, 'sidewall', 0]);
+    expect(repaired).toEqual(['field', 'spare', 'plug', 'camp']);
+    c.tyreFault[1] = 'none';
+    c.tyreTarget[1] = 1;
 
     // Turning damage off puts everything right; mild lifts realistic damage to its limits.
     c.engine = 0;
@@ -189,18 +284,36 @@ describe('mechanical damage', () => {
     sim.physics.free();
   });
 
+  it('pumps let-down tyres back up with the compressor, which takes a minute', async () => {
+    const world = testWorld();
+    const sim = new Simulation(await loadRapier(), world, lateAfternoon);
+    const v = sim.addVehicle('p', sim.campsitePose(world.map.spawnCampsite));
+    const inputs = new Map([['p', emptyInput()]]);
+    const run = (seconds: number) => {
+      for (let t = 0; t < seconds; t += 1 / 60) sim.step(inputs, 1 / 60);
+    };
+    run(1);
+    expect(sim.startPump('p')).toBe(false);
+    v.condition.lowPressure = true;
+    expect(sim.startPump('p')).toBe(true);
+    run(damageTuning.repair.pumpSeconds - 1);
+    expect(v.condition.lowPressure).toBe(true);
+    run(1.5);
+    expect(v.condition.lowPressure).toBe(false);
+    sim.physics.world.free();
+  });
+
   it('is a setting, remembered in the save, and mild for older saves', () => {
     const data = new Map<string, string>();
     const s: KeyValueStore = {
       getItem: (k) => data.get(k) ?? null,
       setItem: (k, val) => void data.set(k, val),
     };
-    const exploration = { discovered: [], lastCampsite: '' };
     expect(defaultSettings.damage).toBe('mild');
-    writeSave({ version: 1, exploration, settings: { ...defaultSettings, damage: 'realistic' } }, s);
+    writeSave(saveData({ settings: { ...defaultSettings, damage: 'realistic' } }), s);
     expect(loadSave(s)!.settings.damage).toBe('realistic');
     const [key] = [...data.keys()];
-    data.set(key, JSON.stringify({ version: 1, exploration, settings: { quality: 'high' } }));
+    data.set(key, JSON.stringify({ version: 1, settings: { quality: 'high' } }));
     expect(loadSave(s)!.settings.damage).toBe('mild');
   });
 });

@@ -1,0 +1,7 @@
+{
+  // The build's type check: only what ships. Tests, e2e and scripts are checked by
+  // `npm run typecheck` (tsconfig.json), which CI runs with lint (v1.44).
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo/app" },
+  "include": ["src", "vite.config.ts"]
+}

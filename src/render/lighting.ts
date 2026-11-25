@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import type { EnvironmentConfig } from '../data/environment';
 import type { QualityPreset } from '../data/quality';
 import { sunDirection } from './sky';
+import { patchShadowReach } from './shadowReach';
+
+const ORIGIN = new THREE.Vector3(0, 0, 0);
+const UP = new THREE.Vector3(0, 1, 0);
 
 /**
  * Sun and hemisphere light (SPEC §4). The sun's shadow camera follows a focus point
@@ -10,11 +14,14 @@ import { sunDirection } from './sky';
 export class Lighting {
   readonly sun: THREE.DirectionalLight;
   readonly hemi: THREE.HemisphereLight;
-  private readonly sunDir = new THREE.Vector3();
+  /** Towards the sun. */
+  readonly sunDir = new THREE.Vector3();
   private extent = 55;
   private mapSize = 2048;
 
   constructor(scene: THREE.Scene, env: EnvironmentConfig) {
+    // Before any material is compiled: shadows fade out at the rim of the map.
+    patchShadowReach();
     this.sun = new THREE.DirectionalLight();
     this.sun.castShadow = true;
     this.sun.shadow.bias = -0.0004;
@@ -61,11 +68,7 @@ export class Lighting {
   /** Centre the shadow area on `focus`. */
   follow(focus: THREE.Vector3): void {
     // Snap the focus to whole shadow texels in light space.
-    this.lightSpace.lookAt(
-      new THREE.Vector3(0, 0, 0),
-      this.sunDir.clone().negate(),
-      new THREE.Vector3(0, 1, 0),
-    );
+    this.lightSpace.lookAt(ORIGIN, this.tmp.copy(this.sunDir).negate(), UP);
     this.invLightSpace.copy(this.lightSpace).invert();
     const texel = (this.extent * 2) / this.mapSize;
     this.tmp.copy(focus).applyMatrix4(this.invLightSpace);

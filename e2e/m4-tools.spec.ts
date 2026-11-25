@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { collectErrors, shot, waitReady, waitSim } from './helpers';
+import { openJourney, collectErrors, lowGraphics, shot, waitReady, waitSim } from './helpers';
 
 type VState = {
   position: { x: number; y: number; z: number };
@@ -15,35 +15,39 @@ const vstate = (page: Page) =>
 test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   test.setTimeout(900_000);
   const errors = collectErrors(page);
-  await page.goto('/?debug');
+  await lowGraphics(page);
+  await page.goto('/?debug&surprises=off&track=reopened');
+  await openJourney(page);
   await waitReady(page);
-  // Simulate up to a second per frame: the software renderer takes seconds per frame.
-  await page.evaluate(() => window.__game!.setCatchUp(true));
 
-  // --- Winch out of the Bog Hole ---
-  await page.evaluate(() => window.__game!.teleport(174, 3, 95));
-  await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
-  await waitSim(page, 9);
-  await page.evaluate(() => window.__game!.setInput(null));
+  // --- Winch up the deep crossing's west bank to the marked boulder at its top ---
+  await page.evaluate(() => window.__game!.teleport(-128, -61, 270));
+  await page.evaluate(() => window.__game!.setParkBrake(false));
+  await waitSim(page, 2);
   await page.keyboard.press('KeyE');
   await waitSim(page, 0.5);
+  // With more than one anchor in reach, E opens the chooser and a second E hooks on (v1.18).
+  if ((await vstate(page)).winch.anchor === null) {
+    await page.keyboard.press('KeyE');
+    await waitSim(page, 0.5);
+  }
   const attached = await vstate(page);
   expect(attached.winch.anchor).not.toBeNull();
   const p0 = await page.evaluate(() => window.__game!.vehicle());
   await page.evaluate((p) => window.__game!.setCamera(p.x - 6, p.y + 5, p.z + 12, p.x + 6, p.y, p.z - 4), p0);
   await page.waitForTimeout(1000);
-  await shot(page, 'M4', 'winch-attached-in-bog');
+  await shot(page, 'M4', 'winch-attached-to-tree');
   await page.evaluate(() => window.__game!.useChaseCamera());
   await page.keyboard.down('KeyR');
   await waitSim(page, 12);
   await page.keyboard.up('KeyR');
   const reeled = await vstate(page);
   expect(reeled.winch.length).toBeLessThan(attached.winch.length - 1);
-  await shot(page, 'M4', 'winch-pulled-out-muddy');
+  await shot(page, 'M4', 'winch-pulled-up-the-bank');
   await page.keyboard.press('KeyE');
 
-  // --- Planks over the Washout Gully ---
-  await page.evaluate(() => window.__game!.teleport(84.4, 314.6, 104));
+  // --- Planks on the west bank track ---
+  await page.evaluate(() => window.__game!.teleport(-171, -30, 0));
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.__game!.tool('planks'))).toBe(true);
   await page.waitForTimeout(800);
@@ -51,13 +55,14 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   await page.evaluate(() => window.__game!.tool('confirm'));
   await waitSim(page, 1.5);
   expect((await vstate(page)).planks.placed.length).toBe(2);
-  await page.evaluate(() => window.__game!.setCamera(82, 27, 309, 90.5, 21.8, 316));
+  const pp = await page.evaluate(() => window.__game!.vehicle());
+  await page.evaluate((p) => window.__game!.setCamera(p.x + 8, p.y + 6, p.z + 6, p.x, p.y, p.z - 4), pp);
   await page.waitForTimeout(1000);
-  await shot(page, 'M4', 'planks-over-gully');
+  await shot(page, 'M4', 'planks-placed');
   await page.evaluate(() => window.__game!.useChaseCamera());
 
   // --- Jack ---
-  await page.evaluate(() => window.__game!.teleport(-150, 238, 315));
+  await page.evaluate(() => window.__game!.teleport(-171, 0, 0));
   await page.waitForTimeout(800);
   await page.evaluate(() => window.__game!.flip());
   await page.waitForFunction(
@@ -80,8 +85,8 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   expect((await page.evaluate(() => window.__game!.vehicle())).tilt).toBeLessThan(20);
   await shot(page, 'M4', 'righted-by-jack');
 
-  // --- Engine flooding at the Deep Crossing ---
-  await page.evaluate(() => window.__game!.teleport(19, 63, 20));
+  // --- Engine flooding in the middle of the deep crossing ---
+  await page.evaluate(() => window.__game!.teleport(-116, -61, 270));
   await page.waitForFunction(
     () =>
       (window.__game!.state() as { vehicles: { flood: { stalled: boolean } }[] }).vehicles[0].flood.stalled,
@@ -90,8 +95,8 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   );
   await shot(page, 'M4', 'engine-flooded-deep-crossing');
 
-  // --- Return to campsite clears flooding and recalls planks ---
-  await page.evaluate(() => window.__game!.returnToCampsite('river-flat-camp'));
+  // --- Back at camp the flooding is cleared and the planks recalled ---
+  await page.evaluate(() => window.__game!.returnToCampsite('ironbark-camp'));
   await page.waitForTimeout(1500);
   const back = await vstate(page);
   expect(back.flood.stalled).toBe(false);

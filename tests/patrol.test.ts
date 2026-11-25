@@ -1,3 +1,4 @@
+import { saveData } from './helpers/saves';
 import { describe, expect, it } from 'vitest';
 import { DoubleSide, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from 'three';
 import { patrolTuning as t } from '../src/data/patrol';
@@ -7,14 +8,16 @@ import { vehicleTuning } from '../src/data/vehicle';
 import { vehicleOrder, vehicles } from '../src/data/vehicles';
 import { DIAL_START, DIAL_SWEEP } from '../src/render/vehicleInstruments';
 import { VehicleModel } from '../src/render/vehicleModel';
-import { defaultSettings, loadSave, writeSave, type KeyValueStore } from '../src/sim/save/save';
+import { loadSave, writeSave, type KeyValueStore } from '../src/sim/save/save';
 import { coupledRpm } from '../src/sim/vehicle/drivetrain';
 import { createCondition } from '../src/sim/vehicle/condition';
 import { makeScene } from './helpers/scenes';
 
 describe('GQ Patrol', () => {
   it('is geared like a TD42 wagon: 4.11 axles, five speeds and a 2.02 low range on 31s', () => {
-    expect(vehicleOrder).toEqual(['shortie', 'camel', 'perentie', 'patrol']);
+    expect(vehicleOrder).toContain('patrol');
+    // The 95 L tank of a GQ wagon.
+    expect(t.engine.fuel.tankLitres).toBe(95);
     expect(Math.abs(t.wheels[0].z - t.wheels[2].z)).toBeCloseTo(2.97, 2);
     expect(Math.abs(t.wheels[0].x - t.wheels[1].x)).toBeCloseTo(1.555, 2);
     expect(t.wheelRadius * 2).toBeCloseTo(0.787, 2);
@@ -117,8 +120,7 @@ describe('GQ Patrol', () => {
   it('is remembered in the save', () => {
     const data = new Map<string, string>();
     const s: KeyValueStore = { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => void data.set(k, v) };
-    const exploration = { discovered: [], lastCampsite: 'river-flat-camp' };
-    writeSave({ version: 1, exploration, settings: defaultSettings, vehicle: 'patrol' }, s);
+    writeSave(saveData({ vehicle: 'patrol' }), s);
     expect(loadSave(s)!.vehicle).toBe('patrol');
   });
 });

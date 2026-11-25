@@ -15,7 +15,11 @@ export const fogUniforms = {
 export function applyFogEnvironment(scene: THREE.Scene, env: EnvironmentConfig, drawDistance: number): void {
   const end = Math.min(env.fog.end, drawDistance * 0.95);
   scene.fog = new THREE.Fog(new THREE.Color(env.fog.nearColor), env.fog.start, end);
-  fogUniforms.fogFarColor.value.set(env.fog.farColor);
+  // The haze is mixed in after the output colour space (FOG_FRAGMENT runs after three's
+  // colorspace_fragment), and three converts its own fog colour to match. This one goes in
+  // unconverted, as the horizon's sky colour does, so the far haze is the hex as written and
+  // melts into the sky it was tuned against.
+  fogUniforms.fogFarColor.value.setStyle(env.fog.farColor, THREE.LinearSRGBColorSpace);
   fogUniforms.fogShiftEnd.value = env.fog.colorShiftEnd;
   fogUniforms.fogMaxAmount.value = env.fog.maxAmount;
   fogUniforms.fogScale.value = (end - env.fog.start) / 3;

@@ -11,6 +11,8 @@ export type ToolMode = 'drive' | 'plankPlace' | 'winchTarget';
  */
 export class ToolController {
   mode: ToolMode = 'drive';
+  /** The press that opened the chooser is still in this frame's input: don't let it confirm. */
+  private fresh = false;
 
   constructor(
     private readonly sim: Simulation,
@@ -46,7 +48,19 @@ export class ToolController {
       t.targeting.findIndex((a) => a === best),
     );
     this.mode = 'winchTarget';
+    this.fresh = true;
     return true;
+  }
+
+  /**
+   * Tapping or clicking an anchor in the view: the first tap picks it, a second tap on
+   * the one already picked hooks the winch to it.
+   */
+  pick(index: number): void {
+    const t = this.tools;
+    if (this.mode !== 'winchTarget' || !t.targeting || !t.targeting[index]) return;
+    if (index === t.targetIndex) this.confirm();
+    else t.targetIndex = index;
   }
 
   cancel(): void {
@@ -71,11 +85,20 @@ export class ToolController {
   update(dt: number): boolean {
     if (this.mode === 'drive') return false;
     const inp = this.input;
+    if (this.fresh) {
+      this.fresh = false;
+      return true;
+    }
     if (inp.pressed('back')) {
       this.cancel();
       return true;
     }
-    if (inp.pressed('confirm') || inp.pressed('interact')) {
+    // Pause (II, Options, Esc) and the map leave the tool and open as usual.
+    if (inp.pressed('pause') || inp.pressed('map')) {
+      this.cancel();
+      return false;
+    }
+    if (inp.pressed('confirm') || inp.pressed('interact') || inp.pressed('winch')) {
       this.confirm();
       return true;
     }

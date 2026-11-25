@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { challengeTrails, crawlScoring } from '../src/data/challenges';
+import { challengeTrails } from './fixtures/maps/challenges';
+import { crawlScoring } from '../src/data/crawlScoring';
 import { lateAfternoon } from '../src/data/environment';
 import { Autopilot } from '../src/sim/input/autopilot';
 import { emptyInput } from '../src/sim/input/vehicleInput';
 import { loadRapier } from '../src/sim/physics';
 import { Simulation } from '../src/sim/sim';
 import { betterRun, CrawlRuns, type CrawlRunEvent, type CrawlRunInput } from '../src/sim/crawlRuns';
-import { winchClimbs } from '../src/data/winchClimbs';
 import { trailPoint } from '../src/sim/world/crawlTrail';
-import { stringybarkWorld, testWorld } from './world';
+import { testWorld } from './world';
 
 const DT = 1 / 60;
 const trail = challengeTrails.find((t) => t.id === 'whoa-boys')!;
@@ -84,22 +84,6 @@ describe('scored crawl runs', () => {
     expect(runs.run?.dir).toBe(1);
   });
 
-  it('counts no points for the winch on a winch climb, which needs it', () => {
-    const world = stringybarkWorld();
-    const climb = winchClimbs[0];
-    const track = world.features.tracks.find((t) => t.def.id === climb.id)!;
-    const runs = new CrawlRuns([climb.trail], world.features.tracks);
-    const at = (along: number, winchAttached = false) => {
-      const p = trailPoint(track, along);
-      return runs.update({ x: p.x, z: p.z, tiltDeg: 20, knock: false, winchAttached, dt: DT });
-    };
-    expect(at(1)?.type).toBe('started');
-    let end: CrawlRunEvent | null = null;
-    for (let s = 1; s < track.poly.length && !end; s += 0.05) end = at(s, Math.floor(s / 10) % 2 === 0);
-    expect(end?.type).toBe('finished');
-    if (end?.type === 'finished') expect(end.result.points).toBe(0);
-  });
-
   it('ranks fewer penalty points first, then the quicker time', () => {
     expect(betterRun({ points: 1, seconds: 90 }, { points: 2, seconds: 30 })).toBe(true);
     expect(betterRun({ points: 2, seconds: 25 }, { points: 2, seconds: 30 })).toBe(true);
@@ -118,7 +102,10 @@ describe('scored crawl runs', () => {
     });
     const inputs = new Map([['p', emptyInput()]]);
     for (let i = 0; i < 30; i++) sim.step(inputs, DT);
-    v.toggleRange();
+    // Begin the scored crawl in low, independent of settling speed on this slope.
+    v.drivetrain.range = 'low';
+    v.transfer.mode = '4L';
+    v.drivetrain.shiftTimer = Math.max(v.drivetrain.shiftTimer, 0.5);
     v.precisionCrawl = true;
     const path = Array.from({ length: Math.ceil(track.poly.length / 0.5) + 1 }, (_, i) => {
       const q = trailPoint(track, Math.min(track.poly.length, i * 0.5));

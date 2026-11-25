@@ -7,6 +7,12 @@ import { hash2 } from '../sim/world/rng';
 import { pal } from './colors';
 import { patchFog } from './fog';
 
+const matrix = new THREE.Matrix4();
+const position = new THREE.Vector3();
+const scale = new THREE.Vector3();
+const rotation = new THREE.Quaternion();
+const axis = new THREE.Vector3(0, 1, 0);
+
 /** Fine, short grass between the larger tussocks. One instanced draw, no shadow pass. */
 export class Meadow {
   readonly mesh: THREE.InstancedMesh;
@@ -67,13 +73,10 @@ export class Meadow {
     this.cellZ = cellZ;
     const radius = Math.min(42, this.quality.grassDistance * 0.3);
     const spacing = 0.8;
-    const matrix = new THREE.Matrix4();
-    const position = new THREE.Vector3(),
-      scale = new THREE.Vector3();
-    const rotation = new THREE.Quaternion();
-    const axis = new THREE.Vector3(0, 1, 0);
     const terrain = this.world.terrain;
     let count = 0;
+    let minY = Infinity,
+      maxY = -Infinity;
     const cx = (cellX + 0.5) * 8,
       cz = (cellZ + 0.5) * 8;
     for (let gz = Math.floor((cz - radius) / spacing); gz <= (cz + radius) / spacing; gz++) {
@@ -83,16 +86,20 @@ export class Meadow {
         const x = (gx + hash2(gx, gz, 17) * 0.8) * spacing;
         const z = (gz + hash2(gx, gz, 29) * 0.8) * spacing;
         const distance = Math.hypot(x - cx, z - cz);
-        if (distance > radius || !terrain.inBounds(x, z) || terrain.surfaceAt(x, z) !== SurfaceId.Grass)
-          continue;
-        const index = Math.round(z + terrain.half) * terrain.res + Math.round(x + terrain.half);
+        if (distance > radius || !terrain.inBounds(x, z)) continue;
+        const surface = terrain.surfaceAt(x, z);
+        if (surface !== SurfaceId.Grass && surface !== SurfaceId.BlackSoil) continue;
+        const index = terrain.index(x, z);
         if (this.world.features.trackDistance[index] < 1.3 || this.world.features.creekDistance[index] < 1)
           continue;
         if (terrain.tint[index] === GroundTint.ForestFloor && seed > 0.23) continue;
         // Tiny blades at the boundary hide the rebuild and the edge of the patch.
         const fade = Math.min(1, Math.max(0, (radius - distance) / 8));
         const s = (0.7 + seed * 0.8) * fade;
-        position.set(x, terrain.heightAt(x, z) - 0.025, z);
+        const y = terrain.heightAt(x, z) - 0.025;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        position.set(x, y, z);
         rotation.setFromAxisAngle(axis, seed * Math.PI * 2);
         scale.set(s, s, s);
         matrix.compose(position, rotation, scale);
@@ -100,7 +107,19 @@ export class Meadow {
       }
     }
     this.mesh.count = count;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    this.mesh.computeBoundingSphere();
+    // Upload only the blades placed (v1.49): setting needsUpdate alone sent all 10,000.
+    const m = this.mesh.instanceMatrix;
+    m.clearUpdateRanges();
+    if (count > 0) m.addUpdateRange(0, count * 16);
+    m.needsUpdate = true;
+    // The patch's own bounds instead of a pass over every blade: a disc of `radius` round the
+    // cell's centre, between the lowest and highest ground a blade stands on, with room for
+    // the tallest blade (0.34 m at 1.5 times its size, leaning and swaying under 0.6 m).
+    const sphere = (this.mesh.boundingSphere ??= new THREE.Sphere());
+    if (count === 0) sphere.set(position.set(cx, 0, cz), 0);
+    else {
+      const half = (maxY - minY) / 2 + 0.6;
+      sphere.set(position.set(cx, (minY + maxY) / 2 + 0.3, cz), Math.hypot(radius + 0.6, half));
+    }
   }
 }

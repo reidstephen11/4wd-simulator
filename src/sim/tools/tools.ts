@@ -16,13 +16,20 @@ export type ToolEvent =
   | { type: 'righted' }
   | { type: 'noAnchor' };
 
+/** Roadside jobs from the tool menu. */
+export type RepairKind = 'field' | 'spare' | 'plug' | 'refuel' | 'pump' | 'hubs' | 'dig';
+
 /** A repair under way at the roadside: the car stays put until it's done. */
 export interface RepairJob {
-  /** Field repair (mild damage) or fitting the spare (realistic). */
-  kind: 'field' | 'spare';
+  /**
+   * Field repair (mild damage), fitting a spare or plugging a puncture (realistic), or
+   * pouring in a jerry can, or pumping let-down tyres back up with the compressor.
+   */
+  kind: RepairKind;
   /** Seconds left, out of `total`. */
   remaining: number;
   total: number;
+  targetPsi?: number;
 }
 
 /** What a vehicle carries: winch, planks, jack and tools for roadside repairs. */
@@ -46,12 +53,7 @@ export class VehicleTools {
       const dz = a.point.z - mount.z;
       const d = Math.hypot(dx, dz) || 1e-3;
       const cos = (dx * f.x + dz * f.z) / (d * (Math.hypot(f.x, f.z) || 1));
-      const score =
-        d *
-          (cos < 0 ? winchTuning.behindPenalty : 1) *
-          (1.6 - 0.6 * Math.max(0, cos)) *
-          (a.kind === 'rock' ? winchTuning.markedPreference : 1) +
-        (d < winchTuning.minPullDistance ? 1000 : 0);
+      const score = d * (cos < 0 ? winchTuning.behindPenalty : 1) * (1.6 - 0.6 * Math.max(0, cos));
       if (score < bestScore) {
         bestScore = score;
         best = a;
@@ -77,9 +79,15 @@ export class VehicleTools {
     return this.jack.state === 'righting';
   }
 
-  /** Hold brake off while the winch is doing the work. */
+  /**
+   * Hold brake off while the winch is doing the work. Pulling a bogged vehicle out, the
+   * brakes hold this one where it stands instead.
+   */
   updateFreeRoll(v: Vehicle, input: VehicleInput): void {
-    v.freeRoll = this.winch.attached && (input.winchIn || this.winch.tension > 0);
+    v.freeRoll =
+      this.winch.attached &&
+      !this.winch.anchor?.id.startsWith('stuck:') &&
+      (input.winchIn || this.winch.tension > 0);
   }
 }
 

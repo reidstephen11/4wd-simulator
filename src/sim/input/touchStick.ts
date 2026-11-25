@@ -2,6 +2,31 @@ import { touchTuning } from '../../data/touch';
 import type { Action } from '../../data/controls';
 
 /**
+ * Turns a -1..1 stick into single menu presses: one press per push most of the way in a
+ * direction, and the stick must come back towards the centre before the next.
+ */
+export class MenuStick {
+  private latched: Action | null = null;
+
+  constructor(private readonly tuning = touchTuning) {}
+
+  step(x: number, y: number): Action | null {
+    const { menuPress, menuRelease } = this.tuning;
+    const ax = Math.abs(x);
+    const ay = Math.abs(y);
+    if (Math.max(ax, ay) < menuRelease) this.latched = null;
+    if (this.latched || Math.max(ax, ay) < menuPress) return null;
+    const a: Action = ax >= ay ? (x > 0 ? 'menuRight' : 'menuLeft') : y > 0 ? 'menuDown' : 'menuUp';
+    this.latched = a;
+    return a;
+  }
+
+  reset(): void {
+    this.latched = null;
+  }
+}
+
+/**
  * The on-screen joystick's maths, kept apart from the DOM so it can be tested: turns a
  * thumb offset into a -1..1 stick and into single menu presses (choosing a winch anchor,
  * moving through menus) when the thumb is pushed most of the way in one direction.
@@ -9,9 +34,11 @@ import type { Action } from '../../data/controls';
 export class TouchStick {
   x = 0;
   y = 0;
-  private latched: Action | null = null;
+  private readonly menu: MenuStick;
 
-  constructor(private readonly tuning = touchTuning) {}
+  constructor(private readonly tuning = touchTuning) {
+    this.menu = new MenuStick(tuning);
+  }
 
   /** Thumb offset from the stick's centre in CSS pixels (y down). Returns new menu presses. */
   move(dx: number, dy: number): Action[] {
@@ -27,7 +54,7 @@ export class TouchStick {
   release(): void {
     this.x = 0;
     this.y = 0;
-    this.latched = null;
+    this.menu.reset();
   }
 
   /** Where the knob is drawn, in CSS pixels from the centre. */
@@ -37,13 +64,7 @@ export class TouchStick {
   }
 
   private menuEdges(): Action[] {
-    const { menuPress, menuRelease } = this.tuning;
-    const ax = Math.abs(this.x);
-    const ay = Math.abs(this.y);
-    if (Math.max(ax, ay) < menuRelease) this.latched = null;
-    if (this.latched || Math.max(ax, ay) < menuPress) return [];
-    const a: Action = ax >= ay ? (this.x > 0 ? 'menuRight' : 'menuLeft') : this.y > 0 ? 'menuDown' : 'menuUp';
-    this.latched = a;
-    return [a];
+    const a = this.menu.step(this.x, this.y);
+    return a ? [a] : [];
   }
 }
