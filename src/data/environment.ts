@@ -377,7 +377,10 @@ function blendEnvironment(a: EnvironmentConfig, b: EnvironmentConfig, t: number)
 }
 
 function withWeather(base: EnvironmentConfig, weather: Weather, night: boolean): EnvironmentConfig {
-  return weather === 'clear' ? base : withEffect(base, weatherEffects[weather], night);
+  // A copy even when nothing changes: the simulation writes the rain and the wet ground into the
+  // environment it is given, and `environmentFor` passes a clear-sky preset straight through here.
+  // Handed the preset itself, a storm set in test mode stayed in it, so Clear kept the rain (v0.22).
+  return weather === 'clear' ? { ...base } : withEffect(base, weatherEffects[weather], night);
 }
 
 function withEffect(base: EnvironmentConfig, w: WeatherEffect, night: boolean): EnvironmentConfig {

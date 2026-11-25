@@ -32,6 +32,12 @@ const saturation = (hex: string) => {
 describe('time of day and weather', () => {
   it('keeps late afternoon in clear weather exactly as it was', () => {
     expect(environmentFor({ time: 'afternoon', weather: 'clear' })).toEqual(lateAfternoon);
+    // A copy, not the preset: the simulation writes the rain into the environment it is given,
+    // and a storm set in test mode stayed in the shared preset, so Clear kept the rain (v0.22).
+    const given = environmentFor({ time: 'afternoon', weather: 'clear' });
+    expect(given).not.toBe(lateAfternoon);
+    given.rain = 1;
+    expect(environmentFor({ time: 'afternoon', weather: 'clear' }).rain).toBe(0);
   });
 
   it('puts the sun where it is in Australia at each time of day', () => {

@@ -149,10 +149,15 @@ const westBank: Waypoint[] = [
   [-150, 206],
 ];
 
+/**
+ * Into the camp and through it: a track's edges are mud, and so is the strip across its end,
+ * so the track ends beyond where the car is parked, not in front of it.
+ */
 const campSpur: Waypoint[] = [
   [-170, 44, 11.95],
   [-182, 41],
-  [-194, 40],
+  [-196, 40],
+  [-208, 40],
 ];
 
 /** The bog hole: a side loop west of the bank track, through an open bog. */
@@ -182,6 +187,7 @@ const paddockSpur: Waypoint[] = [
   [151, -95, 11.36],
   [156, -120],
   [152, -146],
+  [152, -160],
 ];
 
 /** Granite on the rock garden: steps, slabs and boulders, with a way between for a careful line. */
@@ -381,13 +387,13 @@ export const creekProps: PropDef[] = [
   ...bothEnds('creek-chute', 'The chute — steep, hard'),
   ...bothEnds('bog-hole', 'The bog hole — winch'),
   ...bothEnds('rock-garden', 'Rock garden — crawl'),
-  { kind: 'fireRing', x: -203, z: 43, headingDeg: 0 },
-  { kind: 'logSeat', x: -205.5, z: 41, headingDeg: 70 },
-  { kind: 'hut', x: -207, z: 33, headingDeg: 110, flatten: 5 },
-  { kind: 'waterTank', x: -210.5, z: 38.5, headingDeg: 110 },
+  { kind: 'fireRing', x: -201, z: 46.5, headingDeg: 0 },
+  { kind: 'logSeat', x: -203.5, z: 48, headingDeg: 60 },
+  { kind: 'hut', x: -205, z: 31.5, headingDeg: 110, flatten: 5 },
+  { kind: 'waterTank', x: -209.5, z: 34.5, headingDeg: 110 },
   { kind: 'noticeBox', x: -193, z: 35.5, headingDeg: 200, text: 'Ironbark Creek' },
-  { kind: 'fireRing', x: 155, z: -159, headingDeg: 0 },
-  { kind: 'logSeat', x: 157.5, z: -161, headingDeg: 300 },
+  { kind: 'fireRing', x: 158, z: -157, headingDeg: 0 },
+  { kind: 'logSeat', x: 160.5, z: -158.5, headingDeg: 300 },
 ];
 
 const middle = (id: string): XZ => {
@@ -413,7 +419,7 @@ export const creekPois: PoiDef[] = [
     x: -200,
     z: 40,
     radius: 16,
-    reset: { x: -197, z: 40, headingDeg: 90 },
+    reset: { x: -200, z: 40, headingDeg: 90 },
     note: 'The camp on the creek’s west bank',
   },
   {
