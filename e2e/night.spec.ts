@@ -1,47 +1,38 @@
 import { expect, test } from '@playwright/test';
-import { openJourney, collectErrors, lowGraphics, shot, waitReady, waitSim } from './helpers';
+import {
+  openJourney,
+  collectErrors,
+  driveFromBriefing,
+  lowGraphics,
+  shot,
+  waitReady,
+  waitSim,
+} from './helpers';
 
-test('night: the storm comes in, dusk turns the headlights on, N cycles them, and they light the ground ahead', async ({
+test('night: a clear afternoon starts with the lamps off, dusk and night with them on; N cycles them, and they light the ground ahead', async ({
   page,
 }) => {
   test.setTimeout(900_000);
   const errors = collectErrors(page);
   await lowGraphics(page);
-  await page.goto('/?surprises=off&track=reopened');
+  await page.goto('/');
   await openJourney(page);
+  // The default conditions: a clear late afternoon, lamps off.
   await waitReady(page);
   expect((await page.evaluate(() => window.__game!.vehicle())).lights).toBe('off');
-  // The clock runs on into the evening: at dusk the lamps come on by themselves.
-  await page.evaluate(() => window.__game!.setHour(17.7));
-  // By then the storm has come in, with a note on screen (shown for a few seconds).
-  await expect(page.locator('.toast', { hasText: 'Rain coming in' })).toHaveCount(1);
-  await expect.poll(async () => (await page.evaluate(() => window.__game!.vehicle())).lights).toBe('low');
-  await expect(page.locator('.status-lights')).toHaveClass(/shown/);
-  // Rain, soaked ground and risen creeks.
-  const storm = await page.evaluate(() => window.__game!.conditions());
-  expect(storm.rain).toBeGreaterThan(0.9);
-  expect(storm.wetness).toBeGreaterThan(0.95);
-  expect(storm.creekRise).toBeGreaterThan(0.2);
-  // Past the deadline the episode ends.
-  await page.evaluate(() => window.__game!.setHour(19.6));
-  await expect.poll(() => page.evaluate(() => window.__game!.result().open)).toBe(true);
-  await Promise.all([page.waitForEvent('load'), page.evaluate(() => window.__game!.pickResult('menu'))]);
-  await openJourney(page);
+  expect(await page.evaluate(() => window.__game!.conditions())).toMatchObject({ rain: 0, creekRise: 0 });
 
-  // Driving at night is a replay of a finished episode: the clock stands at night.
-  await page.evaluate(() => {
-    const key = '4wdsim.save.v2';
-    const save = JSON.parse(localStorage.getItem(key)!);
-    save.episodes = { creb: { completed: true } };
-    save.replay = { time: 'night', weather: 'clear' };
-    localStorage.setItem(key, JSON.stringify(save));
-  });
-  await page.reload();
-  await openJourney(page);
-  await waitReady(page);
+  // Night, picked on the New drive page: the lamps are on as you arrive, and the weather stays as chosen.
+  await page.keyboard.press('Escape');
+  await Promise.all([page.waitForEvent('load'), page.getByRole('button', { name: /^Main menu/ }).click()]);
+  await page.locator('[data-title-begin]').click();
+  await page.locator('[data-title-journey]').click();
+  await page.locator('[data-group="time"][data-value="night"]').click();
+  await page.locator('[data-welcome-drive]').click();
+  await driveFromBriefing(page);
   expect(await page.evaluate(() => window.__game!.episode())).toMatchObject({ replay: { time: 'night' } });
   expect((await page.evaluate(() => window.__game!.vehicle())).lights).toBe('low');
-  // A replay keeps the weather chosen: no storm.
+  await expect(page.locator('.status-lights')).toHaveClass(/shown/);
   expect(await page.evaluate(() => window.__game!.conditions())).toMatchObject({ rain: 0, creekRise: 0 });
   await waitSim(page, 0.5);
 

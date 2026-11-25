@@ -63,6 +63,8 @@ How hard they are, measured with the autopilot crawling in low range in the shor
 
 **Scored rock climb.** Drive through gate 1 at the foot of the rock climb to start a run: red flag on the left, blue on the right, eight gates uphill. A run starts with 1000 points; touching a flag costs 25, missing a gate 100, each reverse or knock on the body 5, and hooking the winch 50. Time breaks ties. The best score is kept for each vehicle.
 
+**Notes.** The first time you reach an obstacle, a small card says what it is and which control helps there, worded for the keyboard, controller or phone you are using. **Pause → Trip journal** keeps the notes you have seen.
+
 **Camps.** Driving into either camp repairs the car, puts the spare wheel and tyre plugs back (one spare and three plugs) and makes that the camp you return to. **Pause → Restart from last camp** goes back to it. No fuel is used in a playground level.
 
 ## Conditions
@@ -234,6 +236,7 @@ Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, so
 - The drop, the steep descent and the side slope.
 - Damage on Realistic: cut a tyre, then drive into a camp: it should be repaired and the spare and plugs restocked.
 - **Pause → Restart from last camp** returns to the camp you last drove into.
+- The note on first reaching an obstacle: small, top right, and kept under **Pause → Trip journal**.
 - On a phone: the on-screen controls, the 4WD buttons, TOOLS, and Install app.
 - Night and Dusk: the headlights (N).
 

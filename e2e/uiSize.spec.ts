@@ -15,7 +15,7 @@ async function drivingScreen(page: Page): Promise<void> {
     g.setInput({ throttle: 0.5 });
   });
   await waitSim(page, 1);
-  await page.evaluate(() => window.__game!.showNote('knoll-top'));
+  await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
   await expect(page.locator('.history-card')).toBeVisible();
   await expect(page.locator('.prompt').first()).toBeVisible();
 }
@@ -158,7 +158,7 @@ test.describe('phone held upright, every HUD style and UI size', () => {
     await page.goto('/?surprises=off&track=reopened');
     await waitReady(page);
     // At the start the road name and its hint show under the dials (v1.79 screenshot).
-    await page.evaluate(() => window.__game!.showNote('knoll-top'));
+    await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
     await expect(page.locator('.history-card')).toBeVisible();
     await expect(page.locator('.hud-stack .course-hint')).toBeVisible();
     const styles = ['dash', 'edge', 'kit'] as const;
@@ -175,7 +175,7 @@ test.describe('phone held upright, every HUD style and UI size', () => {
             { style, ui },
           );
           // The note closes itself after a few seconds: open it again for each check.
-          await page.evaluate(() => window.__game!.showNote('knoll-top'));
+          await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
           await waitSim(page, 0.2);
           await expect(page.locator('.history-card')).toBeVisible();
           const where = `${style} ${size.width}×${size.height} ui ${ui}`;

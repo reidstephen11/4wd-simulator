@@ -20,8 +20,8 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   await openJourney(page);
   await waitReady(page);
 
-  // --- Winch up Big Red to a rainforest tree ---
-  await page.evaluate(() => window.__game!.teleport(2, 1226, 330));
+  // --- Winch up the deep crossing's west bank to the marked boulder at its top ---
+  await page.evaluate(() => window.__game!.teleport(-128, -61, 270));
   await page.evaluate(() => window.__game!.setParkBrake(false));
   await waitSim(page, 2);
   await page.keyboard.press('KeyE');
@@ -43,11 +43,11 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   await page.keyboard.up('KeyR');
   const reeled = await vstate(page);
   expect(reeled.winch.length).toBeLessThan(attached.winch.length - 1);
-  await shot(page, 'M4', 'winch-pulled-up-big-red');
+  await shot(page, 'M4', 'winch-pulled-up-the-bank');
   await page.keyboard.press('KeyE');
 
-  // --- Planks at the foot of Big Red ---
-  await page.evaluate(() => window.__game!.teleport(9, 1279, 325));
+  // --- Planks on the west bank track ---
+  await page.evaluate(() => window.__game!.teleport(-171, -30, 0));
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.__game!.tool('planks'))).toBe(true);
   await page.waitForTimeout(800);
@@ -62,7 +62,7 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   await page.evaluate(() => window.__game!.useChaseCamera());
 
   // --- Jack ---
-  await page.evaluate(() => window.__game!.teleport(-17, 666, 320));
+  await page.evaluate(() => window.__game!.teleport(-171, 0, 0));
   await page.waitForTimeout(800);
   await page.evaluate(() => window.__game!.flip());
   await page.waitForFunction(
@@ -85,16 +85,15 @@ test('M4: winch, planks, jack, flooding, dirt and dents', async ({ page }) => {
   expect((await page.evaluate(() => window.__game!.vehicle())).tilt).toBeLessThan(20);
   await shot(page, 'M4', 'righted-by-jack');
 
-  // --- Engine flooding in the deep water of the Daintree River ---
-  // On the deep line at the crossing, nose into the current so it isn't carried off.
-  await page.evaluate(() => window.__game!.teleport(-25, 2238, 270));
+  // --- Engine flooding in the middle of the deep crossing ---
+  await page.evaluate(() => window.__game!.teleport(-116, -61, 270));
   await page.waitForFunction(
     () =>
       (window.__game!.state() as { vehicles: { flood: { stalled: boolean } }[] }).vehicles[0].flood.stalled,
     null,
     { timeout: 120_000 },
   );
-  await shot(page, 'M4', 'engine-flooded-daintree');
+  await shot(page, 'M4', 'engine-flooded-deep-crossing');
 
   // --- Back at camp the flooding is cleared and the planks recalled ---
   await page.evaluate(() => window.__game!.returnToCampsite('ironbark-camp'));

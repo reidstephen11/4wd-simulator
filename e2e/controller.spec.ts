@@ -93,7 +93,7 @@ test('pause settings change live driving, camera, map and help prompts, while ke
   // An unused D-pad direction selects the controller without starting the engine.
   await button(page, 13, true);
   await expect(page.locator('.prompts')).toContainText('R2');
-  await page.evaluate(() => window.__game!.showNote('orient-crawl'));
+  await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
   await expect(page.locator('.history-card p')).toContainText('Hold L1, choose Enable precision crawl');
   await expect(page.locator('.history-card p')).not.toContainText('Press P');
   await button(page, 13, false);
@@ -115,7 +115,7 @@ test('pause settings change live driving, camera, map and help prompts, while ke
     await page.keyboard.press('Escape');
     await button(page, 13, true);
     await expect(page.locator('.prompts')).toContainText(pedal);
-    await page.evaluate(() => window.__game!.showNote('orient-crawl'));
+    await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
     await expect(page.locator('.history-card p')).toContainText(
       `Hold ${tools}, choose Enable precision crawl`,
     );

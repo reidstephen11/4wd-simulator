@@ -34,15 +34,15 @@ test('M2: keyboard drives the car and the chase camera follows', async ({ page }
   await page.keyboard.press('Space');
   await expect.poll(() => page.evaluate(() => window.__game!.parkBrake())).toBe(false);
 
-  // Up Big Red's red clay in low range, and along the range through the rainforest.
-  await page.evaluate(() => window.__game!.teleport(7, 1262, 330));
+  // Up the foot of the rock climb in low range, and along the west bank track.
+  await page.evaluate(() => window.__game!.teleport(63, 152, 0));
   await page.evaluate(() => window.__game!.setInput({ throttle: 1 }));
   await waitSim(page, 6);
-  await shot(page, 'M2', 'big-red-low-range');
+  await shot(page, 'M2', 'rock-climb-low-range');
   await page.evaluate(() => window.__game!.setInput(null));
-  await page.evaluate(() => window.__game!.teleport(-16, 727, 310));
+  await page.evaluate(() => window.__game!.teleport(-171, -30, 0));
   await page.waitForTimeout(1500);
-  await shot(page, 'M2', 'rainforest-chase');
+  await shot(page, 'M2', 'west-bank-chase');
   expect(errors).toEqual([]);
 });
 

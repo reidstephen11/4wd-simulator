@@ -49,6 +49,15 @@ describe('Ironbark Creek: the level', () => {
     expect(ironbarkMap.length).toBe(512);
   });
 
+  it('has a note for every obstacle, and none for a place that is not on the map', () => {
+    const ids = ironbarkMap.pois.map((p) => p.id);
+    for (const id of Object.keys(ironbarkLevel.notes)) expect(ids, id).toContain(id);
+    for (const id of [...KNOLL_LINES, ...CROSSINGS, ...WEST_BANK_LINES])
+      expect(ironbarkLevel.notes[id], id).toBeDefined();
+    // The camps and the summit are places, not obstacles: no note.
+    expect(ironbarkLevel.notes['ironbark-camp']).toBeUndefined();
+  });
+
   it('has a camp on each side of the creek, on level ground inside the wall', () => {
     const camps = ironbarkMap.pois.filter((p) => p.kind === 'campsite');
     expect(camps.map((c) => c.id).sort()).toEqual(['ironbark-camp', 'top-paddock-camp']);

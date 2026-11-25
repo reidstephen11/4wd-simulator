@@ -7,7 +7,7 @@
  *
  * Usage (against `npx vite build && npx vite preview --port 4173`):
  *   npx vite-node scripts/playtest.ts <outDir> [view=desktop|phone|portrait] [quality=low|medium|high]
- *     [tracks=upper-daintree-road,daintree-crossing] [every=20] [speed=8] [vehicle=<id>]
+ *     [tracks=camp-spur,creek-ford] [every=20] [speed=8] [vehicle=<id>]
  *     [steps=30] [max=0] [url=http://localhost:4173/]
  * view=phone is a phone held sideways (844x390), view=portrait one held upright (390x844).
  * PW_CHROMIUM names another Chromium than the pinned Playwright's own.
@@ -21,7 +21,7 @@ const arg = (key: string, fallback: string) =>
   rest.find((a) => a.startsWith(`${key}=`))?.slice(key.length + 1) ?? fallback;
 const view = arg('view', 'desktop');
 const quality = arg('quality', 'medium');
-const tracks = arg('tracks', 'upper-daintree-road,daintree-crossing').split(',');
+const tracks = arg('tracks', 'camp-spur,creek-ford').split(',');
 const every = Number(arg('every', '20'));
 const speed = Number(arg('speed', '8'));
 const url = arg('url', 'http://localhost:4173/');

@@ -7,7 +7,7 @@
  * on the ground ahead while driving. `scripts/reach-diff.py` measures the pictures.
  *
  * Usage (against `npx vite build && npx vite preview --port 4173`):
- *   npx vite-node scripts/reach-check.ts <outDir> [track=paddock-road] [at=200,600] [quality=low]
+ *   npx vite-node scripts/reach-check.ts <outDir> [track=knoll-loop] [at=100,300] [quality=low]
  *     [distances=120,90,70,55,45,35,25,10] [hour=] [url=http://localhost:4173/]
  * `at` is how far along the track each watched point is (m); each distance is how far short
  * of it the car stands. PW_CHROMIUM names another Chromium than the pinned Playwright's own.
@@ -19,7 +19,7 @@ const [outDir, ...rest] = process.argv.slice(2);
 if (!outDir) throw new Error('Usage: reach-check.ts <outDir> [key=value...]');
 const arg = (key: string, fallback: string) =>
   rest.find((a) => a.startsWith(`${key}=`))?.slice(key.length + 1) ?? fallback;
-const track = arg('track', 'paddock-road');
+const track = arg('track', 'knoll-loop');
 const ats = arg('at', '200').split(',').map(Number);
 const quality = arg('quality', 'low');
 const distances = arg('distances', '120,90,70,55,45,35,25,10').split(',').map(Number);

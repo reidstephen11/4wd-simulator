@@ -362,7 +362,7 @@ test.describe('phone on the CREB', () => {
       { width: 740, height: 360 },
     ]) {
       await page.setViewportSize(size);
-      await page.evaluate(() => window.__game!.showNote('knoll-top'));
+      await page.evaluate(() => window.__game!.showNote('knoll-rock-climb'));
       await expect(page.locator('.history-card')).toBeVisible();
       await expect(page.locator('.history-backdrop')).toBeHidden();
       await expect(page.locator('.touch-controls')).toBeVisible();

@@ -1605,6 +1605,18 @@ export class Game {
     );
   }
 
+  /** Put the spare wheel and tyre plugs back to what the level set out with, and mend every tyre. */
+  private restockAtCamp(): void {
+    const c = this.vehicle.condition;
+    const kit = this.checkpoint.packed ?? this.episode.loadout;
+    const torn = c.tyreFault.some((f) => f === 'sidewall');
+    if (!torn && c.spares >= kit.spares && c.plugs >= kit.plugs) return;
+    if (torn) repairAll(c);
+    c.spares = Math.max(c.spares, kit.spares);
+    c.plugs = Math.max(c.plugs, kit.plugs);
+    this.hud.toast('Camp: spare wheel and tyre plugs restocked', 2600);
+  }
+
   cameraHeading(): number {
     this.view.camera.getWorldDirection(this.camDir);
     return headingOf(this.camDir.x, this.camDir.z);
@@ -1667,11 +1679,13 @@ export class Game {
     const p = this.vehicle.body.translation();
     if (this.ghostGap) this.ghostBehind = this.ghostGap.update(p.x, p.z, this.run.elapsed);
     // A campsite puts the engine and suspension right and patches punctures.
-    if (
-      this.sim.damage !== 'off' &&
-      this.world.pois.some((q) => q.kind === 'campsite' && Math.hypot(q.x - p.x, q.z - p.z) < q.radius)
-    )
-      this.sim.repairAtCamp(LOCAL_VEHICLE);
+    const inCamp = this.world.pois.some(
+      (q) => q.kind === 'campsite' && Math.hypot(q.x - p.x, q.z - p.z) < q.radius,
+    );
+    if (inCamp && this.sim.damage !== 'off') this.sim.repairAtCamp(LOCAL_VEHICLE);
+    // A playground's camps are a workshop too: a torn sidewall is replaced and the spare and
+    // plugs are put back, at any camp, as often as the car comes in (before the camp is saved below).
+    if (inCamp && !this.episode.goal) this.restockAtCamp();
     this.seen.mark(p.x, p.z);
     const found = this.exploration.check(p.x, p.z);
     for (const poi of found.discovered) {
@@ -1727,14 +1741,6 @@ export class Game {
     if (reachedCamp && reachedCamp !== this.episode.goal && this.run.status === 'driving') {
       const supply = this.checkpoint.supply;
       const camp = this.world.pois.find((q) => q.id === reachedCamp);
-      // A playground's camps are a workshop: everything is put right and the kit restocked.
-      if (!this.episode.goal) {
-        const c = this.vehicle.condition;
-        const kit = this.checkpoint.packed ?? this.episode.loadout;
-        repairAll(c);
-        c.spares = Math.max(c.spares, kit.spares);
-        c.plugs = Math.max(c.plugs, kit.plugs);
-      }
       this.checkpoint = checkpointAt(
         reachedCamp,
         this.run,

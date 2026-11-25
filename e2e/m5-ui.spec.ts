@@ -32,7 +32,7 @@ function discoveryCards(page: Page): Promise<string[]> {
   return page.evaluate(() => window.__discoveryCards ?? []);
 }
 
-test('M5: driving into a place shows the card and its history, adds it to the map, and settings survive a reload', async ({
+test('M5: driving into a place shows its card and its note, adds it to the map, and settings survive a reload', async ({
   page,
 }) => {
   test.setTimeout(900_000);
@@ -42,22 +42,21 @@ test('M5: driving into a place shows the card and its history, adds it to the ma
   await page.goto('/?surprises=off&track=reopened');
   await openJourney(page);
   await waitReady(page);
-  // Starting at Daintree Village discovers it.
-  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('Daintree Village');
+  // Starting at Ironbark camp discovers it.
+  await expect.poll(() => discoveryCards(page), { timeout: 30_000 }).toContain('Ironbark camp');
   await shot(page, 'M5', 'hud-and-first-discovery');
 
-  // Drive down to the Daintree River crossing, from the road just north of the orientation bog.
-  await page.evaluate(() => window.__game!.teleport(-51.8, 2305.5, 65));
+  // Drive down to the ford, from where its track leaves the west bank track.
+  await page.evaluate(() => window.__game!.teleport(-166, 43.5, 97));
   expect(await page.evaluate(() => window.__game!.discovered())).not.toContain('creek-ford');
   await page.evaluate(() => window.__game!.setInput({ throttle: 0.7 }));
   await expect
     .poll(() => page.evaluate(() => window.__game!.discovered()), { timeout: 300_000 })
     .toContain('creek-ford');
   await page.evaluate(() => window.__game!.setInput({ brake: 1 }));
-  expect(await discoveryCards(page)).toContain('Daintree River crossing');
-  await expect
-    .poll(() => page.evaluate(() => window.__game!.historyShown()))
-    .toContain('Daintree River crossing');
+  expect(await discoveryCards(page)).toContain('The ford');
+  // Its note comes up too.
+  await expect.poll(() => page.evaluate(() => window.__game!.historyShown())).toContain('The ford');
   await shot(page, 'M5', 'discovery-toast');
   await page.evaluate(() => window.__game!.setInput(null));
 
@@ -89,7 +88,7 @@ test('M5: driving into a place shows the card and its history, adds it to the ma
   await expect(page.locator('.inst-cluster')).toContainText('mph');
 
   // Tool menu.
-  await page.evaluate(() => window.__game!.teleport(-90, 2560, 27));
+  await page.evaluate(() => window.__game!.teleport(-171, 0, 0));
   await page.waitForTimeout(1000);
   await page.keyboard.down('KeyQ');
   await expect.poll(() => page.evaluate(() => window.__game!.ui().toolMenu)).toBe(true);

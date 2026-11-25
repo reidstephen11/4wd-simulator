@@ -8,7 +8,7 @@
  * `scripts/approach-diff.py` measures the difference and lays the pictures side by side.
  *
  * Usage (against `npx vite build && npx vite preview --port 4173`):
- *   npx vite-node scripts/approach-check.ts <outDir> [tracks=paddock-road] [every=150] [max=10]
+ *   npx vite-node scripts/approach-check.ts <outDir> [tracks=knoll-loop] [every=150] [max=10]
  *     [quality=low] [view=desktop|tv|portrait] [url=http://localhost:4173/]
  * PW_CHROMIUM names another Chromium than the pinned Playwright's own.
  */
@@ -19,7 +19,7 @@ const [outDir, ...rest] = process.argv.slice(2);
 if (!outDir) throw new Error('Usage: approach-check.ts <outDir> [key=value...]');
 const arg = (key: string, fallback: string) =>
   rest.find((a) => a.startsWith(`${key}=`))?.slice(key.length + 1) ?? fallback;
-const tracks = arg('tracks', 'paddock-road').split(',');
+const tracks = arg('tracks', 'knoll-loop').split(',');
 const every = Number(arg('every', '150'));
 const max = Number(arg('max', '10'));
 const quality = arg('quality', 'low');
