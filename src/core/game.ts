@@ -1203,7 +1203,7 @@ export class Game {
       hitch?.kind === 'unhitch'
         ? [{ id: 'unhitch', label: 'Unhitch the trailer', icon: 'detach', enabled: true }]
         : [];
-    return [
+    const tools: ToolOption[] = [
       {
         id: 'transfer',
         label: `Transfer: ${v.transfer.mode} (change)`,
@@ -1286,6 +1286,8 @@ export class Game {
         enabled: fix !== null,
       },
     ];
+    // Where no fuel is burnt (a playground) there are no jerry cans to pour.
+    return tools.filter((o) => o.id !== 'refuel' || this.episode.fuelScale > 0);
   }
 
   private pickTool(id: string): void {
@@ -2146,6 +2148,7 @@ export class Game {
       trailerLeft: this.delivery.trailerLeft(),
       episode: episodeHud(this.run, this.episode),
       supplies: true,
+      fuelUsed: this.episode.fuelScale > 0,
     });
     this.hud.update(hudState);
     // A recovery under way: the winch on, or the car over and waiting to be righted. Once it

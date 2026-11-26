@@ -30,6 +30,8 @@ describe('phone HUD helpers', () => {
     expect(instrumentsNeedDetail(healthy())).toBe(false);
     expect(instrumentsNeedDetail({ ...healthy(), heat: damageTuning.engine.heatWarn })).toBe(true);
     expect(instrumentsNeedDetail({ ...healthy(), fuel: 5 })).toBe(true);
+    // Where no fuel is burnt there is no fuel gauge, so a low reading opens nothing (v0.23).
+    expect(instrumentsNeedDetail({ ...healthy(), fuel: 5, fuelGauge: false })).toBe(false);
     const leak = healthy();
     leak.tyres = leak.tyres.map((t, i) => (i === 0 ? { ...t, fault: 'puncture', inflation: 0.6 } : t));
     expect(instrumentsNeedDetail(leak)).toBe(true);

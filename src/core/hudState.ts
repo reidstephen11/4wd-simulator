@@ -67,6 +67,8 @@ export interface HudInputs {
   recoveryCue?: boolean;
   /** Show the fuel gauge and supplies (an episode is under way). */
   supplies?: boolean;
+  /** Fuel is burnt on this level (false on a playground: no fuel gauge or jerry cans). Default true. */
+  fuelUsed?: boolean;
   /** A trailer to hitch or unhitch, and whether it can be done now. */
   hitch?: { kind: 'hitch' | 'unhitch'; possible: boolean } | null;
   /** The trailer on the back: its load, and whether it has come round against the car or tipped over. */
@@ -418,6 +420,7 @@ export function buildHudState(i: HudInputs): HudState {
       ? {
           fuel: cond.fuel,
           tank: v.tuning.engine.fuel.tankLitres,
+          fuelGauge: i.fuelUsed !== false,
           jerryCans: cond.jerryCans,
           spares: cond.spares,
           plugs: cond.plugs,

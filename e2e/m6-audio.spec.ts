@@ -64,12 +64,13 @@ test('M6: audio starts with the Drive button, follows the car, and the volume se
 
   // Bird call; the mix doesn't clip.
   await page.evaluate(() => window.__game!.bird('kookaburra'));
+  // Read at once: the ambience calls birds of its own, and one in the next seconds would be the last.
+  expect((await audio(page)).lastBird).toBe('kookaburra');
   let peak = 0;
   for (let i = 0; i < 10; i++) {
     await page.waitForTimeout(250);
     peak = Math.max(peak, (await audio(page)).peak);
   }
-  expect((await audio(page)).lastBird).toBe('kookaburra');
   expect(peak).toBeGreaterThan(0.01);
   expect(peak).toBeLessThan(1);
 

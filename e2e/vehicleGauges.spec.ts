@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { collectErrors, lowGraphics, shot, waitReady } from './helpers';
 
-test('vehicle instruments show fuel, temperature, pressure setting and the damaged tyre', async ({
+test('vehicle instruments show temperature, pressure setting and the damaged tyre, and no fuel where none is burnt', async ({
   page,
 }) => {
   test.setTimeout(600_000);
@@ -15,12 +15,15 @@ test('vehicle instruments show fuel, temperature, pressure setting and the damag
   await expect(page.locator('.inst-cluster')).toBeVisible();
   const instruments = page.getByRole('group', { name: 'Vehicle instruments', includeHidden: true });
   const temperature = instruments.getByRole('meter', { name: 'TEMP', includeHidden: true });
-  const fuel = instruments.getByRole('meter', { name: 'FUEL', includeHidden: true });
   await expect(temperature).toBeAttached();
   await expect(temperature).toHaveAttribute('aria-valuetext', /Engine temperature: normal/);
-  const health = await page.evaluate(() => window.__game!.health());
-  await expect(fuel).toHaveAttribute('aria-valuetext', /^Fuel: /);
-  await expect(fuel.locator('.dial-value')).toHaveText(`${Math.round(health.fuel)} L`);
+  // A playground burns no fuel: no FUEL dial beside TEMP, and no jerry cans among the supplies (v0.23).
+  await expect(page.locator('.inst-cluster .inst-temp')).toBeVisible();
+  await expect(page.locator('.inst-cluster')).toHaveClass(/\bno-fuel\b/);
+  await expect(page.locator('.inst-cluster .inst-fuel')).toBeHidden();
+  await expect(instruments).toHaveClass(/\bno-fuel\b/);
+  await expect(page.locator('.status-supplies [title^="Jerry"]')).toHaveCount(0);
+  await expect(page.locator('.status-supplies [title="Spare wheels"]')).toHaveText('×1');
   await expect(instruments.locator('.tyre-mode')).toHaveText('36 psi');
   await expect(instruments.locator('.tyre-gauge')).toHaveCount(4);
   await expect(

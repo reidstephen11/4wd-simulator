@@ -276,7 +276,7 @@ export const creekTracks: TrackDef[] = [
     ...dirt,
     surface: 'gravel',
     smooth: 6,
-    routeHint: 'Shallow water over gravel. Any gear, keep it steady',
+    routeHint: 'Cross steadily; a little more throttle up the far bank',
   },
   {
     id: 'creek-deep',

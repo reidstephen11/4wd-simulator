@@ -13,6 +13,8 @@ export interface TyreGaugeState {
 export interface VehicleGaugeState {
   fuel: number;
   tank: number;
+  /** False where no fuel is burnt (a playground level): the fuel gauge is left out. Default true. */
+  fuelGauge?: boolean;
   /** Normal running is about 0.5; damage begins above 1. */
   heat: number;
   lowPressure: boolean;
@@ -39,7 +41,7 @@ export function tyreLabel(tyre: TyreGaugeState): string {
 /** Full dials on a phone when the engine is hot, fuel is low, or a tyre is hurt. */
 export function instrumentsNeedDetail(s: VehicleGaugeState): boolean {
   if (s.heat >= damageTuning.engine.heatWarn) return true;
-  if (s.fuel / Math.max(1, s.tank) < 0.15) return true;
+  if (s.fuelGauge !== false && s.fuel / Math.max(1, s.tank) < 0.15) return true;
   return s.tyres.some((t) => t.fault !== 'none' || t.inflation < 0.97);
 }
 
@@ -128,13 +130,15 @@ export class VehicleGauges {
   update(s: VehicleGaugeState): void {
     const heat = temperatureLabel(s.heat);
     const fuel = clamp(s.fuel / Math.max(1, s.tank));
-    const key = `${s.heat.toFixed(2)}|${heat}|${s.fuel.toFixed(1)}|${fuel < 0.15}|${s.tank}|${s.lowPressure}|${s.pressurePsi}|${s.tyres.map((t) => `${t.front},${t.left},${t.inflation.toFixed(2)},${t.fault},${tyreLabel(t)}`).join('|')}`;
+    const key = `${s.heat.toFixed(2)}|${heat}|${s.fuel.toFixed(1)}|${fuel < 0.15}|${s.fuelGauge !== false}|${s.tank}|${s.lowPressure}|${s.pressurePsi}|${s.tyres.map((t) => `${t.front},${t.left},${t.inflation.toFixed(2)},${t.fault},${tyreLabel(t)}`).join('|')}`;
     if (key === this.lastKey) return;
     this.lastKey = key;
     const heatText = `Engine temperature: ${heat.toLowerCase()}${s.heat >= 1 ? ' — ease off and let it cool' : ''}`;
     this.updateDial(this.temp, temperatureShare(s.heat), heat, Math.min(1.2, Math.max(0, s.heat)), heatText);
     this.temp.classList.toggle('hot', s.heat >= damageTuning.engine.heatWarn);
     this.temp.classList.toggle('critical', s.heat >= 1);
+    // No fuel gauge where none is burnt: a full tank that never moves reads as something to manage.
+    this.el.classList.toggle('no-fuel', s.fuelGauge === false);
     this.fuel.setAttribute('aria-valuemax', String(s.tank));
     this.updateDial(
       this.fuel,

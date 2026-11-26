@@ -41,6 +41,9 @@
 
 #ui[data-hud] .inst-cluster.no-engine .inst-temp,
 #ui[data-hud] .inst-cluster.no-engine .inst-fuel,
+#ui[data-hud] .inst-cluster.no-fuel .inst-fuel,
+#ui[data-hud] .vehicle-gauges.no-fuel [data-dial='fuel'],
+#ui[data-hud] .vehicle-gauges.no-fuel .strip-fuel,
 #ui[data-hud] .no-clock .inst-clock,
 #ui[data-hud] .no-clock .inst-clocknote {
   display: none;

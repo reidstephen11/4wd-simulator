@@ -26,7 +26,7 @@ export const ironbarkLevel: EpisodeDef = {
   notes: {
     'creek-ford': {
       title: 'The ford',
-      text: 'Shallow water over gravel: any gear will do. In deeper water go slowly, because above a walking pace the bow wave reaches the air intake and floods the engine.',
+      text: 'Shallow water over gravel: any gear will do. Cross steadily, then give it a little more throttle up the far bank. In deeper water go slowly: above a walking pace the bow wave reaches the air intake and floods the engine.',
     },
     'creek-deep': {
       title: 'The deep crossing',
