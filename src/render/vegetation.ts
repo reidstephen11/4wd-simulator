@@ -7,6 +7,7 @@ import { GroundTint } from '../sim/world/terrain';
 import { hash2, mulberry32 } from '../sim/world/rng';
 import { pal } from './colors';
 import { patchFog } from './fog';
+import { rockDetailMaterial } from './rockMaterial';
 import { MeshBuilder } from './lowpoly';
 import { createFoliageMaterials, leafQuadrant } from './foliage';
 import { Meadow } from './meadow';
@@ -315,12 +316,14 @@ function buildFarTree(species: TreeSpecies, variant: number): THREE.BufferGeomet
 
 function buildRock(variant: number, detail: number): THREE.BufferGeometry {
   const b = new MeshBuilder(900 + variant);
+  // Granite: the rock material gives it its fine detail (src/render/rockMaterial.ts).
+  b.tag = 1;
   const rand = mulberry32(variant + 31);
   const c = pal('rock')
     .clone()
     .lerp(pal('rockDark'), rand() * 0.45);
   b.blob(1, c, 0.22, detail, 1);
-  return b.build();
+  return b.build(true);
 }
 
 /**
@@ -343,7 +346,7 @@ function buildMound(variant: number): THREE.BufferGeometry {
     b.blob(r, earth.clone().multiplyScalar(0.92 + rand() * 0.14), 0.18, 1, squash);
     b.pop();
   }
-  return b.build();
+  return b.build(true);
 }
 
 /** Ring bolt and paint mark on top of a marked anchor boulder (unit radius). */
@@ -363,7 +366,7 @@ function buildAnchorMark(): THREE.BufferGeometry {
     b.box(0.05, 0.07, 0.05, steel);
     b.pop();
   }
-  return b.build();
+  return b.build(true);
 }
 
 function buildLog(): THREE.BufferGeometry {
@@ -372,7 +375,7 @@ function buildLog(): THREE.BufferGeometry {
   b.push().rotate(Math.PI / 2, 0, 0);
   b.cylinder(1, 1, 1, 7, bark, true, pal('barkPale'));
   b.pop();
-  return b.build();
+  return b.build(true);
 }
 
 function buildTussock(variant: number): THREE.BufferGeometry {
@@ -573,7 +576,8 @@ export class Vegetation {
       rocks.length + anchorCount + logs.length,
       geometrySize(extras),
       0,
-      this.material,
+      // The boulders' granite detail; the mounds, marks and logs in the same batch are untagged.
+      rockDetailMaterial('scatter-rock'),
     );
     rockMesh.castShadow = true;
     rockMesh.receiveShadow = true;

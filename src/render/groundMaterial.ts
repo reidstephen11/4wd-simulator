@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { useDetailMap } from './detailTexture';
 import { patchFog } from './fog';
 import { canopyUniforms } from './shadowReach';
 
@@ -34,6 +35,7 @@ export function createGroundMaterial(edge: TrackEdgeStyle): THREE.MeshStandardMa
   material.defines = { ...material.defines, SHADOW_FAR_SHADE: '' };
   material.onBeforeCompile = (shader) => {
     shader.uniforms.groundWetness = groundUniforms.groundWetness;
+    useDetailMap(shader);
     Object.assign(shader.uniforms, canopyUniforms);
     shader.vertexShader = `attribute vec2 ground; attribute vec3 trackColor; attribute vec4 trackEdge;
       attribute vec3 patchInner; attribute vec3 patchRim; attribute vec2 patchEdge;
@@ -62,6 +64,8 @@ export function createGroundMaterial(edge: TrackEdgeStyle): THREE.MeshStandardMa
       // The distance out from a track's right edge (vTrackEdge.x: from its left edge).
       varying float vTrackRight;
       uniform float groundWetness;
+      // Grain, pebbles, clods and each pebble's tone (src/render/detailTexture.ts).
+      uniform sampler2D detailMap;
       uniform sampler2D canopyMap;
       uniform vec4 canopyBox;
       uniform vec2 canopyShift;
@@ -120,6 +124,31 @@ export function createGroundMaterial(edge: TrackEdgeStyle): THREE.MeshStandardMa
         float broad = groundNoise(groundP * 0.19);
         float grain = groundNoise(groundP * 15.0);
         float detailFade = 1.0 - smoothstep(0.025, 0.16, length(fwidth(groundP)));
+        // Fine detail (v0.26): the detail texture at two sizes, a 1.2 m tile (pebbles 10 cm
+        // across) and a 4.8 m one (stones 40 cm, lumps of mud). What it shows depends on the
+        // ground: stones where it is rock, scree or gravel; wet lumps where it is mud; grit
+        // and soft lumps on bare earth; only the grain under grass.
+        vec4 fineDetail = texture2D(detailMap, groundP * 0.83);
+        vec4 coarseDetail = texture2D(detailMap, groundP * 0.21 + 0.37);
+        float stony = clamp(vGround.x, 0.0, 1.0);
+        float muddy = clamp(vGround.y, 0.0, 1.0);
+        float grassy = clamp((diffuseColor.g - diffuseColor.r) * 14.0, 0.0, 1.0) * (1.0 - stony) * (1.0 - muddy);
+        float earthy = (1.0 - grassy) * (1.0 - stony) * (1.0 - muddy);
+        // Stones: the larger of the small pebbles and the big stones at each point, each its
+        // own tone, and dark in the gaps between them.
+        float bigStone = step(fineDetail.g, coarseDetail.g);
+        float pebbles = max(fineDetail.g, coarseDetail.g);
+        float stoneTone = 0.74 + 0.5 * mix(fineDetail.a, coarseDetail.a, bigStone);
+        float stoneGap = 1.0 - smoothstep(0.0, 0.3, pebbles);
+        diffuseColor.rgb *= mix(1.0, stoneTone * (1.0 - 0.38 * stoneGap), stony);
+        // Mud: lumps and hollows, darker and wetter in the hollows.
+        float mudLump = coarseDetail.r * 0.7 + fineDetail.r * 0.3;
+        float mudHollow = 1.0 - smoothstep(0.35, 0.6, mudLump);
+        diffuseColor.rgb *= 1.0 - 0.3 * muddy * mudHollow;
+        // Bare earth: a scatter of small stones, paler or darker than the dirt. (Cracks were
+        // tried here and on mud: any regular network of them read as paving.)
+        float grit = smoothstep(0.6, 0.92, fineDetail.g) * earthy;
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * (0.78 + 0.62 * fineDetail.a), grit);
         float fleck = smoothstep(0.69, 0.82, grain) * detailFade;
         diffuseColor.rgb *= 0.94 + broad * 0.12 + (grain - 0.5) * 0.08 * detailFade;
         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.45, fleck * (0.12 + vGround.x * 0.18));
@@ -134,6 +163,9 @@ export function createGroundMaterial(edge: TrackEdgeStyle): THREE.MeshStandardMa
         #include <roughnessmap_fragment>
         roughnessFactor = mix(0.95, 0.38, vGround.y) - fleck * 0.08;
         roughnessFactor = mix(roughnessFactor, 0.5, groundWetness * 0.7);
+        // Water stands in the hollows of mud, and in rain between the stones: they shine.
+        roughnessFactor = mix(roughnessFactor, 0.24, muddy * mudHollow * 0.8);
+        roughnessFactor = mix(roughnessFactor, 0.25, stony * stoneGap * groundWetness * 0.6);
       `,
       )
       .replace(
@@ -141,7 +173,12 @@ export function createGroundMaterial(edge: TrackEdgeStyle): THREE.MeshStandardMa
         /* glsl */ `
         #include <normal_fragment_maps>
         // Fine surface relief without displacing the driving surface.
-        float relief = groundNoise(groundP * 5.5) * 0.018 * detailFade;
+        // (Heights in metres: the grain everywhere, stones standing 3 to 7 cm, mud in lumps
+        // of 6 cm, and on bare earth softer lumps and the grit.)
+        float relief = (groundNoise(groundP * 5.5) * 0.018 + fineDetail.r * 0.012 +
+          stony * (fineDetail.g * 0.03 + coarseDetail.g * 0.07) +
+          muddy * mudLump * 0.06 +
+          earthy * (coarseDetail.r * 0.02 + grit * 0.012)) * detailFade;
         vec3 dx = dFdx(-vViewPosition), dy = dFdy(-vViewPosition);
         vec3 rx = cross(dy, normal), ry = cross(normal, dx);
         float det = dot(dx, rx);
@@ -149,5 +186,5 @@ export function createGroundMaterial(edge: TrackEdgeStyle): THREE.MeshStandardMa
       `,
       );
   };
-  return patchFog(material, 'ground-detail-v5');
+  return patchFog(material, 'ground-detail-v6');
 }
