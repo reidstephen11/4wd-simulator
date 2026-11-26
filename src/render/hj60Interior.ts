@@ -51,9 +51,9 @@ export function addHj60Interior(b: VehicleBuilder, redlineRpm: number): void {
   for (const x of [-0.42, 0.42]) {
     b.block(x, floor + 0.14, 0.13, 0.46, 0.2, 0.42, mat, M.Rubber, Z.Trim, 0.02);
     b.block(x, floor + 0.3, 0.12, 0.52, 0.12, 0.52, C.vinyl, M.Fabric, Z.Trim, 0.045);
-    b.push().translate(x, 0, 0.42).rotate(-0.16, 0, 0);
-    b.block(0, floor + 0.62, 0, 0.5, 0.56, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
-    b.block(0, floor + 0.98, 0.0, 0.28, 0.16, 0.1, C.vinyl, M.Fabric, Z.Trim, 0.04);
+    b.seatBack(x, floor + 0.611, 0.3945, 0.16);
+    b.block(0, 0, 0, 0.5, 0.56, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
+    b.block(0, 0.36, 0, 0.28, 0.16, 0.1, C.vinyl, M.Fabric, Z.Trim, 0.04);
     b.pop();
     for (const dx of [-0.1, 0, 0.1])
       b.block(x + dx, floor + 0.362, 0.12, 0.012, 0.006, 0.44, mat, M.Fabric, Z.Trim);
@@ -73,8 +73,8 @@ export function addHj60Interior(b: VehicleBuilder, redlineRpm: number): void {
   // The rear bench across the car ahead of the wheel boxes.
   b.block(0, floor + 0.14, 1.12, 1.36, 0.2, 0.42, mat, M.Rubber, Z.Trim, 0.02);
   b.block(0, floor + 0.3, 1.11, 1.44, 0.12, 0.5, C.vinyl, M.Fabric, Z.Trim, 0.045);
-  b.push().translate(0, 0, 1.4).rotate(-0.14, 0, 0);
-  b.block(0, floor + 0.6, 0, 1.44, 0.52, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
+  b.seatBack(0, floor + 0.593, 1.375, 0.14);
+  b.block(0, 0, 0, 1.44, 0.52, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
   b.pop();
   for (const side of [-1, 1]) {
     // Door trims with an armrest, a pull and a window winder; the painted steel above them.

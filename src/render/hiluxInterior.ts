@@ -58,10 +58,12 @@ export function addHiluxInterior(b: VehicleBuilder, redlineRpm: number): void {
   // Bench seat across the cab, with pleats and a low back against the rear wall.
   b.block(0, 0.24, 0.02, 1.44, 0.14, 0.5, vinyl, M.Fabric, Z.Trim, 0.045);
   b.block(0, 0.12, 0.05, 1.3, 0.12, 0.44, dark, M.Rubber, Z.Trim);
-  b.push().rotate(-0.16, 0, 0);
-  b.block(0, 0.58, 0.32, 1.44, 0.5, 0.11, vinyl, M.Fabric, Z.Trim, 0.04);
+  // Its top is at the rear wall and its foot on the cushion; the pleats are on the face you sit against.
+  b.seatBack(0, 0.624, 0.2235, 0.16);
+  // 8 cm longer at the foot than before, down to the cushion: the wall showed under it.
+  b.block(0, -0.04, 0, 1.44, 0.58, 0.11, vinyl, M.Fabric, Z.Trim, 0.04);
   for (let i = 0; i < 9; i++)
-    b.block(-0.6 + i * 0.15, 0.58, 0.376, 0.012, 0.44, 0.006, dark, M.Fabric, Z.Trim);
+    b.block(-0.6 + i * 0.15, -0.02, -0.056, 0.012, 0.48, 0.006, dark, M.Fabric, Z.Trim);
   b.pop();
   for (let i = 0; i < 9; i++)
     b.block(-0.6 + i * 0.15, 0.312, 0.02, 0.012, 0.006, 0.44, dark, M.Fabric, Z.Trim);
