@@ -44,9 +44,11 @@ describe('tyre marks: what the ground takes', () => {
   it('marks soft ground most and hard ground not at all', () => {
     expect(on(SurfaceId.Mud)).toBeGreaterThan(on(SurfaceId.Clay));
     expect(on(SurfaceId.Clay)).toBeGreaterThan(on(SurfaceId.Dirt));
-    expect(on(SurfaceId.Dirt)).toBeGreaterThan(on(SurfaceId.Grass));
-    expect(on(SurfaceId.Grass)).toBeGreaterThan(on(SurfaceId.Gravel));
-    expect(on(SurfaceId.Gravel)).toBeGreaterThan(tyreMarkTuning.minStrength);
+    expect(on(SurfaceId.Dirt)).toBeGreaterThan(on(SurfaceId.Gravel));
+    // Grass is pressed flat rather than printed: the faintest of them, in its own tone.
+    expect(on(SurfaceId.Gravel)).toBeGreaterThan(on(SurfaceId.Grass));
+    expect(on(SurfaceId.Grass)).toBeGreaterThan(tyreMarkTuning.minStrength);
+    expect(markFor(wheel({ surface: SurfaceId.Grass }), 0, 0).tone).toBe(MarkTone.Grass);
     for (const hard of [SurfaceId.Rock, SurfaceId.Wood, SurfaceId.Water]) expect(on(hard)).toBe(0);
   });
 

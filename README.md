@@ -32,7 +32,7 @@ The game opens on a title screen. **Press any button** (or **Tap to begin**) bri
 
 The engine is off as you arrive: the first press of the accelerator starts it. **Pause → Main menu** goes back to the title.
 
-The version number (v0.25 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
+The version number (v0.26 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
 
 ## Ironbark Creek
 
@@ -64,6 +64,8 @@ How hard they are, measured with the autopilot crawling in low range in the shor
 **Scored rock climb.** Drive through gate 1 at the foot of the rock climb to start a run: red flag on the left, blue on the right, eight gates uphill. A run starts with 1000 points; touching a flag costs 25, missing a gate 100, each reverse or knock on the body 5, and hooking the winch 50. Time breaks ties. The best score is kept for each vehicle.
 
 **Tyre marks.** The car's tyres leave their tread on the ground: most in mud, clay and sand, less on dirt, grass and gravel, none on rock. Wet ground marks darker, and so does a spinning or locked wheel. Tyres that have just come out of the creek or a bog leave wet tracks for a few metres, on rock too. The marks stay for the drive (about a kilometre and a half of driving before the oldest go), so a climb shows the lines already tried.
+
+**Ground detail.** Close up, the ground is no longer smooth colour. Gravel, rock steps and the creek bed are separate stones; mud is wet lumps with dark hollows; bare earth has grit in it; boulders and ledges have joints, specks and weathering. It is drawn only: the car drives on the same surface as before.
 
 **Notes.** The first time you reach an obstacle, a small card says what it is and which control helps there, worded for the keyboard, controller or phone you are using. **Pause → Trip journal** keeps the notes you have seen.
 
@@ -226,6 +228,12 @@ Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, so
 
 ## What to test
 
+**v0.26**
+
+- Finer ground detail, best seen with the cockpit or bonnet camera or by stopping beside something: the stones of the rock garden and the rock climb, the mud of the bog hole, the creek bed at the ford, the faces of the boulders.
+- On your phone on High: still smooth? If anything stutters, the headroom test (`?bench`) will show where.
+- Tyre marks on grass: a faint darker green line now, not brown tread.
+
 **v0.25**
 
 - Tyre marks: drive off the track onto grass and look back; turn tightly and see four lines separate; spin the wheels on a climb and see the darker marks.
@@ -267,7 +275,7 @@ Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, so
 | ------------------- | ------------------------------------------------------------------------------------------------- |
 | `src/core`          | The game loop, launch, saving, the HUD's state and the test hook                                  |
 | `src/sim`           | The simulation: vehicle, drivetrain, tyres, damage, tools (winch, planks, jack), world generation |
-| `src/render`        | Three.js drawing: terrain, water, vegetation, every vehicle body, cameras, particles              |
+| `src/render`        | Three.js drawing: terrain, water, vegetation, every vehicle body, cameras, particles, tyre marks  |
 | `src/ui`            | Title and setup screens, loading card, HUD, pause menu, tool menu, paper map, touch controls      |
 | `src/audio`         | Engine synthesis, tyres, winch, ambience                                                          |
 | `src/data`          | Tuning and content: vehicles, surfaces, controls, environment, and `levels/` (the maps)           |
@@ -288,5 +296,5 @@ GitHub Actions builds and deploys `main` to GitHub Pages (`.github/workflows/dep
 
 ## What's next
 
-- Pushing the graphics on small levels: tyre marks left on the ground, finer detail on rock and mud.
+- Pushing the graphics further: ground pressed in under the tyres (ruts), finer plants.
 - More playground levels.

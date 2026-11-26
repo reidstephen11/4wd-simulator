@@ -15,6 +15,7 @@ const tones: Record<MarkTone, THREE.Color> = {
   [MarkTone.Sand]: new THREE.Color('#9c8a68'),
   [MarkTone.Gravel]: new THREE.Color('#5d4f41'),
   [MarkTone.Wet]: new THREE.Color('#2f2a26'),
+  [MarkTone.Grass]: new THREE.Color('#3d4a22'),
 };
 
 /**

@@ -10,7 +10,7 @@ import { SurfaceId } from '../../data/surfaces';
  */
 
 /** What colour a mark is: the ground it was pressed into. */
-export const MarkTone = { Earth: 0, Clay: 1, Mud: 2, Sand: 3, Gravel: 4, Wet: 5 } as const;
+export const MarkTone = { Earth: 0, Clay: 1, Mud: 2, Sand: 3, Gravel: 4, Wet: 5, Grass: 6 } as const;
 export type MarkTone = (typeof MarkTone)[keyof typeof MarkTone];
 
 interface Marking {
@@ -30,7 +30,8 @@ const markings: Partial<Record<SurfaceId, Marking>> = {
   [SurfaceId.Clay]: { strength: 0.6, wet: 0.5, tone: MarkTone.Clay },
   [SurfaceId.Sand]: { strength: 0.8, wet: 0, tone: MarkTone.Sand },
   [SurfaceId.Dirt]: { strength: 0.5, wet: 0.5, tone: MarkTone.Earth },
-  [SurfaceId.Grass]: { strength: 0.32, wet: 0.8, tone: MarkTone.Earth },
+  // Grass is pressed flat, not printed: fainter, and its own darker green (v0.26).
+  [SurfaceId.Grass]: { strength: 0.26, wet: 1, tone: MarkTone.Grass },
   [SurfaceId.Gravel]: { strength: 0.3, wet: 0.3, tone: MarkTone.Gravel },
 };
 

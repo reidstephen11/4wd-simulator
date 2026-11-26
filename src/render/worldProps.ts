@@ -6,6 +6,7 @@ import { FALLEN_TREE_STUBS, type DynamicObject } from '../sim/sim';
 import { mulberry32 } from '../sim/world/rng';
 import { pal } from './colors';
 import { patchFog } from './fog';
+import { rockDetailMaterial } from './rockMaterial';
 import { MeshBuilder } from './lowpoly';
 import { coursePoint } from '../sim/world/crawlCourse';
 import { trailPoint, staticLogMesh } from '../sim/world/crawlTrail';
@@ -490,7 +491,8 @@ export class WorldProps {
   private readonly dynamicMeshes: { obj: DynamicObject; mesh: THREE.Mesh }[] = [];
 
   constructor(world: World, dynamics: Iterable<DynamicObject>) {
-    this.material = patchFog(new THREE.MeshLambertMaterial({ vertexColors: true }));
+    // The props' material, with granite's fine detail where a vertex is tagged as rock.
+    this.material = rockDetailMaterial('props-rock');
     this.group.name = 'props';
     const b = new MeshBuilder(2024);
     for (const p of world.map.props) {
@@ -593,6 +595,7 @@ export class WorldProps {
     }
     // Trail granite: the collider is the convex hull of exactly these vertices.
     const lichen = new THREE.Color('#9A9A74');
+    b.tag = 1;
     for (const rock of world.features.rocks) {
       const c = pal('rock')
         .clone()
@@ -615,6 +618,7 @@ export class WorldProps {
       }
       b.pop();
     }
+    b.tag = 0;
     // Bridge timbers: the collider is the convex hull of these vertices. Deck tops are
     // drawn board by board across the track on the hull's own top face.
     for (const t of world.features.timbers) {
@@ -643,7 +647,7 @@ export class WorldProps {
       }
       b.pop();
     }
-    const mesh = new THREE.Mesh(b.build(), this.material);
+    const mesh = new THREE.Mesh(b.build(true), this.material);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.matrixAutoUpdate = false;
@@ -697,6 +701,7 @@ export class WorldProps {
   /** A rock come off a bank: fresh grey faces with clay on the underside. */
   private buildLooseRock(shape: { vertices: Float32Array; indices: Uint32Array }, rand: () => number) {
     const b = new MeshBuilder(405);
+    b.tag = 1;
     const c = pal('rock')
       .clone()
       .lerp(pal('rockDark'), 0.1 + rand() * 0.4);
@@ -708,7 +713,7 @@ export class WorldProps {
       const low = (a.y + bb.y + cc.y) / 3 < 0;
       b.tri(a, bb, cc, low ? c.clone().lerp(pal('dirtTrack'), 0.55) : c);
     }
-    return b.build();
+    return b.build(true);
   }
 
   /** Fallen trees and loose rocks follow their bodies (`alpha` 0 = before the last step, 1 = after). */
