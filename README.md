@@ -220,12 +220,13 @@ Add `?dev` to the address: https://reidstephen11.github.io/4wd-simulator/?dev. A
 
 ## Debug mode
 
-Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, sound levels) and a panel with a free-fly camera (also the backtick key), collider wireframes, a teleport button for every place and live vehicle tuning sliders. Add `?bench` for the phone test: the car parks on the Knoll track and the frame rate is timed with one thing turned off at a time and on each graphics setting.
+Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, sound levels) and a panel with a free-fly camera (also the backtick key), collider wireframes, a teleport button for every place and live vehicle tuning sliders. Add `?bench` for the phone's headroom test: https://reidstephen11.github.io/4wd-simulator/?bench. Start a drive and leave it for about two and a half minutes. The car is parked at three places in turn (the Knoll track, the summit looking west, the ford) and the frame rate is timed while the load is put up step by step: a sharper picture, Medium and High graphics, the screen's full resolution, and the whole picture drawn two, three and four times a frame. The step where the frame rate first drops shows how much the phone has in hand. The results stay on screen to be sent as a screenshot.
 
 ## What to test
 
 **v0.23**
 
+- On your phone, the headroom test: open the game with `?bench` added to the address, start a drive, wait about two and a half minutes and send a screenshot of the results.
 - The dials in all three HUD styles (Settings → HUD style): speedometer and TEMP, no FUEL.
 - The tool menu: no jerry can entry.
 - The ford's hint and note: "a little more throttle up the far bank".

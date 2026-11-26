@@ -230,12 +230,14 @@ export class GameRenderer {
     this.resize();
   }
 
-  /** The phone test (src/debug/bench.ts): draw at this share of the preset's resolution. */
-  benchResolution(scale: number): void {
-    const base = Math.min(window.devicePixelRatio || 1, this.quality.pixelRatio);
-    this.renderer.setPixelRatio(base * scale);
+  /** The phone test (src/debug/bench.ts): draw at this many screen pixels per CSS pixel. */
+  benchPixelRatio(ratio: number): void {
+    this.renderer.setPixelRatio(ratio);
     this.resize();
   }
+
+  /** The phone test: draw the whole picture this many times a frame, to load the graphics chip. */
+  benchDraws = 1;
 
   resize(): void {
     // A headset sets its own size; Three.js refuses (and warns) while one is on.
@@ -332,6 +334,6 @@ export class GameRenderer {
     this.water.update(dt);
     this.rain?.update(eye, this.shelter, dt);
     this.mirrors.update(this.renderer, this.scene, this.mirrorEye(), mirrors, now);
-    this.renderer.render(this.scene, this.camera);
+    for (let i = 0; i < this.benchDraws; i++) this.renderer.render(this.scene, this.camera);
   }
 }
