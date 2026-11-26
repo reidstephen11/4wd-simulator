@@ -29,8 +29,15 @@ describe('the phone headroom test', () => {
     // The views come one after another, never revisited (each change teleports the car).
     const order = benchSteps.map((s) => s.view);
     expect(order).toEqual([...order].sort((a, b) => a - b));
-    // The whole picture drawn up to four times over, at the first view.
-    expect(benchSteps.filter((s) => s.draws > 1).map((s) => s.draws)).toEqual([2, 3, 4]);
+    // The whole picture drawn up to four times over at the first view, and High at full
+    // sharpness two and three times over at the widest.
+    expect(benchSteps.filter((s) => s.draws > 1).map((s) => `${s.quality} ${s.draws}`)).toEqual([
+      'own 2',
+      'own 3',
+      'own 4',
+      'high 2',
+      'high 3',
+    ]);
   });
 
   it('writes lines that fit an upright phone (about 45 characters at this size)', () => {

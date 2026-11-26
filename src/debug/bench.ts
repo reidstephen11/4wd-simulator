@@ -76,6 +76,9 @@ export const benchSteps: readonly BenchStep[] = [
   step('Medium', 1, 'medium'),
   step('High', 1, 'high'),
   step('High, full sharp', 1, 'high', 'screen'),
+  // High at full sharpness held 60 fps on the owner's phone (v0.23): how far past that?
+  step('High sharp, twice', 1, 'high', 'screen', 2),
+  step('High sharp, x3', 1, 'high', 'screen', 3),
   step('No shadows', 1, 'own', 'preset', 1, 'shadows'),
   step('No trees', 1, 'own', 'preset', 1, 'trees'),
   step('No ground cover', 1, 'own', 'preset', 1, 'groundCover'),

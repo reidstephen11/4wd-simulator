@@ -32,7 +32,7 @@ The game opens on a title screen. **Press any button** (or **Tap to begin**) bri
 
 The engine is off as you arrive: the first press of the accelerator starts it. **Pause → Main menu** goes back to the title.
 
-The version number (v0.23 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
+The version number (v0.24 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
 
 ## Ironbark Creek
 
@@ -168,7 +168,7 @@ The table shows PlayStation labels; choose Xbox or Generic in Settings to change
 
 ### Phones and tablets
 
-On a touch screen the game shows on-screen controls, held sideways or upright. Settings → **Phone driving** chooses **Joystick only** (left and right steer, forward and back are throttle and brake; the default) or **Steer and pedals** (a steering stick plus GAS and BRAKE). **Joystick side** swaps the stick and the buttons. Graphics start on Low.
+On a touch screen the game shows on-screen controls, held sideways or upright. Settings → **Phone driving** chooses **Joystick only** (left and right steer, forward and back are throttle and brake; the default) or **Steer and pedals** (a steering stick plus GAS and BRAKE). **Joystick side** swaps the stick and the buttons. Graphics start on Medium, and Low and High can be chosen in Settings; a choice already saved is kept.
 
 | Action                         | Touch                                                               |
 | ------------------------------ | ------------------------------------------------------------------- |
@@ -220,9 +220,14 @@ Add `?dev` to the address: https://reidstephen11.github.io/4wd-simulator/?dev. A
 
 ## Debug mode
 
-Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, sound levels) and a panel with a free-fly camera (also the backtick key), collider wireframes, a teleport button for every place and live vehicle tuning sliders. Add `?bench` for the phone's headroom test: https://reidstephen11.github.io/4wd-simulator/?bench. Start a drive and leave it for about two and a half minutes. The car is parked at three places in turn (the Knoll track, the summit looking west, the ford) and the frame rate is timed while the load is put up step by step: a sharper picture, Medium and High graphics, the screen's full resolution, and the whole picture drawn two, three and four times a frame. The step where the frame rate first drops shows how much the phone has in hand. The results stay on screen to be sent as a screenshot.
+Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, sound levels) and a panel with a free-fly camera (also the backtick key), collider wireframes, a teleport button for every place and live vehicle tuning sliders. Add `?bench` for the phone's headroom test: https://reidstephen11.github.io/4wd-simulator/?bench. Start a drive and leave it for about two and a half minutes. The car is parked at three places in turn (the Knoll track, the summit looking west, the ford) and the frame rate is timed while the load is put up step by step: a sharper picture, Medium and High graphics, the screen's full resolution, the whole picture drawn two, three and four times a frame, and High at full resolution drawn two and three times. The step where the frame rate first drops shows how much the phone has in hand. The results stay on screen to be sent as a screenshot.
 
 ## What to test
+
+**v0.24**
+
+- On your phone: **Settings → Graphics → High** (your saved Low is kept until you change it). The picture should be much sharper, with smooth edges, and still run smoothly. Try Medium too.
+- The headroom test again (`?bench`): two new lines under the summit, "High sharp, twice" and "High sharp, x3".
 
 **v0.23**
 

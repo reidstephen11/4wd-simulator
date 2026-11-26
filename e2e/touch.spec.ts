@@ -71,12 +71,20 @@ function overlapping(page: Page, selector = '.touch-btn, .hud button'): Promise<
 test.describe('phone', () => {
   test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
-  test('the title Settings page offers Low and Medium graphics only (v1.23)', async ({ page }) => {
-    await page.goto('/?track=reopened');
+  test('the title Settings page offers Low, Medium and High graphics, on Medium to start (v0.24)', async ({
+    page,
+  }) => {
+    await page.goto('/');
     await page.locator('[data-title-begin]').click();
     await page.locator('[data-value="settings"]').click();
-    await expect(page.locator('[data-group="quality"]')).toHaveCount(2);
-    await expect(page.locator('[data-group="quality"][data-value="high"]')).toHaveCount(0);
+    await expect(page.locator('[data-group="quality"]')).toHaveCount(3);
+    await expect(page.locator('[data-group="quality"].on')).toHaveAttribute('data-value', 'medium');
+    // High is kept, and shown as High, after a reload.
+    await page.locator('[data-group="quality"][data-value="high"]').click();
+    await page.reload();
+    await page.locator('[data-title-begin]').click();
+    await page.locator('[data-value="settings"]').click();
+    await expect(page.locator('[data-group="quality"].on')).toHaveAttribute('data-value', 'high');
   });
 
   test('on-screen controls drive the car, and the layout works in landscape and portrait', async ({
@@ -100,8 +108,8 @@ test.describe('phone', () => {
     await page.waitForTimeout(4800);
     await expect(page.locator('.mission')).toBeHidden();
     await expect(controls).toBeVisible();
-    // No saved settings: a phone starts on the low graphics preset.
-    expect(await page.evaluate(() => window.__game!.quality())).toBe('low');
+    // No saved settings: a phone starts on the medium graphics preset (v0.24).
+    expect(await page.evaluate(() => window.__game!.quality())).toBe('medium');
     await expect(page.locator('.touch-controls')).toHaveClass(/stick-drive/);
     await expect(page.locator('.touch-pedals.touch-drive')).toBeHidden();
     await shot(page, 'touch', 'landscape');

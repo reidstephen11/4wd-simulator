@@ -20,6 +20,7 @@ import {
   touchDriveSchemes,
   touchStickSideLabels,
   touchStickSides,
+  touchTuning,
   type TouchDriveScheme,
   type TouchStickSide,
 } from '../data/touch';
@@ -125,7 +126,7 @@ export class WelcomeScreen {
     this.packs = { ...save?.packs };
     this.settings = {
       ...defaultSettings,
-      quality: isTouchDevice() ? 'low' : defaultSettings.quality,
+      quality: isTouchDevice() ? touchTuning.defaultQuality : defaultSettings.quality,
       ...save?.settings,
     };
     this.time = initial.replay?.time ?? this.storyTime(initial.episode);

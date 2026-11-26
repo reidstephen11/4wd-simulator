@@ -1,27 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { offeredQualities, qualityFor, qualityPresets, shownQuality } from '../src/data/quality';
+import {
+  offeredQualities,
+  phoneMaxQuality,
+  qualityFor,
+  qualityPresets,
+  shownQuality,
+} from '../src/data/quality';
+import { touchTuning } from '../src/data/touch';
 
 describe('qualityFor', () => {
-  it('draws a phone saved on High at Medium', () => {
-    expect(qualityFor('high', true)).toBe(qualityPresets.medium);
-  });
-
-  it('leaves the other settings and computers unchanged', () => {
-    expect(qualityFor('high', false)).toBe(qualityPresets.high);
-    expect(qualityFor('medium', true)).toBe(qualityPresets.medium);
-    expect(qualityFor('low', true)).toBe(qualityPresets.low);
+  it('draws each setting as its own preset, on a phone as on a computer (v0.24)', () => {
+    expect(phoneMaxQuality).toBe('high');
+    for (const level of ['low', 'medium', 'high'] as const) {
+      expect(qualityFor(level, true)).toBe(qualityPresets[level]);
+      expect(qualityFor(level, false)).toBe(qualityPresets[level]);
+    }
   });
 });
 
-describe('the Graphics row (v1.23)', () => {
-  it('offers Low and Medium on a phone, all three on a computer', () => {
-    expect(offeredQualities(true)).toEqual(['low', 'medium']);
+describe('the Graphics row', () => {
+  it('offers all three settings on a phone and on a computer (v0.24)', () => {
+    expect(offeredQualities(true)).toEqual(['low', 'medium', 'high']);
     expect(offeredQualities(false)).toEqual(['low', 'medium', 'high']);
   });
 
-  it('shows a phone saved on High as Medium', () => {
-    expect(shownQuality('high', true)).toBe('medium');
+  it('shows a phone the setting it saved', () => {
+    expect(shownQuality('high', true)).toBe('high');
     expect(shownQuality('high', false)).toBe('high');
     expect(shownQuality('low', true)).toBe('low');
+  });
+
+  it('starts a phone with no saved settings on Medium (v0.24)', () => {
+    expect(touchTuning.defaultQuality).toBe('medium');
   });
 });
