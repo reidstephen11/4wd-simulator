@@ -48,10 +48,12 @@ export const perentieTuning: VehicleTuning = {
     { cx: 0, cy: 0.45, cz: -1.42, hx: 0.6, hy: 0.24, hz: 0.6 },
     { cx: 0, cy: 0.45, cz: 1.38, hx: 0.6, hy: 0.28, hz: 0.98 },
     // Bull bar over the bumper, the rear crossmember with its pintle hook, the spare wheel
-    // slung under the rear floor, and the canvas tilt.
+    // slung under the rear floor, and the canvas tilt. The spare's box is the drawn tyre since
+    // v2.27 (0.17 m left of centre, its underside 0.37 m off the ground); before, the drawn
+    // tyre hung 0.21 m below its box.
     { cx: 0, cy: 0.3, cz: -2.16, hx: 0.86, hy: 0.36, hz: 0.1 },
     { cx: 0, cy: 0.02, cz: 2.35, hx: 0.76, hy: 0.07, hz: 0.1 },
-    { cx: 0, cy: 0.03, cz: 1.94, hx: 0.4, hy: 0.1, hz: 0.4 },
+    { cx: -0.17, cy: -0.045, cz: 1.89, hx: 0.4, hy: 0.115, hz: 0.4 },
     { cx: 0, cy: 1.06, cz: 0.75, hx: 0.84, hy: 0.42, hz: 1.55 },
   ],
   bumpRadius: 0.25,

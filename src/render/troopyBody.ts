@@ -328,6 +328,20 @@ function sidePanels(b: VehicleBuilder): void {
         M.Rubber,
         Z.Trim,
       );
+      // The back of each front wheelhouse is closed as well, by a dark panel lying against the
+      // opening's sloping back edge from the sill to the roof. It was open there, and the cab's
+      // footwell bulkhead (body colour) showed pale behind the tyre.
+      if (axle < 0) {
+        const z0 = axle + archHalf(SILL) + 0.012,
+          z1 = axle + archHalf(wellTop) + 0.012;
+        b.slot = M.Rubber;
+        b.tag = Z.Trim;
+        b.push()
+          .translate((side * (wellX + SIDE - 0.04)) / 2, (SILL + wellTop) / 2, (z0 + z1) / 2)
+          .rotate(Math.atan2(z1 - z0, wellTop - SILL), 0, 0);
+        b.box(SIDE - 0.04 - wellX, Math.hypot(z1 - z0, wellTop - SILL), 0.02, well);
+        b.pop();
+      }
       // The rear wheelhouses are closed at each end too (the front clip closes its own); the
       // body's inside showed through the top of each rear opening.
       if (axle > 0)

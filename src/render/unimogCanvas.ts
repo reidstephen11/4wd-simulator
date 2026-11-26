@@ -165,5 +165,8 @@ export function addBoardSupports(b: VehicleBuilder): void {
       b.block(side * 0.99, bottom, z, 0.08, 0.04, 0.11, bar, M.Metal, Z.Roof, 0.005);
     }
   }
-  for (const x of [-0.64, 0.64]) b.block(x, 2.32, BOARD_Z, 0.035, 0.03, 1.62, bar, M.Metal, Z.Roof, 0.004);
+  // Two rails join the cross bars into one frame. They were 1.62 m long and stopped 0.11 m short
+  // of each bar, so each lay over the canvas held by nothing.
+  const span = BOARD_STRAPS[1] - BOARD_STRAPS[0] + 0.05;
+  for (const x of [-0.64, 0.64]) b.block(x, 2.32, BOARD_Z, 0.035, 0.03, span, bar, M.Metal, Z.Roof, 0.004);
 }
