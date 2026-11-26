@@ -121,6 +121,8 @@ export interface GameHook {
   ui(): { map: boolean; pause: boolean; toolMenu: boolean; paused: boolean; mode: string };
   /** Seconds of simulated time so far. */
   simTime(): number;
+  /** Pieces of tyre mark laid so far (v0.25). */
+  tyreMarks(): number;
   /** Run this many physics steps every frame, however long frames take (0 = real time). */
   setStepsPerFrame(steps: number): void;
   /**
@@ -521,6 +523,7 @@ export function installHook(game: Game): void {
       mode: g.tool.mode,
     }),
     simTime: () => g.sim.time,
+    tyreMarks: () => g.tyreMarksLaid,
     setStepsPerFrame: (steps) => {
       g.loop.fixedSteps = steps;
     },

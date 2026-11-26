@@ -21,6 +21,8 @@ test('M2: keyboard drives the car and the chase camera follows', async ({ page }
   await page.keyboard.up('KeyW');
   const moved = await page.evaluate(() => window.__game!.vehicle());
   expect(Math.hypot(moved.x - start.x, moved.z - start.z)).toBeGreaterThan(3);
+  // The tyres have left their marks along the way (v0.25): four wheels, a piece every 0.3 m or so.
+  expect(await page.evaluate(() => window.__game!.tyreMarks())).toBeGreaterThan(12);
 
   // Range toggle. Range only changes below 20 km/h, so stop on the park brake first:
   // holding S brakes and then reverses, and could leave the car above it.

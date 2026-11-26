@@ -94,7 +94,7 @@ export class HistoryCard {
     root.appendChild(this.backdrop);
     this.el = document.createElement('div');
     this.el.className = 'history-card paper hidden';
-    this.el.innerHTML = `<small class="history-kind">History</small><strong></strong><p><span class="history-do"></span><span class="history-text"></span></p><span class="history-close" aria-hidden="true">×</span><span class="history-hint">Tap to carry on</span>`;
+    this.el.innerHTML = `<small class="history-kind">Note</small><strong></strong><p><span class="history-do"></span><span class="history-text"></span></p><span class="history-close" aria-hidden="true">×</span><span class="history-hint">Tap to carry on</span>`;
     this.el.addEventListener('click', () => {
       if (this.el.classList.contains('brief')) this.expand();
       else this.next();
@@ -221,7 +221,7 @@ export class HistoryCard {
       ? lesson >= 0
         ? `Lesson ${lesson + 1} of ${LESSONS.length}`
         : 'Lesson'
-      : 'History';
+      : 'Note';
     const doEl = this.el.querySelector('.history-do') as HTMLElement;
     if (note.instruction) {
       const instruction = controlInstruction(note.instruction, this.device, this.controller);

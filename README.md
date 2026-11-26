@@ -32,7 +32,7 @@ The game opens on a title screen. **Press any button** (or **Tap to begin**) bri
 
 The engine is off as you arrive: the first press of the accelerator starts it. **Pause → Main menu** goes back to the title.
 
-The version number (v0.24 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
+The version number (v0.25 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
 
 ## Ironbark Creek
 
@@ -62,6 +62,8 @@ The first level is half a kilometre square. A 25 m knoll stands in the middle wi
 How hard they are, measured with the autopilot crawling in low range in the short-wheelbase 4WD on a dry day: with both diff locks every line can be driven except back up the chute. With open diffs the car stops on the rock climb, the axle twisters, the bog trench, the deep crossing, the chute, the bog hole and the rock garden (driven clockwise); the ford, the side slope, the drop and the steep descent need no lockers. Rain makes the clay and the mud a good deal harder.
 
 **Scored rock climb.** Drive through gate 1 at the foot of the rock climb to start a run: red flag on the left, blue on the right, eight gates uphill. A run starts with 1000 points; touching a flag costs 25, missing a gate 100, each reverse or knock on the body 5, and hooking the winch 50. Time breaks ties. The best score is kept for each vehicle.
+
+**Tyre marks.** The car's tyres leave their tread on the ground: most in mud, clay and sand, less on dirt, grass and gravel, none on rock. Wet ground marks darker, and so does a spinning or locked wheel. Tyres that have just come out of the creek or a bog leave wet tracks for a few metres, on rock too. The marks stay for the drive (about a kilometre and a half of driving before the oldest go), so a climb shows the lines already tried.
 
 **Notes.** The first time you reach an obstacle, a small card says what it is and which control helps there, worded for the keyboard, controller or phone you are using. **Pause → Trip journal** keeps the notes you have seen.
 
@@ -223,6 +225,13 @@ Add `?dev` to the address: https://reidstephen11.github.io/4wd-simulator/?dev. A
 Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, sound levels) and a panel with a free-fly camera (also the backtick key), collider wireframes, a teleport button for every place and live vehicle tuning sliders. Add `?bench` for the phone's headroom test: https://reidstephen11.github.io/4wd-simulator/?bench. Start a drive and leave it for about two and a half minutes. The car is parked at three places in turn (the Knoll track, the summit looking west, the ford) and the frame rate is timed while the load is put up step by step: a sharper picture, Medium and High graphics, the screen's full resolution, the whole picture drawn two, three and four times a frame, and High at full resolution drawn two and three times. The step where the frame rate first drops shows how much the phone has in hand. The results stay on screen to be sent as a screenshot.
 
 ## What to test
+
+**v0.25**
+
+- Tyre marks: drive off the track onto grass and look back; turn tightly and see four lines separate; spin the wheels on a climb and see the darker marks.
+- Out of the ford or the bog hole: wet tracks for a few metres, on rock as well.
+- On your phone on Medium or High: the marks should cost nothing you can feel.
+- A note without a control now reads "Note" at its top, not "History".
 
 **v0.24**
 
