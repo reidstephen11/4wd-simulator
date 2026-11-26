@@ -79,8 +79,8 @@ export function addUnimogInterior(b: VehicleBuilder, redlineRpm: number): void {
   for (const x of [0.5, -0.55]) {
     b.block(x, floor + 0.16, back - 0.35, 0.42, 0.32, 0.36, dark, M.Metal, Z.Trim);
     b.block(x, floor + 0.37, back - 0.42, 0.52, 0.12, 0.5, vinyl, M.Fabric, Z.Trim, 0.04);
-    b.push().rotate(-0.12, 0, 0);
-    b.block(x, floor + 0.76, back + 0.04, 0.52, 0.62, 0.1, vinyl, M.Fabric, Z.Trim, 0.04);
+    b.seatBack(x, floor + 0.678, back - 0.111, 0.12);
+    b.block(0, 0, 0, 0.52, 0.62, 0.1, vinyl, M.Fabric, Z.Trim, 0.04);
     b.pop();
   }
   // Painted inner door skins with a pull handle; the lining overhead.

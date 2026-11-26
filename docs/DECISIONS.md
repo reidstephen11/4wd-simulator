@@ -449,3 +449,12 @@ Every item in `docs/playtest-v0.16.md` was worked through.
 - **Grass under the tyres** (the v0.25 leftover). Grass now takes a fainter mark (0.26, from 0.32) in its own dark green, a flattened line rather than brown tread printed on it. Gravel (0.3) now marks slightly more than dry grass.
 - **Looked at** on High in the browser here, camera a metre off the ground: the camp track (grit, no crack pattern), the bog hole (lumps), the rock garden (stones on the ground, joints on the ledges) and the rock climb from its foot.
 - **Not done.** The ground is still not pressed in under a tyre (no ruts), and the detail is drawn, not felt: the physics drives on the same smooth surface as before. Shrubs are still plain low-poly shapes.
+
+## v0.27: no wheel spin in neutral, seat backs that lean back, the Range Rover's bar
+
+The owner reported three things after v0.26, all in code shared with Over the Cape. Each was fixed there (its v2.26, where the vehicle work, the renders and the reviewer's findings are written up) and the same files were carried across unchanged.
+
+- **Wheels spun when revving in neutral.** A standing car on loose ground with the throttle in is taken to be bogged, and its wheels spin, throw dust, dig in and (here) lay tyre marks. That test read the pedal alone, so it fired in neutral, between gears and with the clutch in. It now needs the drivetrain engaged (`src/sim/vehicle/vehicle.ts`). `tests/neutralSpin.test.ts` revs a Hilux in neutral on the camp's ground (no spin) and then in 1st (spin); it failed before the change with a spin of 0.25.
+- **Seat backs leaned forward.** Forward is −z, so leaning back is a positive turn about x; every cabin turned its backs the other way. They are now placed with `VehicleBuilder.seatBack()`, which names the direction, in all fifteen vehicles. Backs against a rear wall or with a spare behind them keep their rearmost point where it was; the rest keep their foot where it was.
+- **The Range Rover's roo bar stood too far out.** Its pan was drawn bolted on ahead of the factory bumper, which put the hoops 0.34 m ahead of the grille. A winch bar takes the bumper's place, so the pan now starts where the bumper did: the hoops are 0.2 m ahead of the grille and the car is 14 cm shorter over the bar. The winch rope's start moved back with it (`winchMount` in `src/data/rangie.ts`).
+

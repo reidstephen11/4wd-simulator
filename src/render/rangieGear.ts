@@ -19,7 +19,7 @@ const v = (x: number, y: number, z: number): V => ({ x, y, z });
 /** Height of the rack's deck slats, 60 mm over the roof's crown (a literal: rangieBody imports this file). */
 const DECK = 1.345;
 /** Lens centres of the two driving lamps on the bar (also in vehicleLooks). */
-export const RANGIE_DRIVING_LAMPS: V[] = [-0.19, 0.19].map((x) => v(x, 0.665, -2.41));
+export const RANGIE_DRIVING_LAMPS: V[] = [-0.19, 0.19].map((x) => v(x, 0.665, -2.27));
 
 function tube(b: VehicleBuilder, pts: V[], r: number): void {
   continuousTube(
@@ -48,20 +48,23 @@ function plate(b: VehicleBuilder, x: number, y: number, z: number, facing: numbe
 }
 
 /**
- * The roo bar: a folded steel pan ahead of the bumper holding the winch, a centre hoop over
+ * The roo bar: a folded steel pan in the bumper's place holding the winch, a centre hoop over
  * the grille with the two driving lamps on it, a hoop over each headlamp, and a cross rail
- * tying the three together.
+ * tying the three together. Until v2.26 the pan was bolted on ahead of the factory bumper, which
+ * stood the hoops 0.34 m ahead of the grille; a winch bar replaces the bumper, so the pan now
+ * starts where the bumper did (it covers the blade, and the blade's wrapped ends are its wings)
+ * and the hoops stand 0.2 m ahead of the grille.
  */
 function bullBar(b: VehicleBuilder, tuning: VehicleTuning): void {
   const face = tuning.winchMount.z + 0.04,
-    back = NOSE - 0.1,
-    low = 0.03,
+    back = NOSE - 0.02,
+    low = 0.025,
     top = 0.16;
   b.block(
     0,
     (low + top) / 2,
     (face + back) / 2,
-    1.72,
+    1.76,
     top - low,
     back - face,
     C.bar,

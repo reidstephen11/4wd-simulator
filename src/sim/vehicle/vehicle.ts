@@ -762,8 +762,10 @@ export class Vehicle {
     ];
     const axleRequests = transferDrive(t, this.transfer, drive, axleCaps[0], axleCaps[1]);
     updateWindup(t, this.transfer, this.wheels, this.speed, input.steer, dt);
-    // With the engine stopped (empty tank, cranking, flooded) the pedal turns nothing.
-    const driving = this.drivetrain.engineRunning ? throttle : 0;
+    // With the engine stopped (empty tank, cranking, flooded) the pedal turns nothing; nor in
+    // neutral, between gears or with the clutch held in, where it only revs the engine (v2.26).
+    const engaged = !this.drivetrain.neutral && this.drivetrain.clutch > 0.05;
+    const driving = this.drivetrain.engineRunning && engaged ? throttle : 0;
     for (const [i, j] of [
       [0, 1],
       [2, 3],

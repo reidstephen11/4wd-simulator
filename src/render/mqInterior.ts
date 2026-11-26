@@ -52,9 +52,9 @@ export function addMqInterior(b: VehicleBuilder, redlineRpm: number): void {
   for (const x of [-0.4, 0.4]) {
     b.block(x, floor + 0.14, 0.1, 0.46, 0.2, 0.42, mat, M.Rubber, Z.Trim, 0.02);
     b.block(x, floor + 0.3, 0.09, 0.5, 0.12, 0.5, C.vinyl, M.Fabric, Z.Trim, 0.045);
-    b.push().translate(x, 0, 0.38).rotate(-0.16, 0, 0);
-    b.block(0, floor + 0.62, 0, 0.48, 0.56, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
-    b.block(0, floor + 0.98, 0.0, 0.28, 0.16, 0.1, C.vinyl, M.Fabric, Z.Trim, 0.04);
+    b.seatBack(x, floor + 0.611, 0.3545, 0.16);
+    b.block(0, 0, 0, 0.48, 0.56, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
+    b.block(0, 0.36, 0, 0.28, 0.16, 0.1, C.vinyl, M.Fabric, Z.Trim, 0.04);
     b.pop();
   }
   // Four-speed lever and the transfer lever beside it.
@@ -72,8 +72,8 @@ export function addMqInterior(b: VehicleBuilder, redlineRpm: number): void {
   // The small bench behind the seats, ahead of the wheel boxes.
   b.block(0, floor + 0.14, 0.95, 0.96, 0.2, 0.36, mat, M.Rubber, Z.Trim, 0.02);
   b.block(0, floor + 0.3, 0.94, 1.28, 0.12, 0.42, C.vinyl, M.Fabric, Z.Trim, 0.045);
-  b.push().translate(0, 0, 1.18).rotate(-0.14, 0, 0);
-  b.block(0, floor + 0.58, 0, 1.28, 0.48, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
+  b.seatBack(0, floor + 0.573, 1.152, 0.14);
+  b.block(0, 0, 0, 1.28, 0.48, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
   b.pop();
   for (const side of [-1, 1]) {
     // Door trim with an armrest, a pull and a window winder.

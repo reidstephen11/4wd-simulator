@@ -1,7 +1,8 @@
 /**
  * Dev helper: close-ups of one vehicle in the studio page, for looking at a part added or moved
  * (reference/vehicles/README.md, "Close-ups of every part added or moved"). Each view is
- * name:x,y,z,lookX,lookY,lookZ[,fov] in the vehicle frame (x right, y up, z back).
+ * name:x,y,z,lookX,lookY,lookZ[,fov[,near]] in the vehicle frame (x right, y up, z back); `near`
+ * cuts away everything closer to the camera than that, for a section through the cabin.
  * Usage: npx vite-node scripts/studio-closeups.ts <outDir> <vehicleId> <url> name:x,y,z,tx,ty,tz,fov ...
  * Needs the dev server running; STUDIO_CHROMIUM points at a Chromium outside Playwright's cache.
  */
@@ -21,7 +22,7 @@ await page.waitForFunction(() => window.studio?.ready === true, null, { timeout:
 for (const view of views) {
   const [name, numbers] = view.split(':');
   const a = numbers.split(',').map(Number);
-  await page.evaluate((a) => window.studio.view(a[0], a[1], a[2], a[3], a[4], a[5], a[6] ?? 40), a);
+  await page.evaluate((a) => window.studio.view(a[0], a[1], a[2], a[3], a[4], a[5], a[6] ?? 40, a[7]), a);
   await page.screenshot({ path: `${outDir}/${name}.png` });
   console.log(`saved ${name}`);
 }

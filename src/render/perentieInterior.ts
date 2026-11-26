@@ -51,7 +51,9 @@ export function addPerentieInterior(b: VehicleBuilder, redlineRpm: number): void
   for (const x of [-0.42, 0.42]) {
     const w = 0.44;
     b.block(x, 0.51, 0.0, w, 0.1, 0.4, seat, M.Fabric, Z.Trim, 0.035);
-    b.block(x, 0.86, 0.2, w, 0.6, 0.1, seat, M.Fabric, Z.Trim, 0.035);
+    b.seatBack(x, 0.86, 0.17, 0.1);
+    b.block(0, 0, 0, w, 0.6, 0.1, seat, M.Fabric, Z.Trim, 0.035);
+    b.pop();
     for (const dx of [-w / 4, w / 4]) b.block(x + dx, 0.562, 0.0, 0.01, 0.006, 0.34, dark, M.Fabric, Z.Trim);
   }
   // Main gear lever and transfer lever.

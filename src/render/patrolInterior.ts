@@ -55,7 +55,7 @@ export function addPatrolInterior(b: VehicleBuilder, redlineRpm: number, widen =
   for (const x of [-0.42, 0.42]) {
     b.block(x, 0.36, -0.08, 0.42, 0.16, 0.42, dark, M.Metal, Z.Trim, 0.02);
     b.block(x, 0.48, -0.1, 0.5, 0.11, 0.5, cloth, M.Fabric, Z.Trim, 0.045);
-    b.push().translate(x, 0.82, 0.2).rotate(-0.2, 0, 0);
+    b.seatBack(x, 0.82, 0.2, 0.2);
     b.block(0, 0, 0, 0.5, 0.62, 0.12, cloth, M.Fabric, Z.Trim, 0.045);
     b.block(0, 0.4, 0.01, 0.3, 0.16, 0.1, cloth, M.Fabric, Z.Trim, 0.04);
     for (const dx of [-0.12, 0.12]) b.block(dx, 0, -0.062, 0.012, 0.5, 0.006, clothDark, M.Fabric, Z.Trim);
@@ -77,7 +77,7 @@ export function addPatrolInterior(b: VehicleBuilder, redlineRpm: number, widen =
   // Rear bench and backrest, and the cargo floor behind with a fridge and a toolbox.
   b.block(0, 0.55, 0.78, 1.5, 0.12, 0.5, cloth, M.Fabric, Z.Trim, 0.045);
   b.block(0, 0.41, 0.78, 1.4, 0.16, 0.44, dark, M.Metal, Z.Trim);
-  b.push().translate(0, 0.88, 1.05).rotate(-0.15, 0, 0);
+  b.seatBack(0, 0.88, 1.05, 0.15);
   b.block(0, 0, 0, 1.5, 0.6, 0.12, cloth, M.Fabric, Z.Trim, 0.045);
   b.pop();
   b.block(0, 0.22, 1.85, 1.16, 0.03, 1.15, dark, M.Fabric, Z.Trim);

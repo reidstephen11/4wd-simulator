@@ -149,7 +149,7 @@ export const rangieTuning: VehicleTuning = {
   // The air cleaner sits on top of the V8 under the bonnet, behind the right headlamp.
   intakeHeight: 0.98,
   intake: { x: 0.3, y: 0.98 - R - 0.12, z: -1.6 },
-  winchMount: { x: 0, y: 0.1, z: -2.46 },
+  winchMount: { x: 0, y: 0.1, z: -2.32 },
   towPoint: { x: 0, y: 0.0, z: 2.52 },
 };
 
