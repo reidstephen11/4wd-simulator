@@ -51,8 +51,12 @@ export const touchTuning = {
   dragSensitivity: 0.008,
   /** Camera zoom steps per CSS pixel the two fingers of a pinch move apart or together. */
   pinchZoomPerPx: 0.03,
-  /** Graphics preset on a phone or tablet with no saved settings. */
-  defaultQuality: 'low' as QualityLevel,
+  /**
+   * Graphics preset on a phone or tablet with no saved settings. Low in Over the Cape, for its
+   * long forest maps. Medium here (v0.24): the owner's phone held 60 fps on this game's levels
+   * with four times Low's load, and Low draws one pixel for every 2.6 across of its screen.
+   */
+  defaultQuality: 'medium' as QualityLevel,
 };
 
 /**

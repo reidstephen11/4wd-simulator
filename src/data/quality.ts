@@ -83,21 +83,27 @@ export const defaultQuality: QualityLevel = 'medium';
 /** The settings in the order the menus offer them. */
 export const qualityLevels: readonly QualityLevel[] = ['low', 'medium', 'high'];
 
-/** The setting as this device plays it: a phone saved on High plays, and shows, Medium. */
-export function shownQuality(level: QualityLevel, touch: boolean): QualityLevel {
-  return touch && level === 'high' ? 'medium' : level;
-}
-
-/** The settings a device's Graphics row offers: phones have no High. */
-export function offeredQualities(touch: boolean): readonly QualityLevel[] {
-  return touch ? qualityLevels.filter((q) => q !== 'high') : qualityLevels;
-}
-
 /**
- * The preset as drawn on this device. Phones have no High: a Pixel 10a on High fell to 20–39 fps
- * under the Bloomfield forest with the game's code taking only 10–14 ms (the graphics chip was the
- * limit) and was smooth on Medium, so a phone saved on High draws Medium.
+ * The highest setting a phone or tablet is given. Over the Cape stopped phones at Medium: a
+ * Pixel 10a on High fell to 20–39 fps under its Bloomfield forest. On this game's small, open
+ * levels the owner's phone held 60 fps on High at its screen's full resolution at all three
+ * places of the headroom test (`?bench`, v0.23), so phones are offered High too (v0.24). A
+ * level thick enough to need the limit again lowers it here.
  */
+export const phoneMaxQuality: QualityLevel = 'high';
+
+/** The setting as this device plays it: a phone saved above `phoneMaxQuality` plays, and shows, that. */
+export function shownQuality(level: QualityLevel, touch: boolean): QualityLevel {
+  const max = qualityLevels.indexOf(phoneMaxQuality);
+  return touch && qualityLevels.indexOf(level) > max ? phoneMaxQuality : level;
+}
+
+/** The settings a device's Graphics row offers: a phone's stop at `phoneMaxQuality`. */
+export function offeredQualities(touch: boolean): readonly QualityLevel[] {
+  return touch ? qualityLevels.slice(0, qualityLevels.indexOf(phoneMaxQuality) + 1) : qualityLevels;
+}
+
+/** The preset as drawn on this device (see `phoneMaxQuality`). */
 export function qualityFor(level: QualityLevel, touch: boolean): QualityPreset {
   return qualityPresets[shownQuality(level, touch)];
 }

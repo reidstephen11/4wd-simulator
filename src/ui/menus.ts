@@ -338,7 +338,7 @@ export class PauseMenu {
         ${foot(true)}</div>`;
     } else if (page === 'settings') {
       const s = this.settings;
-      // Phones have no High (see qualityFor): one saved on High shows Medium.
+      // A phone's settings stop at phoneMaxQuality (see qualityFor).
       const quality = shownQuality(s.quality, isTouchDevice());
       const q = (v: string) =>
         `<button data-focus data-quality="${v}" class="${quality === v ? 'on' : ''}">${v[0].toUpperCase()}${v.slice(1)}</button>`;
