@@ -55,10 +55,13 @@ export function addPatrolInterior(b: VehicleBuilder, redlineRpm: number, widen =
   for (const x of [-0.42, 0.42]) {
     b.block(x, 0.36, -0.08, 0.42, 0.16, 0.42, dark, M.Metal, Z.Trim, 0.02);
     b.block(x, 0.48, -0.1, 0.5, 0.11, 0.5, cloth, M.Fabric, Z.Trim, 0.045);
+    // The back is 8 cm shorter and the headrest 4 cm than until v2.26, when the headrest's top
+    // stood 8 cm through the headlining (1.215): its top is now at 1.18.
     b.seatBack(x, 0.82, 0.2, 0.2);
-    b.block(0, 0, 0, 0.5, 0.62, 0.12, cloth, M.Fabric, Z.Trim, 0.045);
-    b.block(0, 0.4, 0.01, 0.3, 0.16, 0.1, cloth, M.Fabric, Z.Trim, 0.04);
-    for (const dx of [-0.12, 0.12]) b.block(dx, 0, -0.062, 0.012, 0.5, 0.006, clothDark, M.Fabric, Z.Trim);
+    b.block(0, -0.04, 0, 0.5, 0.54, 0.12, cloth, M.Fabric, Z.Trim, 0.045);
+    b.block(0, 0.31, 0.01, 0.3, 0.12, 0.1, cloth, M.Fabric, Z.Trim, 0.04);
+    for (const dx of [-0.12, 0.12])
+      b.block(dx, -0.04, -0.062, 0.012, 0.44, 0.006, clothDark, M.Fabric, Z.Trim);
     b.pop();
   }
   // Centre console with the five-speed lever, the transfer lever and their boots.

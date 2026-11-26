@@ -87,7 +87,7 @@ export function addRangieInterior(b: VehicleBuilder, redlineRpm: number): void {
   // they were 1.44 m wide, and their tan ends showed inside the rear wheel openings.
   b.block(0, floor + 0.3, 1.09, 1.02, 0.12, 0.5, C.vinyl, M.Fabric, Z.Trim, 0.045);
   // Its top stays where its foot was: the spare stands in the load bay right behind it.
-  b.seatBack(0, floor + 0.5535, 1.278, 0.14);
+  b.seatBack(0, floor + 0.5535, 1.258, 0.14);
   b.block(0, 0, 0, 1.02, 0.5, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
   b.pop();
   for (const side of [-1, 1]) {
