@@ -32,7 +32,7 @@ The game opens on a title screen. **Press any button** (or **Tap to begin**) bri
 
 The engine is off as you arrive: the first press of the accelerator starts it. **Pause → Main menu** goes back to the title.
 
-The version number (v0.22 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
+The version number (v0.23 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
 
 ## Ironbark Creek
 
@@ -50,7 +50,7 @@ The first level is half a kilometre square. A 25 m knoll stands in the middle wi
 
 **On the creek** (each crossing runs from the Knoll track's west leg to the West bank track):
 
-- **The ford** (middle): under half a metre of water over gravel, on easy ramps. Any vehicle, any gear.
+- **The ford** (middle): under half a metre of water over gravel, on easy ramps. Any vehicle, any gear. Cross steadily, then give it a little more throttle up the far bank: at a light throttle the car stops on the ramp.
 - **The deep crossing** (north): over 1.2 m deep on the straight line. Crawl it: above walking pace the bow wave reaches the air intake and floods the engine. Just downstream (to your left going west) a gravel bar carries about half the depth, with boulders to weave between and two scour holes. The banks are laid back for 40 m, so both lines share the way in.
 - **The chute** (south): about eight metres of clay at 30° down to the water, with an erosion rut to straddle, then eleven metres at 26° out with a step of rock at the lip. Marked boulders stand above the climb out to winch from. Going west it can be crawled with both lockers; coming back east, up the chute itself, takes the winch.
 
@@ -65,7 +65,7 @@ How hard they are, measured with the autopilot crawling in low range in the shor
 
 **Notes.** The first time you reach an obstacle, a small card says what it is and which control helps there, worded for the keyboard, controller or phone you are using. **Pause → Trip journal** keeps the notes you have seen.
 
-**Camps.** Driving into either camp repairs the car, puts the spare wheel and tyre plugs back (one spare and three plugs) and makes that the camp you return to. **Pause → Restart from last camp** goes back to it. No fuel is used in a playground level.
+**Camps.** Driving into either camp repairs the car, puts the spare wheel and tyre plugs back (one spare and three plugs) and makes that the camp you return to. **Pause → Restart from last camp** goes back to it. No fuel is used in a playground level, so there is no fuel gauge on the screen and no jerry cans in the tool menu.
 
 ## Conditions
 
@@ -164,7 +164,7 @@ The table shows PlayStation labels; choose Xbox or Generic in Settings to change
 
 **Manual gearbox (controller only).** Settings → **Gearbox** picks **Automatic** (the default) or **Manual** (you change gear with D-pad right and left and the clutch is worked for you). The row shows only while a controller is connected on a computer; the keyboard and touch always drive automatic.
 
-**HUD.** A small group of dials (speedometer with the gear in a window, TEMP and FUEL), a compass, and warning lamps that show what is on (LOW, F LOCK, R LOCK, CRAWL, BRAKE, lights, WINCH) and what is wrong (STALLED, FLOODING, TEMP HIGH, a flat tyre, engine and body damage). Settings → **HUD style** picks Dash cluster, Edge lines or Field kit; **UI size** scales the whole interface; **Frame rate** picks 60 or the screen's own rate.
+**HUD.** A small group of dials (speedometer with the gear in a window, and TEMP), a compass, and warning lamps that show what is on (LOW, F LOCK, R LOCK, CRAWL, BRAKE, lights, WINCH) and what is wrong (STALLED, FLOODING, TEMP HIGH, a flat tyre, engine and body damage). Settings → **HUD style** picks Dash cluster, Edge lines or Field kit; **UI size** scales the whole interface; **Frame rate** picks 60 or the screen's own rate.
 
 ### Phones and tablets
 
@@ -223,6 +223,12 @@ Add `?dev` to the address: https://reidstephen11.github.io/4wd-simulator/?dev. A
 Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, sound levels) and a panel with a free-fly camera (also the backtick key), collider wireframes, a teleport button for every place and live vehicle tuning sliders. Add `?bench` for the phone test: the car parks on the Knoll track and the frame rate is timed with one thing turned off at a time and on each graphics setting.
 
 ## What to test
+
+**v0.23**
+
+- The dials in all three HUD styles (Settings → HUD style): speedometer and TEMP, no FUEL.
+- The tool menu: no jerry can entry.
+- The ford's hint and note: "a little more throttle up the far bank".
 
 **v0.22**
 

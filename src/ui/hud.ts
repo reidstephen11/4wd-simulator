@@ -384,7 +384,7 @@ export class Hud {
       gear: s.gauges.gear,
       range: s.range,
       heat: s.supplies ? s.supplies.heat : null,
-      fuel: s.supplies ? s.supplies.fuel : null,
+      fuel: s.supplies && s.supplies.fuelGauge !== false ? s.supplies.fuel : null,
       tank: s.supplies?.tank ?? 1,
       hour: e?.hour ?? null,
       darkHour: e?.darkHour ?? null,
@@ -539,10 +539,11 @@ export class Hud {
     this.suppliesPanel.classList.toggle('hidden', !s);
     if (!s) return;
     this.vehicleGauges.update(s);
-    const key = `${s.jerryCans}|${s.spares}|${s.plugs}`;
+    const fuel = s.fuelGauge !== false;
+    const key = `${s.jerryCans}|${s.spares}|${s.plugs}|${fuel}`;
     if (key === this.lastSuppliesKey) return;
     this.lastSuppliesKey = key;
-    this.suppliesEl.innerHTML = `<span title="Jerry cans (20 L each)">${icons.fuel}×${s.jerryCans}</span><span title="Spare wheels">${icons.tyre}×${s.spares}</span><span title="Tyre plugs">${icons.plug}×${s.plugs}</span>`;
+    this.suppliesEl.innerHTML = `${fuel ? `<span title="Jerry cans (20 L each)">${icons.fuel}×${s.jerryCans}</span>` : ''}<span title="Spare wheels">${icons.tyre}×${s.spares}</span><span title="Tyre plugs">${icons.plug}×${s.plugs}</span>`;
   }
 
   private drawTrailer(t: TrailerHud | null): void {

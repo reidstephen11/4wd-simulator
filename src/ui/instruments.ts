@@ -265,6 +265,8 @@ export class Instruments {
       this.gearEl.textContent = gear;
     }
     this.cluster.classList.toggle('no-engine', s.heat === null);
+    // The engine's dials without the fuel gauge: a level where no fuel is burnt (v0.23).
+    this.cluster.classList.toggle('no-fuel', s.heat !== null && s.fuel === null);
     if (s.heat !== null) {
       turn(this.temp, sweep(heatShare(s.heat)));
       slide(this.tempSlide, heatShare(s.heat));
