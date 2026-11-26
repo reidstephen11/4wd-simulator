@@ -57,6 +57,8 @@ import { Finds } from '../sim/finds';
 import { FindMarkers } from '../render/finds';
 import { StuckVehicleView } from '../render/stuckVehicleView';
 import { RutsView } from '../render/ruts';
+import { TyreMarksView } from '../render/tyreMarks';
+import { TyreMarkStore, TyreTrail } from '../sim/world/tyreMarks';
 import { WheelMarksView } from '../render/wheelMarks';
 import { wheelMarkSpots } from '../sim/world/wheelMarks';
 import type { TrailerTuning } from '../data/trailers';
@@ -224,6 +226,11 @@ export class Game {
   private readonly trafficCars: TrafficCars;
   private churnNoted = false;
   private readonly ruts: RutsView;
+  /** The marks the car's tyres leave (v0.25): the pieces laid, a trail for each wheel, and their mesh. */
+  private readonly tyreMarkStore = new TyreMarkStore();
+  private tyreTrails: TyreTrail[] = [];
+  private tyreTrailsFor: Vehicle | null = null;
+  private readonly tyreMarks: TyreMarksView;
   /** Stranded drivers winched out so far this run. */
   private strandedFreed = new Set<string>();
   /** The supply run's drums are delivered (shown once). */
@@ -382,6 +389,8 @@ export class Game {
     }
     this.ruts = new RutsView(sim.churn, (x, z) => world.terrain.heightAt(x, z));
     view.scene.add(this.ruts.mesh);
+    this.tyreMarks = new TyreMarksView(this.tyreMarkStore);
+    view.scene.add(this.tyreMarks.mesh);
     // Worn wheel lines where the map has them: which way others have driven (v2.25).
     const wheelMarks = wheelMarkSpots(world.features.tracks, (x, z) => world.terrain.waterDepthAt(x, z));
     if (wheelMarks.length)
@@ -1607,6 +1616,39 @@ export class Game {
     );
   }
 
+  /** Pieces of tyre mark laid so far. */
+  get tyreMarksLaid(): number {
+    return this.tyreMarkStore.laid;
+  }
+
+  /** Lay this frame's tyre marks under each wheel of the car (a trail each, remade for a new car). */
+  private layTyreMarks(v: Vehicle): void {
+    if (this.loop.paused) return;
+    if (this.tyreTrails.length !== v.wheels.length || this.tyreTrailsFor !== v) {
+      const width = v.tuning.drawnWheels?.width ?? v.tuning.wheelWidth;
+      const heightAt = (x: number, z: number) => this.world.terrain.heightAt(x, z);
+      this.tyreTrails = v.wheels.map(() => new TyreTrail(this.tyreMarkStore, width, heightAt));
+      this.tyreTrailsFor = v;
+    }
+    const wetness = this.sim.env.wetness;
+    v.wheels.forEach((w, i) =>
+      this.tyreTrails[i].update(
+        {
+          contact: w.contact,
+          surface: w.surface,
+          x: w.contactPoint.x,
+          y: w.contactPoint.y,
+          z: w.contactPoint.z,
+          spin: w.spin,
+          skid: w.skid,
+          water: w.water,
+        },
+        wetness,
+      ),
+    );
+    this.tyreMarks.update();
+  }
+
   /** Put the spare wheel and tyre plugs back to what the level set out with, and mend every tyre. */
   private restockAtCamp(): void {
     const c = this.vehicle.condition;
@@ -2060,6 +2102,7 @@ export class Game {
     this.trafficCars.render(between);
     this.ghost?.update(this.run.elapsed);
     this.ruts.update(frameDt);
+    this.layTyreMarks(v);
     this.delivery.render(between);
     this.model.applyCondition(v.condition);
     this.model.setPlanksOnRack(tools.planks.carried);
