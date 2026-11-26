@@ -25,6 +25,20 @@ export function addUnimogInterior(b: VehicleBuilder, redlineRpm: number): void {
   // Rubber floor mat and the gearbox hump between the seats.
   b.block(0, floor + 0.036, mid, 2.1, 0.012, len - 0.05, mat, M.Rubber, Z.Trim);
   b.block(0, floor + 0.12, mid - 0.05, 0.46, 0.26, 0.9, inner, M.Paint, Z.Trim, 0.04);
+  // The firewall: the cab's front wall from the floor up to the bonnet's top at the cowl, between
+  // the side skins. Without it the footwells opened into the engine bay and the ground showed
+  // under the dash (v2.27).
+  b.block(
+    0,
+    (floor - 0.02 + 1.1) / 2,
+    front + 0.015,
+    2 * CAB.side - 0.08,
+    1.1 - floor + 0.02,
+    0.02,
+    inner,
+    M.Paint,
+    Z.Trim,
+  );
   // Dash: a steel panel across the cab under the screen, its top at the waist, and its top rail.
   const dashZ = front + 0.18;
   b.block(0, waist - 0.16, dashZ, 2.1, 0.32, 0.25, inner, M.Paint, Z.Trim, 0.02);
@@ -52,12 +66,14 @@ export function addUnimogInterior(b: VehicleBuilder, redlineRpm: number): void {
     M.Fabric,
     Z.Trim,
   );
+  // The column stands on the floor behind the dash, as the 435's does, between the clutch and
+  // brake pedals (the brake pedal stood right behind it at x 0.52).
   addSteeringColumn(b, cabin);
   // Floor-hinged clutch, brake and throttle pedals.
   for (const [x, w] of [
-    [0.36, 0.08],
-    [0.52, 0.09],
-    [0.68, 0.06],
+    [0.34, 0.08],
+    [0.6, 0.09],
+    [0.74, 0.06],
   ]) {
     b.rod({ x, y: floor + 0.02, z: dashZ + 0.15 }, { x, y: floor + 0.14, z: dashZ + 0.27 }, 0.01, metal);
     b.block(x, floor + 0.14, dashZ + 0.29, w, 0.1, 0.02, dark, M.Rubber, Z.Trim);
@@ -75,12 +91,14 @@ export function addUnimogInterior(b: VehicleBuilder, redlineRpm: number): void {
     b.geometry(new THREE.SphereGeometry(0.025, 12, 8), knob);
     b.pop();
   }
-  // Two seats with high backs against the rear wall.
+  // Two seats with high backs against the rear wall. The cushion's top is 0.28 m above the
+  // floor (y 0.82): 0.70 m under the driver's eye and 0.89 m under the lining, and 0.2 m under
+  // the steering wheel's lower rim, which rested on the cushion's front when its top was at 0.97.
   for (const x of [0.5, -0.55]) {
-    b.block(x, floor + 0.16, back - 0.35, 0.42, 0.32, 0.36, dark, M.Metal, Z.Trim);
-    b.block(x, floor + 0.37, back - 0.42, 0.52, 0.12, 0.5, vinyl, M.Fabric, Z.Trim, 0.04);
-    b.seatBack(x, floor + 0.678, back - 0.111, 0.12);
-    b.block(0, 0, 0, 0.52, 0.62, 0.1, vinyl, M.Fabric, Z.Trim, 0.04);
+    b.block(x, floor + 0.085, back - 0.35, 0.42, 0.17, 0.36, dark, M.Metal, Z.Trim);
+    b.block(x, floor + 0.22, back - 0.42, 0.52, 0.12, 0.5, vinyl, M.Fabric, Z.Trim, 0.04);
+    b.seatBack(x, floor + 0.55, back - 0.115, 0.12);
+    b.block(0, 0, 0, 0.52, 0.68, 0.1, vinyl, M.Fabric, Z.Trim, 0.04);
     b.pop();
   }
   // Painted inner door skins with a pull handle; the lining overhead.

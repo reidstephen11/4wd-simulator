@@ -783,6 +783,9 @@ function rollBar(b: VehicleBuilder): void {
   }
 }
 
+/** The chassis rails behind the rear axle: where they climb, and their height and depth there. */
+const REAR_RAIL = { kickFrom: 0.95, kickTo: 1.25, y: 0.125, h: 0.11 };
+
 function chassisAndRecovery(b: VehicleBuilder, tuning: VehicleTuning, wheel: THREE.BufferGeometry): void {
   // Galvanised ladder frame, crossmembers, outriggers and the rear crossmember.
   for (const side of [-1, 1]) {
@@ -805,16 +808,42 @@ function chassisAndRecovery(b: VehicleBuilder, tuning: VehicleTuning, wheel: THR
       M.Paint,
       Z.Trim,
     );
-    b.block(side * 0.43, 0.03, 0.22, 0.1, 0.18, 2.16, galv, M.Paint, Z.Trim);
-    b.rod(
-      { x: side * 0.43, y: 0.03, z: 1.28 },
-      { x: side * 0.495, y: 0.03, z: 1.72 },
-      0.05,
+    b.block(
+      side * 0.43,
+      0.03,
+      (-0.86 + REAR_RAIL.kickFrom) / 2,
+      0.1,
+      0.18,
+      REAR_RAIL.kickFrom + 0.86,
       galv,
       M.Paint,
       Z.Trim,
     );
-    b.block(side * 0.495, 0.03, 2.01, 0.1, 0.18, 0.6, galv, M.Paint, Z.Trim);
+    // Behind the cab each rail climbs over the rear axle and runs on shallower to the tail, so
+    // the axle has room to rise and the spare can tuck up under the rails (they ran straight at
+    // one height, and the axle on full bump stood 0.14 m into them). The climb's height is an
+    // estimate: no photograph in the folder shows the chassis from the side.
+    const run = REAR_RAIL.kickTo - REAR_RAIL.kickFrom,
+      rise = REAR_RAIL.y - 0.03;
+    b.slot = M.Paint;
+    b.tag = Z.Trim;
+    b.push()
+      .translate(side * 0.43, 0.03 + rise / 2, (REAR_RAIL.kickFrom + REAR_RAIL.kickTo) / 2)
+      .rotate(-Math.atan2(rise, run), 0, 0);
+    b.box(0.1, 0.12, Math.hypot(rise, run) + 0.02, galv);
+    b.pop();
+    b.rod(
+      { x: side * 0.43, y: REAR_RAIL.y, z: REAR_RAIL.kickTo },
+      { x: side * 0.495, y: REAR_RAIL.y, z: 1.72 },
+      REAR_RAIL.h / 2,
+      galv,
+      M.Paint,
+      Z.Trim,
+    );
+    b.block(side * 0.495, REAR_RAIL.y, 2.01, 0.1, REAR_RAIL.h, 0.6, galv, M.Paint, Z.Trim);
+    // A drop bracket from each rail's end down the front of the rear crossmember, which hangs
+    // lower than the rails.
+    b.block(side * 0.495, 0.02, 2.28, 0.1, 0.14, 0.06, galv, M.Paint, Z.Trim);
   }
   for (const z of [FRONT_FACE + 0.06, -0.62, 0.62])
     b.block(0, 0.02, z, 0.86, 0.1, 0.1, galv, M.Paint, Z.Trim);
@@ -835,30 +864,52 @@ function chassisAndRecovery(b: VehicleBuilder, tuning: VehicleTuning, wheel: THR
     steel.clone().multiplyScalar(0.6),
   );
   b.block(0.64, 0.06, 0.15, 0.22, 0.24, 0.72, black, M.Metal, Z.Trim, 0.03);
-  b.rod({ x: -0.3, y: -0.06, z: -0.75 }, { x: -0.3, y: -0.08, z: 1.0 }, 0.028, steel);
-  b.rod({ x: -0.3, y: -0.08, z: 1.0 }, { x: -0.62, y: -0.09, z: 2.4 }, 0.028, steel);
+  // The exhaust runs back inside the left rail, turns out under it behind the silencer and ends
+  // under the sill, 0.29 m ahead of the left rear tyre. (It ran on to the tail, where the spare
+  // now is. On the 1988 truck the outlet is under the sill ahead of the right rear wheel, behind
+  // the sill tank: side-county.jpg. The model's exhaust has always been on the left and stays.)
+  // The pipe and silencer are 2 cm further in than before v2.27 (the silencer's side was 5 mm
+  // inside the rail's inner face), and the tail drops to −0.15 so it passes 2 cm under the
+  // rail and the left trailing link. A hanger joins the tail to the rail where it passes under
+  // it, and another hangs its end from the body's sill.
+  b.rod({ x: -0.28, y: -0.06, z: -0.75 }, { x: -0.28, y: -0.09, z: 0.5 }, 0.028, steel);
+  b.rod({ x: -0.28, y: -0.09, z: 0.5 }, { x: -0.84, y: -0.15, z: 0.695 }, 0.028, steel);
+  b.block(-0.43, -0.075, 0.552, 0.04, 0.035, 0.03, black, M.Rubber, Z.Trim);
+  b.rod({ x: -0.76, y: -0.14, z: 0.667 }, { x: -0.76, y: SILL, z: 0.667 }, 0.008, black, M.Rubber, Z.Trim);
+  b.block(-0.76, SILL - 0.012, 0.667, 0.06, 0.024, 0.04, black, M.Metal, Z.Trim);
   b.slot = M.Metal;
   b.tag = Z.Trim;
   b.push()
-    .translate(-0.3, -0.07, 0.2)
+    .translate(-0.28, -0.07, 0.2)
     .rotate(Math.PI / 2, 0, 0);
   b.geometry(new THREE.CylinderGeometry(0.085, 0.085, 0.5, 12), steel.clone().multiplyScalar(0.6));
   b.pop();
-  // The Perentie's own spare wheel, slung flat in a cradle under the rear floor.
+  // The Perentie's own spare wheel, wound up flat under the rear floor behind the axle.
   b.tag = Z.Rear;
-  // v1.90: it hangs 0.2 m lower and 80 mm further back. Tucked up between the rails it could
-  // not be seen from any side, and its front edge was inside the differential. Its tread now
-  // passes just under the rear crossmember and shows below it from behind, as the real one does.
-  const spare = { x: 0, y: -0.17, z: 1.93 };
+  // It lies against the underside of the raised rails, outer face down, 0.17 m left of centre:
+  // the differential is right of centre, and beside it the tyre fits between the axle and the
+  // rear crossmember with 1.5 cm to the differential's housing and 1.2 cm to the crossmember.
+  // About 0.11 m of its tread shows below the crossmember from behind (front-34-left-county.jpg
+  // shows a few centimetres of it and nothing under it). From v1.90 it hung on the centre line
+  // wholly below the crossmember, in a cradle 0.195 m off the ground, the lowest thing behind
+  // the axle; now its tyre is 0.36 m off the ground and its hub plate 0.31 m, above the
+  // differential's 0.30 m.
+  const spare = { x: -0.17, y: REAR_RAIL.y - REAR_RAIL.h / 2 - spareSidewall(wheel) - 0.006, z: 1.89 };
   mountSpare(b, wheel, spare, 'down', black);
-  const under = spare.y - spareSidewall(wheel) - 0.02;
-  for (const x of [-0.2, 0.2]) b.block(x, under, spare.z, 0.05, 0.03, 0.84, galv, M.Paint, Z.Trim);
-  for (const z of [spare.z - 0.42, spare.z + 0.3]) {
-    b.block(0, under - 0.005, z, 1.04, 0.04, 0.035, galv, M.Paint, Z.Trim);
-    // Hangers from the chassis rails down to the cradle.
-    for (const x of [-0.495, 0.495])
-      b.rod({ x, y: -0.06, z }, { x, y: under - 0.005, z }, 0.012, galv, M.Paint, Z.Trim);
-  }
+  // What holds it: a crossbar between the rails above the wheel, a winding rod down through
+  // the wheel's centre, and a plate under the hub.
+  wheel.computeBoundingBox();
+  const half = wheel.boundingBox!.max.x;
+  b.block(0, REAR_RAIL.y + 0.01, spare.z, 0.9, 0.05, 0.06, galv, M.Paint, Z.Trim);
+  b.rod(
+    { x: spare.x, y: REAR_RAIL.y + 0.01, z: spare.z },
+    { x: spare.x, y: spare.y - half - 0.006, z: spare.z },
+    0.012,
+    steel,
+    M.Metal,
+    Z.Trim,
+  );
+  b.block(spare.x, spare.y - half - 0.007, spare.z, 0.2, 0.012, 0.2, galv, M.Paint, Z.Trim, 0.004);
   // Pintle hook and trailer socket for the No. 5 trailer, and the rear plate.
   b.block(0, -0.02, 2.43, 0.14, 0.12, 0.08, black, M.Metal, Z.Rear, 0.01);
   b.ring(0, -0.04, 2.5, 0.045, 0.014, black, M.Metal, 'y', Z.Rear);

@@ -32,7 +32,7 @@ The game opens on a title screen. **Press any button** (or **Tap to begin**) bri
 
 The engine is off as you arrive: the first press of the accelerator starts it. **Pause → Main menu** goes back to the title.
 
-The version number (v0.27 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
+The version number (v0.28 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
 
 ## Ironbark Creek
 
@@ -227,6 +227,16 @@ Add `?dev` to the address: https://reidstephen11.github.io/4wd-simulator/?dev. A
 Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, sound levels) and a panel with a free-fly camera (also the backtick key), collider wireframes, a teleport button for every place and live vehicle tuning sliders. Add `?bench` for the phone's headroom test: https://reidstephen11.github.io/4wd-simulator/?bench. Start a drive and leave it for about two and a half minutes. The car is parked at three places in turn (the Knoll track, the summit looking west, the ford) and the frame rate is timed while the load is put up step by step: a sharper picture, Medium and High graphics, the screen's full resolution, the whole picture drawn two, three and four times a frame, and High at full resolution drawn two and three times. The step where the frame rate first drops shows how much the phone has in hand. The results stay on screen to be sent as a screenshot.
 
 ## What to test
+
+**v0.28**
+
+Vehicle fixes carried over from Over the Cape v2.27. Walk round each in the vehicle menu.
+
+- Short-wheelbase 4WD (the code-built 40): the roof rack's legs come down outside the roof to three clamps on each gutter; the boards stop inside the rack's end rails; the jerry can is flat against the right rear door on a small tray, clear of the bumper.
+- FJ40: the rear spare has a bar and a tee handle across its centre and a bracket from the body's left rear corner; there is a clear gap between the snorkel's head and the rack's front-left leg.
+- Unimog: there is room for legs between the steering wheel and the seat, and the three dials still read through the wheel from the driver's seat. The roof hatch sits on a raised ring with hinges and a latch. The exhaust ends in a short stub ahead of the left rear tyre. The spare on the dropside has a three-armed clamp. The footwells have a wall under the dash, with no ground showing.
+- Perentie: from behind, the spare is tucked up under the floor, a little left of centre, with no cradle under it; the exhaust ends under the left sill ahead of the left rear wheel. Backing off a ledge, the tail touches where the spare is drawn (a little sooner than before).
+- Troop Carrier: the front wheel arch is dark all round behind the tyre.
 
 **v0.27**
 

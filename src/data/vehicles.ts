@@ -416,9 +416,10 @@ export const vehicles: Record<VehicleId, VehicleDef> = {
         travel: 0.6,
       },
       steeringWheel: {
-        // A big wheel on a steep column, almost flat like a bus's.
-        centre: { x: 0.5, y: 1.15, z: -1.45 },
-        columnBase: { x: 0.5, y: 0.78, z: -1.82 },
+        // A big wheel on a steep column from the floor, 25° off flat like a bus's (it was 45°,
+        // with its lower rim on the seat cushion). The dials show through its upper half.
+        centre: { x: 0.5, y: 1.13, z: -1.48 },
+        columnBase: { x: 0.5, y: 0.57, z: -1.74 },
         radius: 0.22,
         // Power steering: about two turns to full lock.
         ratio: 22,
