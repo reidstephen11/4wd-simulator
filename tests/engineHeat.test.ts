@@ -75,7 +75,8 @@ describe('engine heat', () => {
   });
 
   it('warns on a low-range climb and loses power once boiling', () => {
-    const v = fake({ throttle: 1, rpm: 4000, range: 'low', speed: 6 });
+    // A hard climb: flat out at 93% of the revs (4000 rpm of the 4300 the six revved to before v2.29).
+    const v = fake({ throttle: 1, rpm: redline * 0.93, range: 'low', speed: 6 });
     const warnAt = secondsTo(v, damageTuning.engine.heatWarn);
     expect(warnAt).toBeGreaterThan(50);
     expect(warnAt).toBeLessThan(120);

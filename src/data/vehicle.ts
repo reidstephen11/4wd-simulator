@@ -61,6 +61,13 @@ export interface VehicleTuning {
      * through a share of this, so its torque falls as the revs rise.
      */
     airflow: number;
+    /**
+     * The engine breathes better at the top of its revs (v2.29): the air it can draw rises
+     * in a straight line from `airflow` at `fromRpm` to `airflow × (1 + air)` at the rev
+     * limit, at every throttle opening. Below `fromRpm` nothing changes, so the bottom half
+     * of the revs, where the car crawls, pulls as it always did.
+     */
+    topEnd?: { fromRpm: number; air: number };
     /** Share of `airflow` with the throttle closed (idle air). */
     idleAir: number;
     /** Throttle opening → air: share = throttle ^ curve (fine control near closed). */
@@ -256,17 +263,18 @@ export const vehicleTuning: VehicleTuning = {
     idleRpm: 800,
     crankSeconds: 0.95,
     crankRpm: 190,
-    redlineRpm: 4300,
+    redlineRpm: 4700,
     torqueCurve: [
       [600, 150],
       [1200, 235],
       [2000, 280],
       [2800, 285],
-      [3600, 250],
-      [4300, 190],
-      [4800, 80],
+      [3800, 250],
+      [4700, 188],
+      [5350, 79],
     ],
     airflow: 950000,
+    topEnd: { fromRpm: 2800, air: 0.104 },
     idleAir: 0.03,
     throttleCurve: 1.5,
     idleGovernor: 0.08,
@@ -286,7 +294,7 @@ export const vehicleTuning: VehicleTuning = {
     reverse: 2.08,
     finalDrive: 3.7,
     efficiency: 0.85,
-    upshiftRpm: { light: 2100, full: 3800 },
+    upshiftRpm: { light: 2100, full: 4150 },
     downshiftRpm: { light: 1150, full: 2300 },
     shiftTime: 0.35,
   },

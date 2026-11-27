@@ -27,10 +27,12 @@ describe('Hilux SR5 Xtra Cab', () => {
     expect([t.gearbox.finalDrive, t.ranges.low.ratio]).toEqual([4.1, 2.276]);
     expect(t.engine.fuel.tankLitres).toBe(73);
     expect(t.transfer).toBe('partTime');
-    // 190 Nm at 2,800 rpm and 86.5 kW (116 hp) at 4,800.
+    // 190 Nm at 2,800 rpm, as the brochure. Its 86.5 kW (116 hp) at 4,800 became 94.6 kW at
+    // 5,250 on the curve when v2.29 let every engine rev a tenth further (the airflow limit
+    // holds what is delivered to about 86 kW).
     const at = (rpm: number) => t.engine.torqueCurve.find(([r]) => r === rpm)![1];
     expect(at(2800)).toBe(190);
-    expect((at(4800) * 4800 * 2 * Math.PI) / 60 / 1000).toBeCloseTo(86.5, 0);
+    expect((at(5250) * 5250 * 2 * Math.PI) / 60 / 1000).toBeCloseTo(94.6, 0);
     // Its own engine sound: the injected four, four firings, a starter as long as the crank time.
     expect(engineSynthTunings.xtracab).toBe(efiFourSynthTuning);
     expect(efiFourSynthTuning).not.toBe(engineSynthTunings.hilux);

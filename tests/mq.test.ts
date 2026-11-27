@@ -126,7 +126,7 @@ describe('MQ Patrol hardtop', () => {
     }
   });
 
-  it('idles near 650 rpm, reaches 60 km/h in 11 to 18 s, and climbs 30° in low range', async () => {
+  it('idles near 650 rpm, reaches 60 km/h in 10 to 18 s, and climbs 30° in low range', async () => {
     const s = await makeScene({ tuning: t });
     s.run(3, {});
     expect(s.vehicle.drivetrain.rpm).toBeGreaterThan(600);
@@ -136,7 +136,8 @@ describe('MQ Patrol hardtop', () => {
       s.run(0.1, { throttle: 1 });
       time += 0.1;
     }
-    expect(time).toBeGreaterThan(11);
+    // 11.0 s since the engines were given a little more at the top (Over the Cape v2.29); slower before.
+    expect(time).toBeGreaterThan(10);
     expect(time).toBeLessThan(18);
     s.physics.world.free();
     const hill = await makeScene({ pitchDeg: 30, tuning: t });

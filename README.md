@@ -102,7 +102,7 @@ Working the engine hard overheats it, fastest when bogged with the wheels spinni
 
 ## Vehicles
 
-Pick one on the New drive page, or from **pause menu → Vehicle** while driving (the new vehicle starts from your last camp). Every vehicle is open from the start, and each has its own cab, dials and engine sound.
+Pick one on the New drive page, or from **pause menu → Vehicle** while driving (the new vehicle starts from your last camp). Every vehicle is open from the start, and each has its own cab, dials and engine sound. Every engine builds as it nears its rev limit and holds its note there; all but the Range Rover's rev about a tenth further than the real one, and each vehicle pulls a little harder at the top of its revs (v0.29).
 
 | Vehicle                    | Based on                                                                           | Engine and gearbox                                                |
 | -------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -227,6 +227,18 @@ Add `?dev` to the address: https://reidstephen11.github.io/4wd-simulator/?dev. A
 Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, sound levels) and a panel with a free-fly camera (also the backtick key), collider wireframes, a teleport button for every place and live vehicle tuning sliders. Add `?bench` for the phone's headroom test: https://reidstephen11.github.io/4wd-simulator/?bench. Start a drive and leave it for about two and a half minutes. The car is parked at three places in turn (the Knoll track, the summit looking west, the ford) and the frame rate is timed while the load is put up step by step: a sharper picture, Medium and High graphics, the screen's full resolution, the whole picture drawn two, three and four times a frame, and High at full resolution drawn two and three times. The step where the frame rate first drops shows how much the phone has in hand. The results stay on screen to be sent as a screenshot.
 
 ## What to test
+
+**v0.29**
+
+Engines and mud, carried over from Over the Cape v2.28 to v2.30. Listen with headphones or good speakers.
+
+- In any vehicle other than the Range Rover, the 40 Series and the LC79, hold a low gear flat out to the rev limit: the note builds over the last few hundred revs (more intake roar and valve noise) and then holds steady and strong, with no misfiring or cutting out. Try a petrol (the Hilux) and a diesel (the Troop Carrier or the Patrol).
+- Camel Trophy Ninety: it revs cleanly to the top, where it used to break up above about 3,600 rpm.
+- The tachometer needle runs about a tenth further round before the engine cuts (the 40 Series to 4,700, the Troop Carrier to 4,400, the Unimog to 3,100), and the red zone starts there. In Automatic at full throttle the gearbox holds each gear a little longer.
+- Each vehicle feels a little stronger near the top of its revs, and no different crawling in low range at small throttle openings. Drive a line you know well on Ironbark: same line, same throttle.
+- Range Rover: same rev limit (5,000) and the same sound, a little stronger at the top.
+- 40 Series and LC79: they still bounce at the limit. Would you rather they howled like the rest?
+- Mud: get bogged at the Bog Hole or in the bog trench and hold the throttle. The mud comes off as a spray of small flecks with the odd bigger clod, no football-sized lumps, and always flies backwards from each wheel in a forward gear, however the car rocks. In reverse it flies forwards.
 
 **v0.28**
 
