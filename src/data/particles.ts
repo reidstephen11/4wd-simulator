@@ -25,14 +25,28 @@ export const particleTuning = {
   },
 
   mud: {
-    /** Per wheel per second from wheelspin (0..1) and from rolling speed. */
-    spinRate: 45,
-    speedRate: 14,
-    life: [0.7, 1.3],
-    size: [0.06, 0.15],
-    /** Thrown back off the tyre (m/s) and up. */
+    /**
+     * Per wheel per second from wheelspin (0..1) and from rolling speed. More and smaller
+     * since v2.30 (45 and 14 lumps of 12 to 30 cm before); four wheels at full spin for a
+     * fleck's longest life still fit `maxChunks`.
+     */
+    spinRate: 100,
+    speedRate: 30,
+    life: [0.5, 1.0],
+    /** A fleck's radius (m): 2 to 5 cm across. */
+    size: [0.01, 0.025],
+    /** Now and then a clod, up to 8 cm across. */
+    clodChance: 0.07,
+    clodSize: [0.025, 0.04],
+    /** How far a fleck is drawn out along its path (1 = round). */
+    stretch: [1.6, 2.8],
+    /** Thrown off the tyre the way the tread leaves the ground (m/s), and up. */
     throwSpeed: [2, 6],
     lift: [2, 4.5],
+    /** Flecks start this far from the contact, on the side the tread leaves it (m). */
+    behind: 0.35,
+    /** Wheelspin above which the gear, not the car's speed, says which way the wheel turns. */
+    spinFrom: 0.15,
   },
 
   splash: {

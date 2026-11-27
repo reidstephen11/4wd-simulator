@@ -18,7 +18,8 @@ describe('Camel Trophy Land Rover 90', () => {
     expect(Math.max(...wheels.map((w) => w.z)) - Math.min(...wheels.map((w) => w.z))).toBeCloseTo(2.36, 2);
     expect(Math.max(...wheels.map((w) => w.x)) * 2).toBeCloseTo(1.486, 2);
     expect(gearbox.ratios).toHaveLength(5);
-    expect(engine.redlineRpm).toBeLessThan(4500);
+    // A slow diesel: 4600 rpm since v2.29 let every engine rev a tenth further (4200 before).
+    expect(engine.redlineRpm).toBe(4600);
     // Left-hand drive: the driver, the wheel and the dials sit left of centre.
     const cabin = vehicles.camel.cabin;
     expect(cabin.eye.x).toBeLessThan(0);

@@ -275,14 +275,80 @@ export interface EngineSynthTuning {
 
 type PipeTuning = { length: number; reflection: number; dampingHz: number };
 
+type LimiterCharacter = NonNullable<EngineSynthTuning['limiter']>;
+
+/**
+ * Petrol ignition-cut bounce at the limiter: an uneven fire/cut stutter, intake roar and
+ * valvetrain thrash on the way in, and pops / crackles if you lift off still at redline.
+ */
+const petrolLimiter: LimiterCharacter = {
+  approach: 260,
+  kind: 'ignition',
+  pattern: [0, 1, 0, 0, 1, 0, 1, 1],
+  bouncePop: 0.2,
+  intake: 0.7,
+  valves: 0.85,
+  grit: 0.22,
+  block: 0.18,
+  overrunPop: 0.14,
+  dump: 0,
+};
+
+/**
+ * Diesel fuel-cut chop at the limiter: a steadier on-off than petrol, extra turbo dump
+ * and a bit of mechanical strain. Pops stay rare and small — not petrol backfires.
+ */
+const dieselLimiter: LimiterCharacter = {
+  approach: 240,
+  kind: 'fuel',
+  pattern: [0, 0, 1, 1],
+  bouncePop: 0.04,
+  intake: 0.45,
+  valves: 0.55,
+  grit: 0.16,
+  block: 0.14,
+  overrunPop: 0.03,
+  dump: 0.7,
+};
+
+/** How far above the vehicle's rev limit a howling engine's sound limiter sits. */
+const HOWL_ABOVE = 1.04;
+/** Where below the vehicle's rev limit its note starts to build (a share of that limit). */
+const HOWL_FROM = 0.94;
+
+/**
+ * The Range Rover's arrangement at the top of the revs (v2.28), for an engine whose vehicle
+ * cuts at `redlineRpm` (`engine.redlineRpm`; tests/limiter.test.ts holds the two together).
+ * The sound limiter sits 4% above the physics limit, so held flat out every cylinder still
+ * fires while the intake roar, valve noise and harshness build over the last 6% of the revs:
+ * the engine howls. The bounce is heard only if the revs are pushed past the limit, as on a
+ * steep descent in gear. `turbo` keeps the diesel's extra dump on a lift-off.
+ */
+function howl(
+  redlineRpm: number,
+  fuel: 'petrol' | 'diesel',
+  turbo = false,
+): Pick<EngineSynthTuning, 'limiterRpm' | 'limiter'> {
+  const limiterRpm = Math.round(redlineRpm * HOWL_ABOVE);
+  const like = fuel === 'petrol' ? petrolLimiter : dieselLimiter;
+  return {
+    limiterRpm,
+    limiter: {
+      ...like,
+      approach: limiterRpm - Math.round(redlineRpm * HOWL_FROM),
+      dump: turbo ? like.dump : 0,
+    },
+  };
+}
+
 /**
  * Inline-six engine synthesiser (src/audio/engine/engineSynth.ts), modelled on the
  * 4.2 L petrol six of a 1970s 40 Series. Pressures are relative (1 = full throttle).
  */
 export const engineSynthTuning: EngineSynthTuning = {
   idleRpm: 800,
-  /** Matches the 40 Series' 4300 rpm redline so the bounce is heard while the physics cuts. */
-  limiterRpm: 4300,
+  /** Matches the 40 Series' 4700 rpm redline so the bounce is heard while the physics cuts. */
+  limiterRpm: 4700,
   firingOrder: [1, 5, 3, 6, 2, 4],
   /**
    * Exhaust manifold runners, cylinders 1..6: extra delay (ms) and pulse strength. The
@@ -360,22 +426,7 @@ export const engineSynthTuning: EngineSynthTuning = {
    * second mesh and second harmonic levels, shaft-rate wobble and random flutter.
    */
   whine: { teeth: [43, 31], second: 0.5, harmonic: 0.25, shaftAm: 0.3, wobble: 0.15, gain: 0.05 },
-  /**
-   * Petrol ignition-cut bounce at the limiter: an uneven fire/cut stutter, intake roar and
-   * valvetrain thrash on the way in, and pops / crackles if you lift off still at redline.
-   */
-  limiter: {
-    approach: 260,
-    kind: 'ignition',
-    pattern: [0, 1, 0, 0, 1, 0, 1, 1],
-    bouncePop: 0.2,
-    intake: 0.7,
-    valves: 0.85,
-    grit: 0.22,
-    block: 0.18,
-    overrunPop: 0.14,
-    dump: 0,
-  },
+  limiter: petrolLimiter,
   outputGain: 1,
 };
 
@@ -387,7 +438,8 @@ export const engineSynthTuning: EngineSynthTuning = {
  */
 export const dieselSynthTuning: EngineSynthTuning = {
   idleRpm: 700,
-  limiterRpm: 3650,
+  // The Perentie cuts at 4000 rpm.
+  ...howl(4000, 'diesel'),
   firingOrder: [1, 3, 4, 2],
   runners: { delayMs: [0.3, 0.1, 0.1, 0.3], strength: [0.98, 1.02, 1.02, 0.97] },
   pulse: { riseMs: [0.35, 0.18], decayMs: [1.9, 1.05], minRiseDeg: 2, minDecayDeg: 6, maxDecayDeg: 28 },
@@ -441,7 +493,8 @@ export const dieselSynthTuning: EngineSynthTuning = {
  */
 export const petrolFourSynthTuning: EngineSynthTuning = {
   idleRpm: 750,
-  limiterRpm: 5650,
+  // Both Hiluxes cut at 6100 rpm.
+  ...howl(6100, 'petrol'),
   firingOrder: [1, 3, 4, 2],
   runners: { delayMs: [0.35, 0.12, 0.1, 0.33], strength: [0.98, 1.02, 1.03, 0.97] },
   pulse: { riseMs: [0.4, 0.18], decayMs: [1.4, 0.8], minRiseDeg: 2, minDecayDeg: 5, maxDecayDeg: 24 },
@@ -500,7 +553,8 @@ export const petrolFourSynthTuning: EngineSynthTuning = {
  */
 export const dieselSixSynthTuning: EngineSynthTuning = {
   idleRpm: 650,
-  limiterRpm: 2850,
+  // The Unimog cuts at 3100 rpm.
+  ...howl(3100, 'diesel'),
   firingOrder: [1, 5, 3, 6, 2, 4],
   runners: {
     delayMs: [0.5, 0.28, 0.06, 0.1, 0.32, 0.55],
@@ -558,7 +612,8 @@ export const dieselSixSynthTuning: EngineSynthTuning = {
 export const troopyDieselSynthTuning: EngineSynthTuning = {
   ...dieselSynthTuning,
   idleRpm: 700,
-  limiterRpm: 4050,
+  // The Troop Carrier cuts at 4400 rpm.
+  ...howl(4400, 'diesel'),
   firingOrder: [1, 5, 3, 6, 2, 4],
   runners: {
     delayMs: [0.42, 0.24, 0.06, 0.1, 0.28, 0.46],
@@ -599,7 +654,8 @@ export const troopyDieselSynthTuning: EngineSynthTuning = {
 export const twoHSynthTuning: EngineSynthTuning = {
   ...troopyDieselSynthTuning,
   idleRpm: 650,
-  limiterRpm: 4000,
+  // The HJ60 cuts at 4300 rpm.
+  ...howl(4300, 'diesel'),
   jitter: { idle: 0.12, load: 0.04, timingDeg: 3, lopeRpm: 10 },
   exhaust: {
     ...troopyDieselSynthTuning.exhaust,
@@ -627,7 +683,8 @@ export const twoHSynthTuning: EngineSynthTuning = {
 export const sd33SynthTuning: EngineSynthTuning = {
   ...twoHSynthTuning,
   idleRpm: 650,
-  limiterRpm: 4100,
+  // The MQ cuts at 4300 rpm.
+  ...howl(4300, 'diesel'),
   jitter: { idle: 0.14, load: 0.05, timingDeg: 3.5, lopeRpm: 12 },
   exhaust: {
     ...twoHSynthTuning.exhaust,
@@ -655,7 +712,8 @@ export const sd33SynthTuning: EngineSynthTuning = {
  */
 export const td42SynthTuning: EngineSynthTuning = {
   idleRpm: 650,
-  limiterRpm: 4050,
+  // The GQ Patrol cuts at 4400 rpm.
+  ...howl(4400, 'diesel'),
   firingOrder: [1, 5, 3, 6, 2, 4],
   runners: {
     delayMs: [0.5, 0.3, 0.1, 0.1, 0.3, 0.5],
@@ -714,8 +772,8 @@ export const td42SynthTuning: EngineSynthTuning = {
  */
 export const v8DieselSynthTuning: EngineSynthTuning = {
   idleRpm: 680,
-  /** Matches the 1VD's 4100 rpm cut so the fuel-cut chop is heard while the physics limits. */
-  limiterRpm: 4100,
+  /** Matches the 1VD's 4500 rpm cut so the fuel-cut chop is heard while the physics limits. */
+  limiterRpm: 4500,
   firingOrder: [1, 8, 7, 3, 6, 5, 4, 2],
   runners: {
     delayMs: [0.3, 1.9, 0.15, 1.75, 0.15, 1.75, 0.3, 1.9],
@@ -779,22 +837,7 @@ export const v8DieselSynthTuning: EngineSynthTuning = {
     flutterHz: 15,
     flutterGain: 0.09,
   },
-  /**
-   * Diesel fuel-cut chop at the limiter: a steadier on-off than petrol, extra turbo dump
-   * and a bit of mechanical strain. Pops stay rare and small — not petrol backfires.
-   */
-  limiter: {
-    approach: 240,
-    kind: 'fuel',
-    pattern: [0, 0, 1, 1],
-    bouncePop: 0.04,
-    intake: 0.45,
-    valves: 0.55,
-    grit: 0.16,
-    block: 0.14,
-    overrunPop: 0.03,
-    dump: 0.7,
-  },
+  limiter: dieselLimiter,
   outputGain: 0.85,
 };
 
@@ -914,7 +957,6 @@ export const roverV8SynthTuning: EngineSynthTuning = {
  */
 export const efiFourSynthTuning: EngineSynthTuning = {
   ...petrolFourSynthTuning,
-  limiterRpm: 5700,
   runners: { delayMs: [0.33, 0.14, 0.12, 0.31], strength: [0.99, 1.01, 1.02, 0.98] },
   jitter: { idle: 0.05, load: 0.025, timingDeg: 1.5, lopeRpm: 6 },
   exhaust: {
@@ -936,7 +978,8 @@ export const engineSynthTunings = {
   shortie: engineSynthTuning,
   forty: engineSynthTuning,
   ute40: engineSynthTuning,
-  camel: dieselSynthTuning,
+  // The Ninety has the Perentie's engine sound but revs to 4600 rpm.
+  camel: { ...dieselSynthTuning, ...howl(4600, 'diesel') },
   perentie: dieselSynthTuning,
   hilux: petrolFourSynthTuning,
   unimog: dieselSixSynthTuning,
@@ -947,6 +990,8 @@ export const engineSynthTunings = {
   sooty80: {
     ...td42SynthTuning,
     turbo: v8DieselSynthTuning.turbo,
+    // Turbocharged, so it keeps the dump on a lift-off at the limiter.
+    ...howl(4400, 'diesel', true),
   },
   lc79: v8DieselSynthTuning,
   rangie: roverV8SynthTuning,
