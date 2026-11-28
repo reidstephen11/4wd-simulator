@@ -2,7 +2,7 @@ import { jerryCan, numberPlate } from './bodyKit';
 import { ROUND_BEND, continuousTube, cleanGeometry } from './bodyRefinement';
 import * as THREE from 'three';
 import type { VehicleTuning } from '../data/vehicle';
-import { FJ40_BODY_LIFT } from '../data/vehicles';
+import { FJ40_BODY_LIFT, FJ40_SNORKEL_HEAD } from '../data/vehicles';
 import { pal } from './colors';
 import { BodyZone as Z, VehicleBuilder, VehicleMaterial as M } from './vehicleGeometry';
 import { HW, NOSE, ROOF, TAIL } from './vehicleBody';
@@ -423,7 +423,7 @@ export function addVehicleEquipment(
 function fj40Snorkel(b: VehicleBuilder): void {
   // 0.825 m out: inboard of the left mirror's head (from 0.885 m) with a gap that shows from
   // the front, and clear of the gutter (0.763 m) and the rack's clamps.
-  const x = -0.825;
+  const x = FJ40_SNORKEL_HEAD.x;
   const rubber = new THREE.Color('#202325');
   // Cowl side skin is at x -0.775, z -0.66..-0.30; the louvres are at z -0.50..-0.40.
   b.block(-0.825, 0.535, -0.48, 0.1, 0.27, 0.16, rubber, M.Rubber, Z.Front, 0.02);
@@ -432,8 +432,10 @@ function fj40Snorkel(b: VehicleBuilder): void {
   tubePath(b, [v(x, 0.62, -0.465), v(x, 0.76, -0.41), v(x, 0.84, -0.385), v(x, 1.36, -0.315)], 0.042, rubber);
   b.slot = M.Rubber;
   b.tag = Z.Front;
+  // The head: where the engine draws its air (fj40Tuning.intake, since v2.38).
+  const head = FJ40_SNORKEL_HEAD;
   b.push()
-    .translate(x, 1.395, -0.375)
+    .translate(head.x, head.y, head.z)
     .rotate(Math.PI / 2, 0, 0);
   b.geometry(new THREE.CylinderGeometry(0.046, 0.058, 0.17, 12), rubber);
   b.pop();
