@@ -13,6 +13,7 @@ import { vehicles } from '../../src/data/vehicles';
 import { WIDEN as PATROL_WIDEN } from '../../src/render/patrolBody';
 import { type MountedSpare, takeMountedSpares, withoutSpareWheels } from '../../src/render/spares';
 import { vehicleLooks } from '../../src/render/vehicleLooks';
+import { wheelBack } from '../../src/render/wheelBack';
 
 /**
  * On the outer face a strap, a clamp bar or a cradle bar the tyre rests on may press into the
@@ -69,7 +70,8 @@ export interface Built {
 export function buildSpares(id: VehicleId): Built {
   const look = vehicleLooks[id];
   const t = vehicles[id].tuning;
-  const wheel = look.wheel(t);
+  // As the game gives it to the body: outer face to +x, the real inner side to −x.
+  const wheel = wheelBack(look.wheel(t));
   takeMountedSpares();
   const body = look.body(t, wheel.clone());
   const spares = takeMountedSpares();

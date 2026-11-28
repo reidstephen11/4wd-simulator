@@ -12,6 +12,7 @@ import {
   VehicleMaterial as M,
 } from './vehicleGeometry';
 import { buildVehicleWheel } from './vehicleWheel';
+import { wheelBack, withBrake } from './wheelBack';
 
 const galv = new THREE.Color('#A3A8A4');
 const dark = new THREE.Color('#3A3D3B');
@@ -52,26 +53,33 @@ export class TrailerView {
     body.castShadow = true;
     body.receiveShadow = true;
     this.root.add(body);
-    const wheelGeo = buildVehicleWheel(
-      { wheelRadius: t.wheelRadius, wheelWidth: t.wheelWidth } as VehicleTuning,
-      // Army green rims on the No. 5; white steel ones on the box trailer.
-      t.id === 'no5' ? army.clone() : new THREE.Color('#D9D8D0'),
+    // Army green rims on the No. 5; white steel ones on the box trailer. The road wheels have
+    // their brake drums inside; the spare has none.
+    const spareGeo = wheelBack(
+      buildVehicleWheel(
+        { wheelRadius: t.wheelRadius, wheelWidth: t.wheelWidth } as VehicleTuning,
+        t.id === 'no5' ? army.clone() : new THREE.Color('#D9D8D0'),
+      ),
     );
+    const wheelGeo = withBrake(spareGeo);
     groupVehicleMaterials(wheelGeo);
+    groupVehicleMaterials(spareGeo);
     for (const w of t.wheels) {
       const pivot = new THREE.Group();
       pivot.position.set(w.x, w.y - t.suspensionRestLength, w.z);
       const spin = new THREE.Group();
       const mesh = new THREE.Mesh(wheelGeo, this.materials);
       mesh.castShadow = true;
+      // Outer face to +x as drawn: the left wheel is turned round.
+      if (w.x < 0) mesh.rotation.y = Math.PI;
       spin.add(mesh);
       pivot.add(spin);
       this.root.add(pivot);
       this.wheels.push({ pivot, spin });
     }
     if (t.spare) {
-      // Standing on the drawbar, facing the way it goes.
-      const spare = new THREE.Mesh(wheelGeo, this.materials);
+      // Standing on the drawbar, its outer face forward, the way it goes.
+      const spare = new THREE.Mesh(spareGeo, this.materials);
       spare.position.set(t.spare.x, t.spare.y, t.spare.z);
       spare.rotation.y = Math.PI / 2;
       spare.castShadow = true;

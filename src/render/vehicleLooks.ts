@@ -44,8 +44,6 @@ export interface VehicleLook {
   plank(index: number): THREE.BufferGeometry;
   paint: { roughness: number; metalness: number; clearcoat: number; clearcoatRoughness: number };
   springs: 'leaf' | 'coil';
-  /** The wheel has an outer face (to +x) and a different inner one, so the left wheels are turned round. */
-  handedWheels?: boolean;
   suspension?: SuspensionLayout;
   /** Lens centres: the headlamps, and any driving lamps that come on with high beam. */
   lamps: { head: readonly Vec3[]; roof?: readonly Vec3[] };
@@ -85,9 +83,6 @@ export const vehicleLooks: Record<VehicleId, VehicleLook> = {
     },
     paint: { roughness: 0.39, metalness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.24 },
     springs: 'leaf',
-    get handedWheels() {
-      return fj40GlbActive();
-    },
     // The Blender body has an inner wing over each front shock and a wheel tub over each rear
     // one: the shocks hang from brackets there (y 0.335 and 0.40), not from open towers. Their
     // lower eyes are 0.52 m out on the axle, 75 mm inboard of the tyres' inner faces.

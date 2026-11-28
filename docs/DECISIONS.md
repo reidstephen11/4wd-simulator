@@ -571,3 +571,13 @@ Fixed in Over the Cape first (its v2.38, where the reasons are written up) and c
 ### Tests
 
 `tests/fj40Snorkel.test.ts` (3, copied): the FJ40's intake is the drawn snorkel head; the code-built 40 keeps its wing intake; in 1.5 m of water the code-built 40 floods and the FJ40 does not. The full unit suite passes (116 files, 979 tests); lint and the build pass.
+
+## v0.34: wheels with a real inner side
+
+The owner's report: every wheel looked the same on the inside as on the outside, with a second set of wheel nuts and a hub cap facing the axle.
+
+Fixed in Over the Cape first (its v2.39, where the reasons, the table of where each spare is and which way it faces, and the reviewer's findings are written up) and carried across unchanged. New `src/render/wheelBack.ts`: `wheelBack()` takes any wheel builder's wheel, removes the inner disc, nuts and hub cap, and adds the rim's barrel with its well and the back of the disc; `withBrake()` adds a matte cast-iron drum and a dark backing plate with the hub boss to the road wheels (spares have none). `src/render/vehicleModel.ts` turns every vehicle's left wheels round so both sides show their outer face; `src/render/trailerView.ts` does the same for the trailers. `src/render/spares.ts`: `mountSpare()` turns the outer face the way its facing says, and its `reversed` option is gone (its three uses, in `lc79Body.ts`, `patrolBody.ts` and `troopyBody.ts`, would have put the nuts against the door). The FJ40's Blender wheel (`fj40Glb.ts`) loses its own dark inner copy and goes through the same step. The studio page gains `spares()` and `wheelsOnly()` for close-ups. No body part moved.
+
+### Tests
+
+New `tests/wheelBack.test.ts` (copied): every vehicle's wheel and both trailers' have no nuts or hub cap on the inner half, are closed from inside, and the road wheel has its brake where the spare has none; `mountSpare` turns the hub cap to each of the six facings. `tests/spares.test.ts` passes unchanged; its helper now gives the body the wheel the game gives it.

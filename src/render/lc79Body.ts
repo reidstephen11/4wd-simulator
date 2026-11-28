@@ -988,7 +988,7 @@ function spare(
 ): void {
   b.tag = flat ? Z.Roof : Z.Rear;
   if (flat) mountSpare(b, wheel, { x, y, z }, 'up', black);
-  else mountSpare(b, wheel, { x, y, z }, 'back', black, { reversed: true });
+  else mountSpare(b, wheel, { x, y, z }, 'back', black);
 }
 
 /** The canopy: black alloy box with gullwing doors each side, a rear door and a roof rack. */

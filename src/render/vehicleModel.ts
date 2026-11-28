@@ -8,6 +8,7 @@ import { pal } from './colors';
 import { patchFog } from './fog';
 import { BodyZone, groupVehicleMaterials } from './vehicleGeometry';
 import { vehicleLooks, type VehicleLook } from './vehicleLooks';
+import { wheelBack, withBrake } from './wheelBack';
 import { vehicles } from '../data/vehicles';
 import { VehicleSuspension } from './vehicleSuspension';
 import { VehicleInstruments } from './vehicleInstruments';
@@ -117,8 +118,11 @@ export class VehicleModel {
       this.dialMarksMaterial,
       patchFog(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.2, metalness: 0.8 })),
     ];
-    this.wheelGeo = look.wheel(tuning);
-    const geometry = look.body(tuning, this.wheelGeo);
+    // Every wheel is drawn with its nuts and hub cap on the outer face (to +x) and its real
+    // inner side in: the barrel, the back of the disc and, on the road wheels, the brake.
+    const spare = wheelBack(look.wheel(tuning));
+    const geometry = look.body(tuning, spare);
+    this.wheelGeo = withBrake(spare);
     groupVehicleMaterials(geometry);
     this.body = new THREE.Mesh(geometry, materials);
     this.body.name = 'body-cabin-and-equipment';
@@ -158,8 +162,8 @@ export class VehicleModel {
       const spin = new THREE.Group();
       const mesh = new THREE.Mesh(this.wheelGeo, materials);
       mesh.castShadow = true;
-      // A wheel with an inner and an outer face is drawn outer face to +x: turn the left ones.
-      const turned = look.handedWheels === true && x < 0;
+      // The wheel is drawn outer face to +x: turn the left ones so theirs faces out too.
+      const turned = x < 0;
       if (turned) mesh.rotation.y = Math.PI;
       spin.add(mesh);
       pivot.add(spin);

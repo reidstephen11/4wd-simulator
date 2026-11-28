@@ -235,8 +235,9 @@ export function buildFj40GlbBody(
 
 /**
  * The GLB's right front wheel (its outer face to +X) as the one wheel all four share: the outer
- * half mirrored onto the inner side, with the inner side's rim and hub dark, scaled to the
- * physics radius. The left wheels are turned round (VehicleLook.handedWheels).
+ * half mirrored onto the inner side, scaled to the physics radius. Like every wheel builder it
+ * draws both faces alike; `wheelBack` (src/render/wheelBack.ts) then gives it a real inner side,
+ * and the left wheels are turned round so that side faces in.
  */
 export function buildFj40GlbWheel(tuning: VehicleTuning): THREE.BufferGeometry {
   if (!gltfRoot) throw new Error('fj40.glb not loaded');
@@ -262,13 +263,9 @@ export function buildFj40GlbWheel(tuning: VehicleTuning): THREE.BufferGeometry {
         const i = t * 3 + j;
         out.pos.push(mirror * Math.max(0, half.pos[i * 3]), half.pos[i * 3 + 1], half.pos[i * 3 + 2]);
         out.nrm.push(mirror * half.nrm[i * 3], half.nrm[i * 3 + 1], half.nrm[i * 3 + 2]);
-        // The inner side is the back of the wheel: the tyre as it is, the rest dark like a
-        // brake drum, where it used to be a second white disc with its own hub cap.
-        const back = mirror === -1 && half.slot[i] !== M.Rubber;
-        if (back) out.col.push(0.06, 0.06, 0.055);
-        else out.col.push(half.col[i * 3], half.col[i * 3 + 1], half.col[i * 3 + 2]);
+        out.col.push(half.col[i * 3], half.col[i * 3 + 1], half.col[i * 3 + 2]);
         out.tag.push(Z.Trim);
-        out.slot.push(back ? M.Metal : half.slot[i]);
+        out.slot.push(half.slot[i]);
       }
     }
   }
