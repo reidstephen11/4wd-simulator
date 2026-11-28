@@ -541,3 +541,19 @@ Hard ground takes no rut (v0.30), so nothing changes there.
 ### Tests
 
 `tests/rutFeel.test.ts` (4, copied from Over the Cape): four wheels in full-depth ruts lower the body by the rut's depth; a car coasts to a stop sooner in ruts, but not much sooner; steered gently along two ruts it drifts less far than on flat ground and full lock still leaves them; a rut field that is flat everywhere changes nothing. `tests/rutDepth.test.ts` gains two: the rut store and the wheels agree on what a full-depth rut is, and Ironbark Creek asks for its ruts to be felt. `tests/ironbark.test.ts` drives every line with ruts pressed and felt. The full unit suite passes with it (115 files, 974 tests); lint and the build pass.
+
+## v0.32: fixes from a code review
+
+After v0.29 to v0.31 were published, a reviewer was given the diffs of both games and the intent of each change, and asked for defects only. It found no severe ones. Its findings, each checked against the code before acting:
+
+- **Ruts had gaps where the car went fast** (real, fixed). A tyre trail pressed two spots for each piece of tyre mark it laid, and a piece is as long as the wheel moved since the last frame: half a metre at 15 m/s and 30 frames a second, up to 4 m in a slow frame. With 0.25 m cells that skipped cells, so a fast pass left a rut with holes in it, and in this level the drag, the hold and the ride height changed with the frame rate. A trail now presses every cell a piece crosses, once a pass (`pressAlong()` in `src/sim/world/tyreMarks.ts`).
+- **A wheel on a plank, a rock or a log over a rut felt the rut** (real, fixed in Over the Cape's v2.37 and copied). A wheel now feels a rut only on ground that can hold one.
+- **A wheel that left the ground kept its sideways rut pull** and had it back on landing (real, fixed the same way).
+- **The shared mud and splash pool was too small on High** and dropped flecks and splashes (real, fixed the same way: 760 pieces from 520).
+- **`src/sim/world/rutDepth.ts` still said nothing a wheel feels changes** (fixed).
+
+Looked at and left: the reviewer noted that no rut is pressed where water stands more than 3 cm over the ground, since a tyre trail lays no mark there. A rut under water could not be seen anyway, and the level's bogs have no standing water; if one gets some, this is where to look.
+
+### Tests
+
+`tests/rutDepth.test.ts` gains one test: a trail rolled in steps of 0.1, 0.5, 1.5 and 3.5 m presses every cell along its line, each once. It failed at 1.5 m before the fix. `tests/rutFeel.test.ts` and `tests/mudSpray.test.ts` are copied from Over the Cape with their new tests. The full unit suite and `scripts/level-drive.ts` were running when this was committed; their results are added here before the update is merged.

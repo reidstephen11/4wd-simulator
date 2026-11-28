@@ -5,7 +5,9 @@
 export const particleTuning = {
   /** Pool sizes (enough for the High preset). */
   maxDust: 420,
-  maxChunks: 520,
+  // Mud flecks and creek splash share this pool. 520 until v2.37, which on High (1.35 times the
+  // rate) was too few for four wheels at full spin, and dropped flecks and splashes.
+  maxChunks: 760,
   maxWakes: 90,
 
   dust: {
@@ -28,7 +30,7 @@ export const particleTuning = {
     /**
      * Per wheel per second from wheelspin (0..1) and from rolling speed. More and smaller
      * since v2.30 (45 and 14 lumps of 12 to 30 cm before); four wheels at full spin for a
-     * fleck's longest life still fit `maxChunks`.
+     * fleck's longest life still fit `maxChunks` on the High preset (tests/mudSpray.test.ts).
      */
     spinRate: 100,
     speedRate: 30,

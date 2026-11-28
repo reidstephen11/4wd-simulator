@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { particleTuning } from '../src/data/particles';
+import { qualityPresets } from '../src/data/quality';
 import { mudFleck, mudRate, mudThrow, wheelTurning } from '../src/render/mudSpray';
 
 describe('mud spray (v2.30)', () => {
@@ -57,8 +58,11 @@ describe('mud spray (v2.30)', () => {
   it('throws more pieces than the 45 a second of full wheelspin it used to, inside the pool', () => {
     const full = mudRate(1, 0);
     expect(full).toBeGreaterThan(45 * 1.8);
-    // Four wheels at full spin for a fleck's longest life still fit the pool.
-    expect(4 * full * particleTuning.mud.life[1]).toBeLessThan(particleTuning.maxChunks);
+    // Four wheels at full spin for a fleck's longest life still fit the pool, on the preset that
+    // throws the most (v2.37: on High they did not, and flecks and splashes were dropped).
+    const most = Math.max(...Object.values(qualityPresets).map((q) => q.particles));
+    expect(most).toBeGreaterThan(1);
+    expect(4 * full * most * particleTuning.mud.life[1]).toBeLessThan(particleTuning.maxChunks);
     // Rolling through mud without spin throws some too, more with speed.
     expect(mudRate(0, 6)).toBeGreaterThan(mudRate(0, 1));
     expect(mudRate(0, 0)).toBe(0);

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { rutFeel } from '../src/data/rutFeel';
 import { vehicleTuning } from '../src/data/vehicle';
 import type { RutField, VehicleEnv } from '../src/sim/vehicle/vehicle';
+import { SurfaceId } from '../src/data/surfaces';
+import { flatDirt } from '../src/sim/physics';
 import { makeScene } from './helpers/scenes';
 
 /**
@@ -84,5 +86,21 @@ describe('ruts that can be felt', () => {
       return out;
     };
     expect(await drive(nowhere)).toEqual(await drive());
+  });
+
+  it('a wheel on a plank, a rock or a log over a rut feels none of it (v2.37)', async () => {
+    const flat = await makeScene({ env: dry() });
+    const onWood = await makeScene({
+      env: dry(everywhere(rutFeel.fullDepth)),
+      ground: { ...flatDirt, surfaceAt: () => SurfaceId.Wood },
+    });
+    const onRock = await makeScene({
+      env: dry(everywhere(rutFeel.fullDepth)),
+      ground: { ...flatDirt, surfaceAt: () => SurfaceId.Rock },
+    });
+    for (const s of [flat, onWood, onRock]) s.run(3, {});
+    for (const s of [onWood, onRock])
+      expect(s.vehicle.body.translation().y).toBeCloseTo(flat.vehicle.body.translation().y, 3);
+    for (const s of [flat, onWood, onRock]) s.physics.world.free();
   });
 });

@@ -27,9 +27,9 @@ const wheel = (over: Partial<WheelMarkInput> = {}): WheelMarkInput => ({
 });
 const flat = () => 0;
 /** One wheel pass along a line going east. */
-function pass(trail: TyreTrail, over: Partial<WheelMarkInput> = {}, wet = 0, from = 0, to = 6) {
+function pass(trail: TyreTrail, over: Partial<WheelMarkInput> = {}, wet = 0, from = 0, to = 6, step = 0.1) {
   trail.lift();
-  for (let x = from; x <= to + 1e-9; x += 0.1) trail.update(wheel({ x, ...over }), wet);
+  for (let x = from; x <= to + 1e-9; x += step) trail.update(wheel({ x, ...over }), wet);
 }
 /** The rut depth (0..1) the pieces of a store carry at their far ends, in the order laid. */
 const depths = (store: TyreMarkStore) =>
@@ -107,6 +107,20 @@ describe('tyre marks carry the rut they were pressed into', () => {
     for (let k = 0; k < 6; k++) pass(trail);
     const last = depths(store).slice(-first.length);
     expect(Math.min(...last)).toBeGreaterThan(Math.max(...first) * 1.5);
+  });
+
+  it('presses every cell it passes over, however long a frame is (v0.32)', () => {
+    // At 30 frames a second and 15 m/s a wheel moves half a metre between frames, and a
+    // frame hitch moves it further: a piece is laid that long, and each cell under it pressed.
+    for (const step of [0.1, 0.5, 1.5, 3.5]) {
+      const ruts = new RutDepth();
+      const trail = new TyreTrail(new TyreMarkStore(4000), 0.26, flat, ruts);
+      pass(trail, {}, 0, 0, 14, step);
+      for (let x = 0.6; x < 13; x += rutTuning.cell)
+        expect(ruts.depthAt(x, 0), `step ${step} m, x ${x.toFixed(2)}`).toBeGreaterThan(0);
+      // Once per pass, however many times a long piece crosses the same cell.
+      expect(ruts.depthAt(7, 0), `step ${step} m`).toBeCloseTo(rutTuning.press[SurfaceId.Mud]!, 6);
+    }
   });
 
   it('none on gravel or rock, however often it is driven', () => {

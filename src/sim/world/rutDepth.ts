@@ -6,8 +6,9 @@ import { SurfaceId } from '../../data/surfaces';
  * wheel has pressed. Soft ground takes a rut; hard ground takes none; clay, dirt and grass
  * only when wet. No Three.js here, so it can be tested.
  *
- * Stage one draws it: a tyre mark laid in a rut is shaded to look pressed in
- * (src/render/tyreMarks.ts). The ground itself is not moved, and nothing a wheel feels changes.
+ * A tyre mark laid in a rut is shaded to look pressed in (src/render/tyreMarks.ts, v0.30). In a
+ * level with `feltRuts` the wheels feel it too (v0.31): they sit lower, drag and are held in it
+ * (`src/data/rutFeel.ts`). The drawn ground is never moved.
  */
 export const rutTuning = {
   /** The side of a cell (m): about a tyre's width, so the two wheel tracks stay apart. */

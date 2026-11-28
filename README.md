@@ -232,6 +232,14 @@ Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, so
 
 ## What to test
 
+**v0.32**
+
+Fixes from a code review.
+
+- Ruts at speed: drive a muddy line fast, then slowly along it. The rut is a continuous groove, with no gaps where the car went fast; before, a fast pass left a rut with holes in it.
+- Planks over a rut: in the bog hole, lay the recovery planks over a rut you have made and drive onto them. The car rides on the planks, not down in the rut below.
+- On High graphics, the mud spray from four spinning wheels and the splash in the creek look as full as on Medium.
+
 **v0.31**
 
 Ruts you can feel.

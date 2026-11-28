@@ -1,5 +1,5 @@
 import { SurfaceId } from '../../data/surfaces';
-import type { RutDepth } from './rutDepth';
+import { rutTuning, type RutDepth } from './rutDepth';
 
 /**
  * Tyre marks (v0.25): the lines the car's own wheels leave on the ground it drives over, kept
@@ -196,14 +196,32 @@ export class TyreTrail {
     private readonly ruts?: RutDepth,
   ) {}
 
-  /** One wheel pass over a spot: press its rut cell, once, and say how deep it is now. */
-  private press(x: number, z: number, surface: SurfaceId, wetness: number): number {
+  /**
+   * One wheel pass from (ax, az) to (bx, bz): press each rut cell along it once (and not the cell
+   * the last piece ended in), and say how deep the rut is at the far end now.
+   */
+  private pressAlong(
+    ax: number,
+    az: number,
+    bx: number,
+    bz: number,
+    surface: SurfaceId,
+    wetness: number,
+  ): number {
     const r = this.ruts;
     if (!r) return 0;
-    const k = r.key(x, z);
-    if (k === this.pressed) return r.depthAt(x, z);
-    this.pressed = k;
-    return r.press(x, z, surface, wetness);
+    const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / (rutTuning.cell / 2)));
+    const seen = new Set<number>();
+    for (let k = 1; k <= steps; k++) {
+      const x = ax + ((bx - ax) * k) / steps;
+      const z = az + ((bz - az) * k) / steps;
+      const key = r.key(x, z);
+      if (key === this.pressed || seen.has(key)) continue;
+      seen.add(key);
+      r.press(x, z, surface, wetness);
+    }
+    this.pressed = r.key(bx, bz);
+    return r.depthAt(bx, bz);
   }
 
   /** Break the trail: the next contact starts a new one. */
@@ -248,13 +266,10 @@ export class TyreTrail {
     const px = (-dz / d) * (this.width / 2);
     const pz = (dx / d) * (this.width / 2);
     const onTerrain = Math.abs(w.y - this.heightAt(w.x, w.z)) < t.onGround;
-    // Press the ground under this piece: half-way along it and at its far end (a piece is a
-    // little longer than a rut cell). On a rock, a plank or a bridge there is nothing to press.
-    let rut = 0;
-    if (onTerrain) {
-      this.press((from.x + w.x) / 2, (from.z + w.z) / 2, w.surface, wetness);
-      rut = this.press(w.x, w.z, w.surface, wetness);
-    }
+    // Press the ground under this piece: every rut cell it crosses, once a pass, however long a
+    // frame made it (v0.32: it pressed two spots a piece, and skipped cells at speed or in a
+    // slow frame). On a rock, a plank or a bridge there is nothing to press.
+    const rut = onTerrain ? this.pressAlong(from.x, from.z, w.x, w.z, w.surface, wetness) : 0;
     const edgeY = (x: number, z: number) => (onTerrain ? this.heightAt(x, z) : w.y);
     const here = {
       x: w.x,
