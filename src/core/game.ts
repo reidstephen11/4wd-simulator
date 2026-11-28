@@ -58,6 +58,7 @@ import { FindMarkers } from '../render/finds';
 import { StuckVehicleView } from '../render/stuckVehicleView';
 import { RutsView } from '../render/ruts';
 import { TyreMarksView } from '../render/tyreMarks';
+import { RutDepth } from '../sim/world/rutDepth';
 import { TyreMarkStore, TyreTrail } from '../sim/world/tyreMarks';
 import { WheelMarksView } from '../render/wheelMarks';
 import { wheelMarkSpots } from '../sim/world/wheelMarks';
@@ -228,6 +229,8 @@ export class Game {
   private readonly ruts: RutsView;
   /** The marks the car's tyres leave (v0.25): the pieces laid, a trail for each wheel, and their mesh. */
   private readonly tyreMarkStore = new TyreMarkStore();
+  /** Where the wheels have pressed the ground in (v0.30): tyre marks laid there look like ruts. */
+  private readonly rutDepth = new RutDepth();
   private tyreTrails: TyreTrail[] = [];
   private tyreTrailsFor: Vehicle | null = null;
   private readonly tyreMarks: TyreMarksView;
@@ -1627,7 +1630,7 @@ export class Game {
     if (this.tyreTrails.length !== v.wheels.length || this.tyreTrailsFor !== v) {
       const width = v.tuning.drawnWheels?.width ?? v.tuning.wheelWidth;
       const heightAt = (x: number, z: number) => this.world.terrain.heightAt(x, z);
-      this.tyreTrails = v.wheels.map(() => new TyreTrail(this.tyreMarkStore, width, heightAt));
+      this.tyreTrails = v.wheels.map(() => new TyreTrail(this.tyreMarkStore, width, heightAt, this.rutDepth));
       this.tyreTrailsFor = v;
     }
     const wetness = this.sim.env.wetness;
@@ -1646,6 +1649,7 @@ export class Game {
         wetness,
       ),
     );
+    this.tyreMarks.setSun(this.view.lighting.sunDir);
     this.tyreMarks.update();
   }
 

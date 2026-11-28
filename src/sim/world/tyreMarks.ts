@@ -1,4 +1,5 @@
 import { SurfaceId } from '../../data/surfaces';
+import type { RutDepth } from './rutDepth';
 
 /**
  * Tyre marks (v0.25): the lines the car's own wheels leave on the ground it drives over, kept
@@ -105,8 +106,34 @@ export function markFor(
   return { strength: Math.min(1, carried + 0.6 * effort), tone: MarkTone.Wet };
 }
 
-/** Floats kept per piece: four corners (x, y, z), distance along the trail at each end, strength at each end, tone. */
-export const MARK_FLOATS = 17;
+/**
+ * Floats kept per piece: four corners (x, y, z), distance along the trail at each end, strength
+ * at each end, tone, and how deep a rut it lies in at each end (0 to 1, v0.30).
+ */
+export const MARK_FLOATS = 19;
+/** Where in a piece the rut depth at its near end is; the far end's is the next float. */
+export const MARK_RUT = 17;
+
+/**
+ * Which wall of a piece's rut catches the sun (v0.30): above 0 the wall along its left edge,
+ * below 0 the right, by how squarely the sun stands across the rut and how low it is. 0 with
+ * the sun along the rut, overhead or down. `sun` points towards the sun.
+ */
+export function rutLit(
+  data: ArrayLike<number>,
+  offset: number,
+  sun: { x: number; y: number; z: number },
+): number {
+  if (sun.y <= 0) return 0;
+  // From the near left corner to the near right one: across the rut.
+  const ax = data[offset + 3] - data[offset];
+  const az = data[offset + 5] - data[offset + 2];
+  const across = Math.hypot(ax, az);
+  const len = Math.hypot(sun.x, sun.y, sun.z);
+  if (across < 1e-6 || len < 1e-6) return 0;
+  // The left wall faces right, across the rut: lit when the sun is on that side.
+  return (ax * sun.x + az * sun.z) / (across * len);
+}
 
 /** The pieces laid so far, oldest overwritten first. */
 export class TyreMarkStore {
@@ -147,6 +174,8 @@ export class TyreTrail {
     rz: number;
     s: number;
     v: number;
+    /** How deep the rut is here (0 to 1). */
+    rut: number;
   } | null = null;
   /** Where the trail would start: a first contact, with no direction yet. */
   private start: { x: number; y: number; z: number; s: number } | null = null;
@@ -155,18 +184,33 @@ export class TyreTrail {
   /** Where the wheel last touched down, for the distance rolled since. */
   private rolled: { x: number; z: number } | null = null;
   private readonly piece = new Float32Array(MARK_FLOATS);
+  /** The rut cell this wheel pressed last, so one pass presses each cell once. */
+  private pressed = -1;
 
   constructor(
     private readonly store: TyreMarkStore,
     /** Tyre width on the ground (m). */
     private readonly width: number,
     private readonly heightAt: (x: number, z: number) => number,
+    /** Where the ground is pressed in (v0.30). Without it the marks lie flat. */
+    private readonly ruts?: RutDepth,
   ) {}
+
+  /** One wheel pass over a spot: press its rut cell, once, and say how deep it is now. */
+  private press(x: number, z: number, surface: SurfaceId, wetness: number): number {
+    const r = this.ruts;
+    if (!r) return 0;
+    const k = r.key(x, z);
+    if (k === this.pressed) return r.depthAt(x, z);
+    this.pressed = k;
+    return r.press(x, z, surface, wetness);
+  }
 
   /** Break the trail: the next contact starts a new one. */
   lift(): void {
     this.last = null;
     this.start = null;
+    this.pressed = -1;
   }
 
   /** The wheel's contact this frame, with the ground's wetness (0..1). */
@@ -204,6 +248,13 @@ export class TyreTrail {
     const px = (-dz / d) * (this.width / 2);
     const pz = (dx / d) * (this.width / 2);
     const onTerrain = Math.abs(w.y - this.heightAt(w.x, w.z)) < t.onGround;
+    // Press the ground under this piece: half-way along it and at its far end (a piece is a
+    // little longer than a rut cell). On a rock, a plank or a bridge there is nothing to press.
+    let rut = 0;
+    if (onTerrain) {
+      this.press((from.x + w.x) / 2, (from.z + w.z) / 2, w.surface, wetness);
+      rut = this.press(w.x, w.z, w.surface, wetness);
+    }
     const edgeY = (x: number, z: number) => (onTerrain ? this.heightAt(x, z) : w.y);
     const here = {
       x: w.x,
@@ -216,6 +267,7 @@ export class TyreTrail {
       rz: w.z + pz,
       s: strength,
       v: (this.last?.v ?? 0) + d,
+      rut,
     };
     // A trail's first piece starts square across the same way.
     const a =
@@ -233,6 +285,7 @@ export class TyreTrail {
           rz: s.z + pz,
           s: s.s,
           v: 0,
+          rut: onTerrain ? (this.ruts?.depthAt(s.x, s.z) ?? 0) : 0,
         };
       })();
     const p = this.piece;
@@ -254,6 +307,8 @@ export class TyreTrail {
       a.s,
       here.s,
       tone,
+      a.rut,
+      here.rut,
     ]);
     this.store.add(p);
     this.last = here;

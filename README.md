@@ -65,6 +65,8 @@ How hard they are, measured with the autopilot crawling in low range in the shor
 
 **Tyre marks.** The car's tyres leave their tread on the ground: most in mud, clay and sand, less on dirt, grass and gravel, none on rock. Wet ground marks darker, and so does a spinning or locked wheel. Tyres that have just come out of the creek or a bog leave wet tracks for a few metres, on rock too. The marks stay for the drive (about a kilometre and a half of driving before the oldest go), so a climb shows the lines already tried.
 
+**Ruts you can see (v0.30).** On soft ground the tyre marks look pressed in: a darker, more solid groove, a band along each edge for its walls (the one facing the sun lit, the other in shadow) and a strip of soil pushed up along each side. Each time a wheel goes over the same spot the rut deepens, so a line you have driven five times looks clearly deeper than one driven once. Mud, black soil and sand take a rut wet or dry; clay, dirt and grass only when wet; rock, gravel and timber never, and their marks stay flat. The ground itself is not moved and the car drives exactly as before: feeling the ruts is the next stage.
+
 **Ground detail.** Close up, the ground is no longer smooth colour. Gravel, rock steps and the creek bed are separate stones; mud is wet lumps with dark hollows; bare earth has grit in it; boulders and ledges have joints, specks and weathering. It is drawn only: the car drives on the same surface as before.
 
 **Notes.** The first time you reach an obstacle, a small card says what it is and which control helps there, worded for the keyboard, controller or phone you are using. **Pause → Trip journal** keeps the notes you have seen.
@@ -228,6 +230,17 @@ Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, so
 
 ## What to test
 
+**v0.30**
+
+Ruts you can see, and signs you can read (the signs carried over from Over the Cape v2.31).
+
+- Ruts: pick **After rain** and drive the same line along a clay track three or four times (the loop to the bog hole is flat). Each pass, the wheel tracks look deeper: from a tread print to a darker, solid groove with soil pushed up along its edges. Look across them from the side and along them from behind.
+- In **Clear** weather, drive through the mud at the edge of the bog hole twice: the same grooves in the mud. On dry clay, rock and gravel the marks stay flat prints, however often you drive them.
+- In low sun (Morning or Late afternoon), does one wall of a deep rut look lit and the other shaded? Is the effect too strong, too weak or about right? Do the ruts look pressed in, or painted on?
+- The car should drive exactly as before: the ruts are only drawn.
+- On your phone on High: still smooth with a lot of ruts laid?
+- Signs: drive up to a line's sign from the driver's seat. The lettering is larger, bolder and on up to three lines (**Rock climb / 8 gates / start uphill**); can you read it before you are level with it? From behind, the lettering is there too with the post not standing across it.
+
 **v0.29**
 
 Engines and mud, carried over from Over the Cape v2.28 to v2.30. Listen with headphones or good speakers.
@@ -324,5 +337,6 @@ GitHub Actions builds and deploys `main` to GitHub Pages (`.github/workflows/dep
 
 ## What's next
 
-- Pushing the graphics further: ground pressed in under the tyres (ruts), finer plants.
+- Ruts you can feel: a wheel in a rut sits lower, drags and resists steering out (the next update; v0.30 draws them).
+- Pushing the graphics further: finer plants.
 - More playground levels.
