@@ -556,4 +556,4 @@ Looked at and left: the reviewer noted that no rut is pressed where water stands
 
 ### Tests
 
-`tests/rutDepth.test.ts` gains one test: a trail rolled in steps of 0.1, 0.5, 1.5 and 3.5 m presses every cell along its line, each once. It failed at 1.5 m before the fix. `tests/rutFeel.test.ts` and `tests/mudSpray.test.ts` are copied from Over the Cape with their new tests. The full unit suite and `scripts/level-drive.ts` were running when this was committed; their results are added here before the update is merged.
+`tests/rutDepth.test.ts` gains one test: a trail rolled in steps of 0.1, 0.5, 1.5 and 3.5 m presses every cell along its line, each once. It failed at 1.5 m before the fix. `tests/rutFeel.test.ts` and `tests/mudSpray.test.ts` are copied from Over the Cape with their new tests. The full unit suite passes (115 files, 976 tests), and `scripts/level-drive.ts`, with ruts felt, gives the same outcome on every line, locked and open, as v0.31. Lint and the build pass.
