@@ -13,6 +13,8 @@ export const ironbarkLevel: EpisodeDef = {
   mission: 'Drive anything you like the look of',
   startHour: 10,
   weather: 'clear',
+  // The ruts the wheels press into soft ground are felt as well as seen (v0.31).
+  feltRuts: true,
   clockRate: 0,
   // Nothing is burnt: the tank stays as it was filled.
   fuelScale: 0,

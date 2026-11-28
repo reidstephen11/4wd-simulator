@@ -54,6 +54,11 @@ export interface EpisodeDef {
   /** Weather that changes through the run (a storm coming through), from `weather` at the start. */
   storm?: WeatherTimeline;
   /**
+   * Ruts are felt as well as seen (v0.31): a wheel in one sits lower, drags and is held in it
+   * (`src/data/rutFeel.ts`). Without it the ruts are only drawn.
+   */
+  feltRuts?: boolean;
+  /**
    * Miss this and the episode ends (hours), with a label for the HUD. With `until`, it
    * only holds until that place (a POI id) is reached, and the HUD shows `mission` till then.
    */

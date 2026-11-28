@@ -39,6 +39,7 @@ import { mulberry32 } from '../world/rng';
 import { type Quat, type Vec3, dot, headingToYaw, rotate, v3, yawQuat } from './math';
 import { WALL_SPEED, WallSide, WheelContacts } from './wheelContacts';
 import { axleDriveCapacity } from './differential';
+import { rutFeel } from '../../data/rutFeel';
 import {
   createTransferState,
   frontDriven,
@@ -117,6 +118,16 @@ export interface VehicleEnv {
   waterLevelOffset: number;
   /** Churned-up clay and mud, worse where wheels have spun (absent: none). */
   churn?: ChurnMap;
+  /**
+   * Where wheels have pressed the ground into ruts, for a level that wants them felt (4WD
+   * Simulator v0.31; absent: none, and the car drives as it always has). See `rutFeel`.
+   */
+  ruts?: RutField;
+}
+
+/** How deep the ground is pressed in at a point (m). */
+export interface RutField {
+  metresAt(x: number, z: number): number;
 }
 
 const WHEEL_FILTER = groups(Groups.VEHICLE, Groups.TERRAIN | Groups.STATIC | Groups.DYNAMIC | Groups.VEHICLE);
@@ -240,6 +251,9 @@ export class Vehicle {
   private caps = [0, 0, 0, 0];
   private requests = [0, 0, 0, 0];
   private preload = [0, 0, 0, 0];
+  /** How deep a rut each wheel sits in (m), and the sideways pull back into it (N, + = right). */
+  private wheelRut = [0, 0, 0, 0];
+  private rutPull = [0, 0, 0, 0];
   /** Sideways grip kept by each tyre in running water or going flat (1 = all of it). */
   private readonly sideCreep = [1, 1, 1, 1];
   private readonly wheelContacts: WheelContacts;
@@ -551,6 +565,8 @@ export class Vehicle {
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     for (const w of this.wheels) w.sink = 0;
+    this.wheelRut.fill(0);
+    this.rutPull.fill(0);
     this.dugGround = null;
     this.swept = 0;
     this.cornerFall.fill(0);
@@ -942,6 +958,12 @@ export class Vehicle {
           Math.min(1, 0.4 + w.spin + (Math.abs(this.speed) < 2 ? 0.4 : 0))
         : 0;
       w.sink += (sinkTarget - w.sink) * Math.min(1, dt * (sinkTarget > w.sink ? 0.8 : 2.5));
+      // A wheel in a rut sits that much lower, and takes the corner of the car down with it.
+      const ruts = this.env.ruts;
+      if (ruts) {
+        const rut = w.contact ? ruts.metresAt(w.contactPoint.x, w.contactPoint.z) : 0;
+        this.wheelRut[i] += (rut - this.wheelRut[i]) * Math.min(1, dt / rutFeel.settle);
+      }
       c.setWheelMaxSuspensionTravel(i, t.suspensionTravel + extraDroop);
       c.setWheelSuspensionCompression(
         i,
@@ -951,7 +973,10 @@ export class Vehicle {
         i,
         t.damperRelaxation + (t.crawling.damperRelaxation - t.damperRelaxation) * flex,
       );
-      c.setWheelSuspensionRestLength(i, t.suspensionRestLength + extraDroop + w.sink + this.preload[i]);
+      c.setWheelSuspensionRestLength(
+        i,
+        t.suspensionRestLength + extraDroop + w.sink + this.preload[i] - this.wheelRut[i],
+      );
       c.setWheelSuspensionStiffness(i, stiffness * suspensionStiffnessMultiplier(this.condition, i));
       // A tyre going down rolls on a smaller radius, dropping that corner.
       c.setWheelRadius(i, t.wheelRadius - tyreDrop(this.condition, i, w.rotation));
@@ -987,6 +1012,21 @@ export class Vehicle {
         w.load *
         (softGround ? 1 - 0.65 * relief : 1) *
         (isSand(w.surface) ? sandPressure(this.condition).drag : 1);
+      // A rut drags at the tyre's sides, and pulls the wheel back in when it tries to climb
+      // out sideways: the ground beside it is felt a little way to each side.
+      const ruts = this.env.ruts;
+      if (ruts) {
+        rr += rutFeel.drag * (this.wheelRut[i] / rutFeel.fullDepth) * w.load;
+        const cp = w.contactPoint;
+        const reach = rutFeel.reach;
+        const toLeft = ruts.metresAt(cp.x - right.x * reach, cp.z - right.z * reach);
+        const toRight = ruts.metresAt(cp.x + right.x * reach, cp.z + right.z * reach);
+        const moving = Math.min(1, Math.abs(this.speed) / rutFeel.pullFromSpeed);
+        const pull = ((rutFeel.hold * w.load * (toRight - toLeft)) / rutFeel.fullDepth) * moving;
+        this.rutPull[i] += (pull - this.rutPull[i]) * Math.min(1, dt / rutFeel.settle);
+        const j = this.rutPull[i] * dt;
+        if (j !== 0) this.body.applyImpulseAtPoint({ x: right.x * j, y: 0, z: right.z * j }, cp, true);
+      }
       // A soft or flat tyre drags at its own corner, which also pulls the car that way.
       const drag = damageTuning.tyre.flatDrag * (1 - this.condition.tyres[i]) * w.load * sv * dt;
       if (drag !== 0)

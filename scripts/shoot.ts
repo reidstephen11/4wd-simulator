@@ -25,11 +25,22 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 // Low graphics, as the end-to-end tests start (the software renderer is slow); QUALITY=high
-// (or medium) shows what a player sees.
-await page.addInitScript((quality) => {
-  if (!localStorage.getItem('4wdsim.save.v2'))
-    localStorage.setItem('4wdsim.save.v2', JSON.stringify({ version: 1, settings: { quality } }));
-}, process.env.QUALITY ?? 'low');
+// (or medium) shows what a player sees. WEATHER=wet (or rain) and TIME=midday (morning, ...)
+// pick the conditions, as the New drive page does.
+await page.addInitScript(
+  ([quality, weather, time]) => {
+    if (!localStorage.getItem('4wdsim.save.v2'))
+      localStorage.setItem(
+        '4wdsim.save.v2',
+        JSON.stringify({
+          version: 1,
+          settings: { quality },
+          ...(weather || time ? { replay: { time: time || 'afternoon', weather: weather || 'clear' } } : {}),
+        }),
+      );
+  },
+  [process.env.QUALITY ?? 'low', process.env.WEATHER ?? '', process.env.TIME ?? ''],
+);
 const errors: string[] = [];
 page.on('console', (m) => {
   if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`);
