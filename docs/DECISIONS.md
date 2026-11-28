@@ -515,3 +515,29 @@ The quad still lies flat on the ground, 2.5 cm above it: no ground is moved. The
 ### Tests
 
 New `tests/rutDepth.test.ts` (7): depth grows with each pass on soft ground, less each time, to a limit, and five car passes are over 1.6 times as deep as one; nothing on hard ground, and on clay, dirt and grass only when wet; a rut is where the wheel went and nowhere else, and the oldest cells are forgotten; tyre marks carry a deeper rut on each pass over the same line in mud, none on gravel or rock, and none without a rut store; which wall the sun lights. `tests/signLayout.test.ts` (5, copied). The full unit suite passes (114 files, 968 tests), with `tests/ironbark.test.ts` and every scripted drive in it; lint and the build pass. No level and nothing a wheel feels changed, so `scripts/level-drive.ts` was not run again.
+
+## v0.31: ruts you can feel
+
+The second ticket (issue 37) of the ruts spec (issue 35). The seen stage (v0.30) draws a rut where wheels have pressed soft ground; this stage lets the wheels feel it.
+
+**The engine change was made in Over the Cape first** (its v2.36, where the reasons and the measurements are) and the shared files are copied unchanged: `src/sim/vehicle/vehicle.ts`, `src/sim/sim.ts`, `src/data/rutFeel.ts` and `tests/rutFeel.test.ts`. There no episode turns it on. Here Ironbark Creek does (`feltRuts: true`), and the game hands the simulation the rut store that the tyre trails fill.
+
+**What a wheel in a rut feels** (`src/data/rutFeel.ts`):
+
+- **It sits lower,** by the rut's depth, up to 8 cm, settling over about an eighth of a second. That corner of the car comes down with it.
+- **It drags a little:** up to 7% of the wheel's load more rolling resistance in a full-depth rut.
+- **It is held:** the ground is felt 0.2 m to each side of the wheel and the wheel is pulled towards the deeper side with up to 20% of its load, fading out below 0.8 m/s so a standing car is not pushed. Steered gently, the car stays nearer its ruts; full lock climbs out.
+
+Hard ground takes no rut (v0.30), so nothing changes there.
+
+**Every wheel now sits in the rut it is making.** A front wheel on mud presses the ground to 0.30 of full depth as it passes and the rear wheel behind it to 0.51, so on a first pass over mud the front sits 2.4 cm lower and the rear 4 cm. That is the sinking-in the level's bogs were missing a look for; it also means the feel changes a little on any soft ground from the first metre, not only on a worn line.
+
+**The scripted drives press and feel ruts too.** The game lays tyre trails every frame; the test drives had none, so with nothing more they would have driven a level without ruts and said nothing about this change. `driver()` in `tests/helpers/drive.ts` takes `{ ruts: true }` and then lays the same trails every physics step (`trailWheels()` in `src/sim/world/tyreMarks.ts`, which the game now uses as well). `tests/ironbark.test.ts` and `scripts/level-drive.ts` drive with it, as the level is played. `RUTS=off npx vite-node scripts/level-drive.ts` drives without, to compare.
+
+**Every line, locked and open, with ruts felt.** `scripts/level-drive.ts` gives the same outcome on all 32 drives as it did on v0.29 without ruts: every line that finished still finishes, and every line that stopped short stops within 0.7 m of where it did (the open-diff switchbacks 6.8 m short against 6.1 m). Times are within three seconds: the bog trench locked takes 93 s against 90 s, the bog hole locked 61 s both times. So one pass through each line is hardly touched, which is as it should be: a first pass makes shallow ruts. The cost builds with passes over the same line, which these single drives do not measure; that is the owner's test.
+
+**Not checkable here: how it feels.** The numbers above are a first guess at "a few centimetres lower, drags a little more, resists steering out". The pull is the part most likely to need the owner's hand: the store's cells are 0.25 m squares, so a rut that runs at an angle to them is a staircase to the wheel, and the pull is smoothed over an eighth of a second to keep that from being felt as a tug. If it is, `rutFeel.hold` is the lever, and `rutFeel.reach`.
+
+### Tests
+
+`tests/rutFeel.test.ts` (4, copied from Over the Cape): four wheels in full-depth ruts lower the body by the rut's depth; a car coasts to a stop sooner in ruts, but not much sooner; steered gently along two ruts it drifts less far than on flat ground and full lock still leaves them; a rut field that is flat everywhere changes nothing. `tests/rutDepth.test.ts` gains two: the rut store and the wheels agree on what a full-depth rut is, and Ironbark Creek asks for its ruts to be felt. `tests/ironbark.test.ts` drives every line with ruts pressed and felt. The full unit suite was still running when this was committed; its result is added here before the update is merged.

@@ -65,7 +65,9 @@ How hard they are, measured with the autopilot crawling in low range in the shor
 
 **Tyre marks.** The car's tyres leave their tread on the ground: most in mud, clay and sand, less on dirt, grass and gravel, none on rock. Wet ground marks darker, and so does a spinning or locked wheel. Tyres that have just come out of the creek or a bog leave wet tracks for a few metres, on rock too. The marks stay for the drive (about a kilometre and a half of driving before the oldest go), so a climb shows the lines already tried.
 
-**Ruts you can see (v0.30).** On soft ground the tyre marks look pressed in: a darker, more solid groove, a band along each edge for its walls (the one facing the sun lit, the other in shadow) and a strip of soil pushed up along each side. Each time a wheel goes over the same spot the rut deepens, so a line you have driven five times looks clearly deeper than one driven once. Mud, black soil and sand take a rut wet or dry; clay, dirt and grass only when wet; rock, gravel and timber never, and their marks stay flat. The ground itself is not moved and the car drives exactly as before: feeling the ruts is the next stage.
+**Ruts you can see (v0.30).** On soft ground the tyre marks look pressed in: a darker, more solid groove, a band along each edge for its walls (the one facing the sun lit, the other in shadow) and a strip of soil pushed up along each side. Each time a wheel goes over the same spot the rut deepens, so a line you have driven five times looks clearly deeper than one driven once. Mud, black soil and sand take a rut wet or dry; clay, dirt and grass only when wet; rock, gravel and timber never, and their marks stay flat. The ground itself is not moved.
+
+**Ruts you can feel (v0.31).** A wheel in a rut sits lower, by up to 8 cm in a full-depth one, and takes that corner of the car down with it: with all four wheels in deep ruts the belly is 8 cm nearer the ground. The rut drags at the tyre a little, and it holds the wheel: steer gently and the car stays in its ruts, steer firmly and it climbs out. So cutting up a soft climb or a bog has a cost on the next attempt, and a well-worn line guides the car along it.
 
 **Ground detail.** Close up, the ground is no longer smooth colour. Gravel, rock steps and the creek bed are separate stones; mud is wet lumps with dark hollows; bare earth has grit in it; boulders and ledges have joints, specks and weathering. It is drawn only: the car drives on the same surface as before.
 
@@ -230,6 +232,16 @@ Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, so
 
 ## What to test
 
+**v0.31**
+
+Ruts you can feel.
+
+- Pick **After rain** and drive the same line along a flat clay track five or six times, then drive it once more slowly with a light hand on the steering: does the car follow its own ruts? Steer gently to one side: does it resist, and then climb out when you steer more firmly? Is the pull too strong, too weak or about right?
+- Look at the car from the side as it drives in deep ruts and then out onto untouched ground: does it sit a little lower in them?
+- At the bog hole and in the bog trench: are they harder on the second and third attempt along the same line than on the first, and by about the right amount? Can you still get through each line you could before?
+- On rock, gravel and dry clay nothing should feel different.
+- Anything that feels like the steering tugging or shaking for no reason, on soft ground, is worth reporting: say where.
+
 **v0.30**
 
 Ruts you can see, and signs you can read (the signs carried over from Over the Cape v2.31).
@@ -337,6 +349,5 @@ GitHub Actions builds and deploys `main` to GitHub Pages (`.github/workflows/dep
 
 ## What's next
 
-- Ruts you can feel: a wheel in a rut sits lower, drags and resists steering out (the next update; v0.30 draws them).
 - Pushing the graphics further: finer plants.
 - More playground levels.

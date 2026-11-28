@@ -59,7 +59,7 @@ import { StuckVehicleView } from '../render/stuckVehicleView';
 import { RutsView } from '../render/ruts';
 import { TyreMarksView } from '../render/tyreMarks';
 import { RutDepth } from '../sim/world/rutDepth';
-import { TyreMarkStore, TyreTrail } from '../sim/world/tyreMarks';
+import { TyreMarkStore, TyreTrail, trailWheels } from '../sim/world/tyreMarks';
 import { WheelMarksView } from '../render/wheelMarks';
 import { wheelMarkSpots } from '../sim/world/wheelMarks';
 import type { TrailerTuning } from '../data/trailers';
@@ -394,6 +394,8 @@ export class Game {
     view.scene.add(this.ruts.mesh);
     this.tyreMarks = new TyreMarksView(this.tyreMarkStore);
     view.scene.add(this.tyreMarks.mesh);
+    // A level whose ruts are felt: the vehicles are handed where the ground is pressed in (v0.31).
+    sim.ruts = setup.def.feltRuts ? this.rutDepth : undefined;
     // Worn wheel lines where the map has them: which way others have driven (v2.25).
     const wheelMarks = wheelMarkSpots(world.features.tracks, (x, z) => world.terrain.waterDepthAt(x, z));
     if (wheelMarks.length)
@@ -1633,22 +1635,7 @@ export class Game {
       this.tyreTrails = v.wheels.map(() => new TyreTrail(this.tyreMarkStore, width, heightAt, this.rutDepth));
       this.tyreTrailsFor = v;
     }
-    const wetness = this.sim.env.wetness;
-    v.wheels.forEach((w, i) =>
-      this.tyreTrails[i].update(
-        {
-          contact: w.contact,
-          surface: w.surface,
-          x: w.contactPoint.x,
-          y: w.contactPoint.y,
-          z: w.contactPoint.z,
-          spin: w.spin,
-          skid: w.skid,
-          water: w.water,
-        },
-        wetness,
-      ),
-    );
+    trailWheels(this.tyreTrails, v.wheels, this.sim.env.wetness);
     this.tyreMarks.setSun(this.view.lighting.sunDir);
     this.tyreMarks.update();
   }

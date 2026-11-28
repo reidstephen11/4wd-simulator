@@ -5,12 +5,18 @@
  * Each line is tried crawling in low range with both lockers, then with open diffs; lines
  * marked `back` are driven from their far end.
  */
+import { lateAfternoon } from '../src/data/environment';
+import { ironbarkLevel } from '../src/data/levels/ironbark';
 import { ironbarkMap } from '../src/data/levels/ironbarkMap';
 import { buildWorld } from '../src/sim/world/world';
 import { driver, type Lockers } from '../tests/helpers/drive';
 
 const world = buildWorld(ironbarkMap);
-const { drive } = driver(world);
+// The level's ruts are felt (v0.31): the car presses and feels them here as it does in the game.
+// RUTS=off drives without, to compare.
+const ruts = process.env.RUTS !== 'off' && !!ironbarkLevel.feltRuts;
+const { drive } = driver(world, lateAfternoon, { ruts });
+console.log(`ruts ${ruts ? 'felt' : 'off'}`);
 /** [track, driven from the far end]. */
 const LINES: [string, boolean][] = [
   ['knoll-rock-climb', false],

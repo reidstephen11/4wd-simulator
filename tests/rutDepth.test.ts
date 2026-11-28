@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { SurfaceId } from '../src/data/surfaces';
+import { ironbarkLevel } from '../src/data/levels/ironbark';
+import { rutFeel } from '../src/data/rutFeel';
+import type { RutField } from '../src/sim/vehicle/vehicle';
 import { RutDepth, rutTuning } from '../src/sim/world/rutDepth';
 import {
   MARK_FLOATS,
@@ -141,5 +144,21 @@ describe('which wall of a rut catches the sun', () => {
     expect(Math.abs(rutLit(piece, 0, { x: 0, y: 1, z: 0 }))).toBeLessThan(0.05);
     // Sun below the horizon: nothing is lit.
     expect(rutLit(piece, 0, { x: 0, y: -0.2, z: 1 })).toBe(0);
+  });
+});
+
+describe('ruts that are felt (v0.31)', () => {
+  it('the rut store is what the vehicles feel, in the same metres', () => {
+    // A full-depth rut in the store is a full-depth rut to the wheels.
+    expect(rutTuning.maxDepth).toBe(rutFeel.fullDepth);
+    const ruts = new RutDepth();
+    const field: RutField = ruts;
+    for (let k = 0; k < 20; k++) ruts.press(1, 1, SurfaceId.Mud, 0);
+    expect(field.metresAt(1, 1)).toBeGreaterThan(rutFeel.fullDepth * 0.95);
+    expect(field.metresAt(5, 5)).toBe(0);
+  });
+
+  it('Ironbark Creek asks for its ruts to be felt', () => {
+    expect(ironbarkLevel.feltRuts).toBe(true);
   });
 });

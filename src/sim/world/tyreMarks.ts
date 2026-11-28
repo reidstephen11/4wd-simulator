@@ -315,3 +315,40 @@ export class TyreTrail {
     this.start = null;
   }
 }
+
+/** A vehicle's wheel, as much of it as the trails need. */
+export interface TrailWheel {
+  contact: boolean;
+  surface: SurfaceId;
+  contactPoint: { x: number; y: number; z: number };
+  spin: number;
+  skid: number;
+  water: number;
+}
+
+/**
+ * Lay each wheel's contact into its trail, one trail a wheel in the same order. The game does
+ * this every frame; the scripted drives do it every step, so the ruts they drive in are the
+ * ones a player's wheels would press (v0.31).
+ */
+export function trailWheels(
+  trails: readonly TyreTrail[],
+  wheels: readonly TrailWheel[],
+  wetness: number,
+): void {
+  wheels.forEach((w, i) =>
+    trails[i]?.update(
+      {
+        contact: w.contact,
+        surface: w.surface,
+        x: w.contactPoint.x,
+        y: w.contactPoint.y,
+        z: w.contactPoint.z,
+        spin: w.spin,
+        skid: w.skid,
+        water: w.water,
+      },
+      wetness,
+    ),
+  );
+}
