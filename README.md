@@ -32,7 +32,7 @@ The game opens on a title screen. **Press any button** (or **Tap to begin**) bri
 
 The engine is off as you arrive: the first press of the accelerator starts it. **Pause → Main menu** goes back to the title.
 
-The version number (v0.26 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
+The version number (v0.28 now) is on the title screen, the loading card and the pause menu, and goes up by 0.01 with every update. Hover over it to see the exact build. Saves from v0.21 and earlier are not read: the game starts fresh.
 
 ## Ironbark Creek
 
@@ -64,6 +64,10 @@ How hard they are, measured with the autopilot crawling in low range in the shor
 **Scored rock climb.** Drive through gate 1 at the foot of the rock climb to start a run: red flag on the left, blue on the right, eight gates uphill. A run starts with 1000 points; touching a flag costs 25, missing a gate 100, each reverse or knock on the body 5, and hooking the winch 50. Time breaks ties. The best score is kept for each vehicle.
 
 **Tyre marks.** The car's tyres leave their tread on the ground: most in mud, clay and sand, less on dirt, grass and gravel, none on rock. Wet ground marks darker, and so does a spinning or locked wheel. Tyres that have just come out of the creek or a bog leave wet tracks for a few metres, on rock too. The marks stay for the drive (about a kilometre and a half of driving before the oldest go), so a climb shows the lines already tried.
+
+**Ruts you can see (v0.30).** On soft ground the tyre marks look pressed in: a darker, more solid groove, a band along each edge for its walls (the one facing the sun lit, the other in shadow) and a strip of soil pushed up along each side. Each time a wheel goes over the same spot the rut deepens, so a line you have driven five times looks clearly deeper than one driven once. Mud, black soil and sand take a rut wet or dry; clay, dirt and grass only when wet; rock, gravel and timber never, and their marks stay flat. The ground itself is not moved.
+
+**Ruts you can feel (v0.31).** A wheel in a rut sits lower, by up to 8 cm in a full-depth one, and takes that corner of the car down with it: with all four wheels in deep ruts the belly is 8 cm nearer the ground. The rut drags at the tyre a little, and it holds the wheel: steer gently and the car stays in its ruts, steer firmly and it climbs out. So cutting up a soft climb or a bog has a cost on the next attempt, and a well-worn line guides the car along it.
 
 **Ground detail.** Close up, the ground is no longer smooth colour. Gravel, rock steps and the creek bed are separate stones; mud is wet lumps with dark hollows; bare earth has grit in it; boulders and ledges have joints, specks and weathering. It is drawn only: the car drives on the same surface as before.
 
@@ -102,7 +106,7 @@ Working the engine hard overheats it, fastest when bogged with the wheels spinni
 
 ## Vehicles
 
-Pick one on the New drive page, or from **pause menu → Vehicle** while driving (the new vehicle starts from your last camp). Every vehicle is open from the start, and each has its own cab, dials and engine sound.
+Pick one on the New drive page, or from **pause menu → Vehicle** while driving (the new vehicle starts from your last camp). Every vehicle is open from the start, and each has its own cab, dials and engine sound. Every engine builds as it nears its rev limit and holds its note there; all but the Range Rover's rev about a tenth further than the real one, and each vehicle pulls a little harder at the top of its revs (v0.29).
 
 | Vehicle                    | Based on                                                                           | Engine and gearbox                                                |
 | -------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -228,6 +232,55 @@ Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, so
 
 ## What to test
 
+**v0.31**
+
+Ruts you can feel.
+
+- Pick **After rain** and drive the same line along a flat clay track five or six times, then drive it once more slowly with a light hand on the steering: does the car follow its own ruts? Steer gently to one side: does it resist, and then climb out when you steer more firmly? Is the pull too strong, too weak or about right?
+- Look at the car from the side as it drives in deep ruts and then out onto untouched ground: does it sit a little lower in them?
+- At the bog hole and in the bog trench: are they harder on the second and third attempt along the same line than on the first, and by about the right amount? Can you still get through each line you could before?
+- On rock, gravel and dry clay nothing should feel different.
+- Anything that feels like the steering tugging or shaking for no reason, on soft ground, is worth reporting: say where.
+
+**v0.30**
+
+Ruts you can see, and signs you can read (the signs carried over from Over the Cape v2.31).
+
+- Ruts: pick **After rain** and drive the same line along a clay track three or four times (the loop to the bog hole is flat). Each pass, the wheel tracks look deeper: from a tread print to a darker, solid groove with soil pushed up along its edges. Look across them from the side and along them from behind.
+- In **Clear** weather, drive through the mud at the edge of the bog hole twice: the same grooves in the mud. On dry clay, rock and gravel the marks stay flat prints, however often you drive them.
+- In low sun (Morning or Late afternoon), does one wall of a deep rut look lit and the other shaded? Is the effect too strong, too weak or about right? Do the ruts look pressed in, or painted on?
+- The car should drive exactly as before: the ruts are only drawn.
+- On your phone on High: still smooth with a lot of ruts laid?
+- Signs: drive up to a line's sign from the driver's seat. The lettering is larger, bolder and on up to three lines (**Rock climb / 8 gates / start uphill**); can you read it before you are level with it? From behind, the lettering is there too with the post not standing across it.
+
+**v0.29**
+
+Engines and mud, carried over from Over the Cape v2.28 to v2.30. Listen with headphones or good speakers.
+
+- In any vehicle other than the Range Rover, the 40 Series and the LC79, hold a low gear flat out to the rev limit: the note builds over the last few hundred revs (more intake roar and valve noise) and then holds steady and strong, with no misfiring or cutting out. Try a petrol (the Hilux) and a diesel (the Troop Carrier or the Patrol).
+- Camel Trophy Ninety: it revs cleanly to the top, where it used to break up above about 3,600 rpm.
+- The tachometer needle runs about a tenth further round before the engine cuts (the 40 Series to 4,700, the Troop Carrier to 4,400, the Unimog to 3,100), and the red zone starts there. In Automatic at full throttle the gearbox holds each gear a little longer.
+- Each vehicle feels a little stronger near the top of its revs, and no different crawling in low range at small throttle openings. Drive a line you know well on Ironbark: same line, same throttle.
+- Range Rover: same rev limit (5,000) and the same sound, a little stronger at the top.
+- 40 Series and LC79: they still bounce at the limit. Would you rather they howled like the rest?
+- Mud: get bogged at the Bog Hole or in the bog trench and hold the throttle. The mud comes off as a spray of small flecks with the odd bigger clod, no football-sized lumps, and always flies backwards from each wheel in a forward gear, however the car rocks. In reverse it flies forwards.
+
+**v0.28**
+
+Vehicle fixes carried over from Over the Cape v2.27. Walk round each in the vehicle menu.
+
+- Short-wheelbase 4WD (the code-built 40): the roof rack's legs come down outside the roof to three clamps on each gutter; the boards stop inside the rack's end rails; the jerry can is flat against the right rear door on a small tray, clear of the bumper.
+- FJ40: the rear spare has a bar and a tee handle across its centre and a bracket from the body's left rear corner; there is a clear gap between the snorkel's head and the rack's front-left leg.
+- Unimog: there is room for legs between the steering wheel and the seat, and the three dials still read through the wheel from the driver's seat. The roof hatch sits on a raised ring with hinges and a latch. The exhaust ends in a short stub ahead of the left rear tyre. The spare on the dropside has a three-armed clamp. The footwells have a wall under the dash, with no ground showing.
+- Perentie: from behind, the spare is tucked up under the floor, a little left of centre, with no cradle under it; the exhaust ends under the left sill ahead of the left rear wheel. Backing off a ledge, the tail touches where the spare is drawn (a little sooner than before).
+- Troop Carrier: the front wheel arch is dark all round behind the tyre.
+
+**v0.27**
+
+- Neutral: with Settings → Gearbox on Manual (controller), stand on dirt or sand in neutral and hold the throttle. The engine should rev and the wheels stay still, with no dust, no tyre marks and no digging in. In 1st, bogged in the bog hole, they should still spin.
+- Seats: look into any vehicle from the side, or look round from the driver's seat. The seat backs should lean back, away from the steering wheel.
+- Range Rover: from the side, the roo bar sits closer to the grille than before (14 cm).
+
 **v0.26**
 
 - Finer ground detail, best seen with the cockpit or bonnet camera or by stopping beside something: the stones of the rock garden and the rock climb, the mud of the bog hole, the creek bed at the ford, the faces of the boulders.
@@ -296,5 +349,5 @@ GitHub Actions builds and deploys `main` to GitHub Pages (`.github/workflows/dep
 
 ## What's next
 
-- Pushing the graphics further: ground pressed in under the tyres (ruts), finer plants.
+- Pushing the graphics further: finer plants.
 - More playground levels.

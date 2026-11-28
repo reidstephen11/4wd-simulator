@@ -1018,14 +1018,12 @@ function interior(b: VehicleBuilder, t: VehicleTuning) {
   b.block(-0.04, 0.67, -0.455, 0.25, 0.125, 0.008, new THREE.Color('#506A72'), M.Paint, Z.Trim, 0.005);
   for (const x of [-0.43, 0.43]) {
     b.block(x, 0.43, 0.03 + CAB, 0.51, 0.14, 0.54, cloth, M.Fabric, Z.Trim, 0.05);
-    b.push()
-      .translate(x, 0.79, 0.3 + CAB)
-      .rotate(-0.1, 0, 0);
+    b.seatBack(x, 0.79, 0.365 + CAB, 0.1);
     b.block(0, 0, 0, 0.51, 0.65, 0.14, cloth, M.Fabric, Z.Trim, 0.05);
+    b.block(0, 0.33, 0, 0.26, 0.16, 0.095, cloth, M.Fabric, Z.Trim, 0.035);
     b.pop();
     for (const dx of [-0.16, 0.16])
       b.block(x + dx, 0.28, 0.02 + CAB, 0.025, 0.2, 0.45, steel, M.Metal, Z.Trim);
-    b.block(x, 1.12, 0.32 + CAB, 0.26, 0.16, 0.095, cloth, M.Fabric, Z.Trim, 0.035);
   }
   b.block(0, 0.33, 0.16 + CAB, 0.24, 0.25, 0.78, black, M.Rubber, Z.Trim, 0.025);
   for (const [x, z, h] of [

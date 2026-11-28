@@ -40,6 +40,16 @@ export class VehicleBuilder extends MeshBuilder {
     return super.tri(a, b, c, color);
   }
 
+  /**
+   * Start a seat's back (close it with `pop()`): what follows is drawn about (x, y, z), the
+   * middle of the back, leaning `lean` radians with its top towards the tail. Forward is −z, so
+   * leaning back is a positive turn about x. Until v2.26 every cabin turned its backs the other
+   * way, and they leaned forward over the cushions.
+   */
+  seatBack(x: number, y: number, z: number, lean: number): this {
+    return this.push().translate(x, y, z).rotate(lean, 0, 0);
+  }
+
   /** Consume a Three.js primitive, keeping its authored normals through the transform. */
   geometry(geometry: THREE.BufferGeometry, color: THREE.Color): this {
     const source = geometry.index ? geometry.toNonIndexed() : geometry;

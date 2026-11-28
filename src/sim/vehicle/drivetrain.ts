@@ -106,7 +106,12 @@ export function combustionTorque(t: VehicleTuning, rpm: number, throttle: number
   const E = t.engine;
   const air = E.idleAir + (1 - E.idleAir) * Math.pow(Math.min(1, Math.max(0, throttle)), E.throttleCurve);
   const wideOpen = engineTorque(t, rpm) + frictionTorque(t, rpm, 1);
-  return Math.min(wideOpen, (air * E.airflow) / Math.max(E.idleRpm * 0.5, rpm));
+  // Above `topEnd.fromRpm` the engine draws more air, up to its rev limit (v2.29).
+  const top = E.topEnd;
+  const breath = top
+    ? 1 + top.air * Math.min(1, Math.max(0, (rpm - top.fromRpm) / (E.redlineRpm - top.fromRpm)))
+    : 1;
+  return Math.min(wideOpen, (air * E.airflow * breath) / Math.max(E.idleRpm * 0.5, rpm));
 }
 
 /** Engine friction and pumping losses (Nm); pumping is highest with the throttle closed. */

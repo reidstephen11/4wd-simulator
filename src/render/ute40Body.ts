@@ -380,8 +380,8 @@ function interior(b: VehicleBuilder, redlineRpm: number): void {
   b.block(0, 0.265, (-0.78 + CAB_BACK) / 2, 1.16, 0.06, CAB_BACK + 0.78, dark, M.Rubber, Z.Trim);
   for (const x of [-0.38, 0.38]) {
     b.block(x, 0.47, 0.25, 0.52, 0.15, 0.5, seat, M.Fabric, Z.Trim, 0.055);
-    b.push().rotate(-0.1, 0, 0);
-    b.block(x, 0.78, 0.5, 0.52, 0.59, 0.11, seat, M.Fabric, Z.Trim, 0.045);
+    b.seatBack(x, 0.826, 0.4196, 0.1);
+    b.block(0, 0, 0, 0.52, 0.59, 0.11, seat, M.Fabric, Z.Trim, 0.045);
     b.pop();
     for (const dx of [-0.12, 0.12]) b.block(x + dx, 0.55, 0.23, 0.015, 0.009, 0.4, dark, M.Fabric, Z.Trim);
     for (const dx of [-0.15, 0.15]) b.block(x + dx, 0.35, 0.23, 0.025, 0.17, 0.4, metal, M.Metal, Z.Trim);

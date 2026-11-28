@@ -202,11 +202,11 @@ interface RackLayout {
   clampX: number;
   clampY: number;
   /**
-   * Where each leg's outrigger turns down, when it cannot run straight from the post to the
-   * clamp without passing through the roof's edge.
+   * Where each leg's outrigger turns down: it cannot run straight from the post to the clamp
+   * without passing through the roof's edge.
    */
-  elbow?: { x: number; y: number };
-  /** How far the posts under the deck rail reach down past the standard rack's. */
+  elbow: { x: number; y: number };
+  /** How far the posts under the deck rail reach down past 0.15 m (negative: shorter). */
   postReach?: number;
   /** Stations of the uprights between the deck rail and the top rail. */
   posts: number[];
@@ -215,43 +215,54 @@ interface RackLayout {
   slats: number;
 }
 
-/** The rack as the code-built 40 Series cars carry it. */
-const standardRack: RackLayout = {
-  z0: -0.4,
-  z1: 1.62,
-  legs: [-0.29, 0.66, 1.52],
-  clampX: 0.835,
-  clampY: 1.545,
-  posts: [-0.4, 0.1, 0.62, 1.12, 1.62],
-  slat0: -0.3,
-  slats: 10,
-};
-
 /**
- * The Blender FJ40's rack. Its hardtop is narrower, so the clamps come in to grip the gutter
- * (x 0.763, 1.815 m above the ground) instead of hanging beside the roof; and it is long
- * enough for the 2.4 m recovery boards, which stuck out 0.2 m at each end of the old one,
- * with 28 mm between each board end and the rail (at 2 mm they looked run through it).
- * It overhangs the windscreen by 0.23 m and the tail by 0.08 m. Heights are before
- * FJ40_GEAR_DROP and rackDrop().
+ * The rack both 40 Series carry: 2.5 m long, for the 2.4 m recovery boards, with 28 mm
+ * between each board end and the rail (on the 2.02 m rack the code-built car had until v2.27
+ * they stuck out 0.2 m at both ends, through the end rails). It overhangs the windscreen and
+ * the tail.
  */
-const fj40Rack: RackLayout = {
+const rackDeck = {
   z0: -0.53,
   z1: 1.97,
-  legs: [-0.17, 0.7, 1.55],
-  clampX: 0.778,
-  clampY: 1.512,
-  elbow: { x: 0.8, y: 1.7 },
-  postReach: 0.03,
   posts: [-0.53, -0.03, 0.47, 0.97, 1.47, 1.97],
   slat0: -0.43,
   slats: 12,
 };
 
-/** How far back the FJ40's boards sit from where the standard rack carries them. */
-export const FJ40_PLANK_SHIFT = 0.13;
+/**
+ * On the code-built 40 Series. Its hardtop cap is 0.815 m out with the gutter strip at its
+ * lower edge (x 0.82, y 1.458, z -0.30 to 1.66). The posts are stubs under the deck rail that
+ * stop 16 mm above the roof; each outrigger goes out over the roof's edge and down outside
+ * the cap to a clamp over the gutter. Until v2.27 the posts stood 3 cm into the roof skin and
+ * the outriggers ran straight to the clamps, through the cap's corner, so the three clamps a
+ * side sat on the gutter with nothing reaching them. Heights are before rackDrop().
+ */
+const standardRack: RackLayout = {
+  ...rackDeck,
+  legs: [-0.2, 0.68, 1.56],
+  clampX: 0.835,
+  clampY: 1.545,
+  elbow: { x: 0.85, y: 1.67 },
+  postReach: -0.05,
+};
 
-function roofGear(b: VehicleBuilder, r: RackLayout = standardRack): void {
+/**
+ * The Blender FJ40's rack. Its hardtop is narrower, so the clamps come in to grip the gutter
+ * (x 0.763, 1.815 m above the ground). The front legs stand 0.24 m behind the snorkel's head
+ * (its rear end is at z -0.255); at z -0.17 until v2.27 the clamp was 35 mm behind the head
+ * and level with it, and the two read as touching. Heights are before FJ40_GEAR_DROP and
+ * rackDrop().
+ */
+const fj40Rack: RackLayout = {
+  ...rackDeck,
+  legs: [-0.02, 0.76, 1.55],
+  clampX: 0.778,
+  clampY: 1.512,
+  elbow: { x: 0.8, y: 1.7 },
+  postReach: 0.03,
+};
+
+function roofGear(b: VehicleBuilder, r: RackLayout): void {
   b.push().translate(0, rackDrop(), 0);
   // Feet, basket deck, perimeter rails, uprights and tie-down rings.
   for (const x of [-0.68, 0.68]) {
@@ -259,18 +270,15 @@ function roofGear(b: VehicleBuilder, r: RackLayout = standardRack): void {
     for (const z of r.legs) {
       const reach = r.postReach ?? 0;
       b.block(x, 1.695 - reach / 2, z, 0.08, 0.15 + reach, 0.1, trim, M.Metal, Z.Roof, 0.008);
-      if (r.elbow) {
-        // Out over the roof's edge, then straight down to the clamp on the gutter.
-        const knee = v(side * r.elbow.x, r.elbow.y, z);
-        b.rod(v(x, 1.72, z), knee, 0.013, trim, M.Metal, Z.Roof);
-        b.rod(knee, v(side * (r.clampX + 0.012), r.clampY, z), 0.013, trim, M.Metal, Z.Roof);
-        b.slot = M.Metal;
-        b.tag = Z.Roof;
-        b.push().translate(knee.x, knee.y, knee.z);
-        b.geometry(new THREE.SphereGeometry(0.013, 8, 6), trim);
-        b.pop();
-      } else
-        b.rod(v(x, 1.72, z), v(side * (r.clampX - 0.01), r.clampY + 0.005, z), 0.013, trim, M.Metal, Z.Roof);
+      // Out over the roof's edge, then straight down to the clamp on the gutter.
+      const knee = v(side * r.elbow.x, r.elbow.y, z);
+      b.rod(v(x, 1.72, z), knee, 0.013, trim, M.Metal, Z.Roof);
+      b.rod(knee, v(side * (r.clampX + 0.012), r.clampY, z), 0.013, trim, M.Metal, Z.Roof);
+      b.slot = M.Metal;
+      b.tag = Z.Roof;
+      b.push().translate(knee.x, knee.y, knee.z);
+      b.geometry(new THREE.SphereGeometry(0.013, 8, 6), trim);
+      b.pop();
       b.block(side * r.clampX, r.clampY, z, 0.032, 0.06, 0.1, trim, M.Metal, Z.Roof, 0.006);
     }
     b.rod({ x, y: 1.77, z: r.z0 }, { x, y: 1.77, z: r.z1 }, 0.022, trim, M.Metal, Z.Roof);
@@ -325,7 +333,7 @@ function roofGear(b: VehicleBuilder, r: RackLayout = standardRack): void {
 /**
  * The first spare on the left-hand rear door, where the factory carrier is in
  * rear-34-left.jpg and rear-34-orange-1977.jpg, and a jerry can on the right door, clear of
- * the lamps.
+ * the lamps and the bumper.
  */
 function rearDoorGear(b: VehicleBuilder, wheel: THREE.BufferGeometry): void {
   const sx = -0.27,
@@ -336,37 +344,11 @@ function rearDoorGear(b: VehicleBuilder, wheel: THREE.BufferGeometry): void {
   b.rod(v(sx, sy, TAIL + 0.03), v(sx, sy, sz - 0.13), 0.045, bar, M.Metal, Z.Rear);
   b.tag = Z.Rear;
   mountSpare(b, wheel, { x: sx, y: sy, z: sz }, 'back', black);
-  // Jerry can in a cradle on the right door, below the window.
-  const olive = new THREE.Color('#667258');
-  const cx = 0.27,
-    cy = 0.5,
-    cz = TAIL + 0.13;
-  b.block(cx, cy - 0.235, cz - 0.02, 0.3, 0.035, 0.24, bar, M.Metal, Z.Rear);
-  for (const x of [cx - 0.14, cx + 0.14])
-    b.block(x, cy - 0.1, TAIL + 0.03, 0.03, 0.3, 0.04, bar, M.Metal, Z.Rear);
-  b.block(cx, cy, cz, 0.25, 0.43, 0.19, olive, M.Paint, Z.Rear, 0.02);
-  for (const side of [-1, 1])
-    b.rod(
-      v(cx - 0.09, cy - 0.17 + (side > 0 ? 0 : 0.3), cz + 0.1),
-      v(cx + 0.09, cy - 0.17 + (side > 0 ? 0.3 : 0), cz + 0.1),
-      0.009,
-      olive,
-      M.Paint,
-      Z.Rear,
-    );
-  b.block(cx, cy - 0.02, cz + 0.105, 0.035, 0.37, 0.017, black, M.Rubber, Z.Rear);
-  b.block(cx, cy - 0.221, cz, 0.035, 0.012, 0.22, black, M.Rubber, Z.Rear);
-  b.block(cx, cy + 0.216, cz, 0.035, 0.012, 0.22, black, M.Rubber, Z.Rear);
-  b.block(cx, cy - 0.002, cz - 0.1, 0.035, 0.43, 0.012, black, M.Rubber, Z.Rear);
-  b.block(cx, cy + 0.02, cz + 0.118, 0.055, 0.065, 0.012, steel, M.Metal, Z.Rear, 0.004);
-  for (const x of [cx - 0.06, cx + 0.03])
-    b.rod(v(x, cy + 0.21, cz), v(x, cy + 0.28, cz), 0.012, olive, M.Paint, Z.Rear);
-  b.rod(v(cx - 0.06, cy + 0.28, cz), v(cx + 0.03, cy + 0.28, cz), 0.012, olive, M.Paint, Z.Rear);
-  b.slot = M.Metal;
-  b.tag = Z.Rear;
-  b.push().translate(cx + 0.08, cy + 0.22, cz);
-  b.geometry(new THREE.CylinderGeometry(0.025, 0.025, 0.018, 12), steel);
-  b.pop();
+  // Jerry can on the right door: between the handle (to x 0.145) and the door's hinges (from
+  // x 0.50), its tray 9 cm above the rear bumper's top (y 0.285) and its cap under the window
+  // (from y 1.0). Until v2.27 it stood end-on in a cradle whose floor was 2 cm inside the
+  // bumper's top, so the can stood on the bumper and the door could not have opened past it.
+  doorCan(b, TAIL, 0.33, 0.64, 0.065);
 }
 
 /**
@@ -422,7 +404,7 @@ export function addVehicleEquipment(
   bullBar(b, tuning);
   rearBumper(b, tuning);
   chassis(b);
-  roofGear(b);
+  roofGear(b, standardRack);
   rearDoorGear(b, wheel);
   roofSpare(b, tuning, wheel);
   // Flexible whip aerial on the guard.
@@ -500,22 +482,26 @@ function fj40Flap(b: VehicleBuilder, x: number, z: number): void {
 }
 
 /**
- * Jerry can on the right barn door, its broad side flat against the door skin (it stood
- * end-on until v1.85 and was the rearmost point of the car). It stands in a tray that two flat
- * bars behind the can bolt to the door, with a stay under each side and a strap round it;
- * clear of the door's handle, its outer edge, its window above and the spare.
+ * Jerry can on the right barn door, its broad side flat against the door skin (on the Blender
+ * FJ40 it stood end-on until v1.85 and was the rearmost point of the car). It stands in a tray
+ * that two flat bars behind the can bolt to the door, with a stay under each side and a strap
+ * round it. The whole holder is on the door and swings with it. `door` is the door skin's z,
+ * (x, y) the can's centre, and `stay` how far below the tray each stay meets the door.
  */
-function fj40RearCan(b: VehicleBuilder): void {
-  const door = 1.89;
-  // The right door runs from the centre seam to x 0.52; its handle ends at x 0.15.
-  const x = 0.35,
-    y = 0.54,
-    z = door + 0.03 + 0.08;
+function doorCan(b: VehicleBuilder, door: number, x: number, y: number, stay: number): void {
+  const z = door + 0.03 + 0.08;
   b.block(x, y - 0.25, door + 0.1, 0.34, 0.03, 0.2, bar, M.Metal, Z.Rear, 0.004);
   for (const dx of [-0.12, 0.12]) {
     b.block(x + dx, y, door + 0.015, 0.035, 0.5, 0.03, bar, M.Metal, Z.Rear);
     // A stay under the tray, from its outer edge back to the door.
-    b.rod(v(x + dx, y - 0.265, door + 0.19), v(x + dx, y - 0.4, door + 0.012), 0.009, bar, M.Metal, Z.Rear);
+    b.rod(
+      v(x + dx, y - 0.265, door + 0.19),
+      v(x + dx, y - 0.265 - stay, door + 0.012),
+      0.009,
+      bar,
+      M.Metal,
+      Z.Rear,
+    );
   }
   b.push()
     .translate(x, y, z)
@@ -529,18 +515,25 @@ function fj40RearCan(b: VehicleBuilder): void {
 }
 
 /**
- * What holds the door spare: a swing-away carrier, as rear-34-left.jpg has. Its arm runs along
- * the rear sill, under the doors and the tail lamps, from a hinge bracket on the fixed left
- * corner of the body to a catch on the rear bar. A post stands on the arm, between the door
- * skin and the tyre, up to a plate and boss the wheel bolts to. Nothing is fixed to a door: the
- * carrier swings clear of both before they open, so the spare may stand across their seam.
- * Heights are at the body's stock height (the caller lifts them with the body).
+ * What holds the door spare: a swing-away carrier, as rear-34-left.jpg has. It is a frame
+ * hinged at two brackets on the fixed left corner of the body: a lower arm along the rear sill,
+ * under the doors and the tail lamps, to a catch on the rear bar, and an upper arm between the
+ * left door's two hinges. A post stands on the lower arm, between the door skin and the tyre
+ * (a 40 mm gap), up to a plate and boss behind the wheel's centre. A stud from the boss comes
+ * out through the wheel's centre, where a bar across the rim and a tee handle clamp the wheel
+ * on, as on the roof spare. Nothing is fixed to a door: the carrier swings clear of both before
+ * they open, so the spare may stand across their seam. Until v2.27 there was no upper arm and
+ * no clamp, and everything above the sill was hidden behind the tyre: from behind, the wheel
+ * showed a post under its tread and nothing else. Heights are at the body's stock height (the
+ * caller lifts them with the body).
  */
 function fj40SpareCarrier(b: VehicleBuilder): void {
   const y = 0.1,
     z = 1.925,
     x = -0.365,
     hub = 0.738;
+  // The spare's hub plane (the Blender wheel, moved by SPARE_SHIFT in fj40Glb.ts).
+  const hubZ = 2.05;
   // The body's rear corner is round (0.2 m): at x -0.69 its skin is at z 1.85.
   b.block(-0.69, y, 1.895, 0.07, 0.1, 0.1, bar, M.Metal, Z.Rear, 0.004);
   // Arm and post are 50 mm box section; the post is 30 mm deep to pass between door and tyre.
@@ -550,8 +543,19 @@ function fj40SpareCarrier(b: VehicleBuilder): void {
   b.block(x, (y + hub) / 2 + 0.01, 1.908, 0.06, hub - y + 0.02, 0.03, bar, M.Metal, Z.Rear, 0.004);
   // A gusset from the arm up to the post on each side.
   for (const dx of [-0.16, 0.16]) b.rod(v(x + dx, y, z), v(x, y + 0.2, 1.908), 0.012, bar, M.Metal, Z.Rear);
+  // The upper hinge bracket and arm, in the clear band between the door's hinges (which
+  // stand at y 0.34 to 0.46 and 0.66 to 0.78 here).
+  const upper = 0.56;
+  b.block(-0.69, upper, 1.895, 0.07, 0.08, 0.1, bar, M.Metal, Z.Rear, 0.004);
+  b.block((-0.69 + x) / 2, upper, 1.908, x + 0.69, 0.04, 0.03, bar, M.Metal, Z.Rear, 0.004);
   b.block(x, hub, 1.918, 0.15, 0.15, 0.02, bar, M.Metal, Z.Rear, 0.004);
   b.rod(v(x, hub, 1.92), v(x, hub, 2.03), 0.05, bar, M.Metal, Z.Rear);
+  // The clamp on the wheel's face. The rim's flange is 0.21 m out and 96 mm behind the hub's
+  // plane; the bar spans it, 2 mm clear, held by the stud's tee handle.
+  const face = hubZ + 0.098;
+  b.rod(v(x, hub, 2.03), v(x, hub, face + 0.05), 0.014, steel, M.Metal, Z.Rear);
+  b.block(x, hub, face + 0.01, 0.44, 0.06, 0.02, bar, M.Metal, Z.Rear, 0.006);
+  b.rod(v(x - 0.06, hub, face + 0.04), v(x + 0.06, hub, face + 0.04), 0.01, steel, M.Metal, Z.Rear);
 }
 
 /** Rear bar under the lamps, with the plate on the right (the spare takes the left) and a tow ball. */
@@ -591,7 +595,9 @@ export function addFj40GlbEquipment(
     fj40Flap(b, x, -0.645);
     fj40Flap(b, x, 1.655);
   }
-  fj40RearCan(b);
+  // The right door runs from the centre seam to x 0.52 and its handle ends at x 0.15: the can
+  // is clear of the handle, the door's outer edge, its window above and the spare.
+  doorCan(b, 1.89, 0.35, 0.54, 0.135);
   fj40SpareCarrier(b);
   // Whip aerial on the flat top of the left wing (0.99 m above the ground at stock height,
   // x 0.50 to 0.67). Until v1.85 its base hung 0.3 m above the wing, beside the bonnet.
@@ -613,12 +619,14 @@ export function buildRackPlank(index: number): THREE.BufferGeometry {
   b.push().translate(0, rackDrop(), 0);
   const wood = pal('barkOchre');
   const x = index === 0 ? -0.46 : -0.1;
-  b.block(x, 1.81, 0.59, 0.3, 0.055, 2.4, wood, M.Fabric, Z.Roof);
+  // 2.4 m long, from z -0.48 to 1.92: inside the rack's end rails (-0.53 and 1.97).
+  const mid = 0.72;
+  b.block(x, 1.81, mid, 0.3, 0.055, 2.4, wood, M.Fabric, Z.Roof);
   for (let i = 0; i < 4; i++)
     b.block(
       x - 0.12 + i * 0.075,
       1.84,
-      0.59,
+      mid,
       0.004,
       0.003,
       2.34,
@@ -626,7 +634,8 @@ export function buildRackPlank(index: number): THREE.BufferGeometry {
       M.Fabric,
       Z.Roof,
     );
-  for (const z of [-0.1, 1.3]) {
+  // Each strap goes round the board and the cross slat under it (slats at z -0.03 and 1.37).
+  for (const z of [-0.03, 1.37]) {
     b.block(x, 1.846, z, 0.305, 0.015, 0.045, black, M.Rubber, Z.Roof);
     for (const side of [-1, 1]) b.block(x + side * 0.156, 1.8, z, 0.012, 0.1, 0.045, black, M.Rubber, Z.Roof);
     b.block(x, 1.752, z, 0.325, 0.012, 0.045, black, M.Rubber, Z.Roof);

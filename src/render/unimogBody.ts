@@ -103,16 +103,51 @@ function chassis(b: VehicleBuilder): void {
   for (const z of [0.2, 0.65]) b.block(-0.6, 0.11, z, 0.32, 0.04, 0.06, black, M.Metal, Z.Trim);
   for (const z of [-0.5, -0.15]) b.block(-0.6, 0.2, z, 0.3, 0.04, 0.06, black, M.Metal, Z.Trim);
   for (const z of [0.4, 0.85]) b.block(0.6, 0.2, z, 0.3, 0.04, 0.06, black, M.Metal, Z.Trim);
-  b.rod({ x: -0.3, y: 0.1, z: -1.7 }, { x: -0.3, y: 0.02, z: 0.9 }, 0.04, steel);
+  // The exhaust: down inside the left rail and under the crossmembers, out under the rail (its
+  // underside is at 0.03) behind the fuel tank, into a silencer hung across outside the rail,
+  // and a short tailpipe turned out and down under the tray's edge, 0.2 m ahead of the rear
+  // tyre's tread, where side.jpg shows the stub. Until v2.27 the silencer ran through the rail
+  // and the tailpipe ended 2 cm from the tread, pointing at it. The inlet pipe is outside the
+  // rail by z 0.8, ahead of the left trailing link's chassis end (x −0.42, z 0.975), and enters
+  // the silencer's front near its inner end; a first route crossed under the rail at that end
+  // and passed through the link.
+  continuousTube(
+    b,
+    [
+      v(-0.3, 0.1, -1.7),
+      v(-0.3, 0.03, -1.2),
+      v(-0.3, 0.03, 0.3),
+      v(-0.3, -0.05, 0.55),
+      v(-0.64, -0.05, 0.8),
+      v(-0.66, -0.03, 1.0),
+    ],
+    0.04,
+    steel,
+    Z.Trim,
+    M.Metal,
+    ROUND_BEND,
+  );
   b.slot = M.Metal;
   b.tag = Z.Trim;
   b.push()
-    .translate(-0.62, 0.15, 1.15)
+    .translate(-0.8, 0.02, 1.05)
     .rotate(0, 0, Math.PI / 2);
-  b.geometry(new THREE.CylinderGeometry(0.13, 0.13, 0.5, 14), steel.clone().multiplyScalar(0.55));
+  b.geometry(new THREE.CylinderGeometry(0.12, 0.12, 0.5, 14), steel.clone().multiplyScalar(0.55));
   b.pop();
-  b.rod({ x: -0.3, y: 0.02, z: 0.9 }, { x: -0.45, y: 0.12, z: 1.15 }, 0.04, steel);
-  b.rod({ x: -0.87, y: 0.15, z: 1.15 }, { x: -1.0, y: 0.1, z: 1.35 }, 0.04, steel);
+  continuousTube(
+    b,
+    [v(-1.04, 0.02, 1.05), v(-1.1, 0.02, 1.05), v(-1.14, -0.07, 1.09)],
+    0.035,
+    steel,
+    Z.Trim,
+    M.Metal,
+    ROUND_BEND,
+  );
+  // What holds the silencer: a bracket from the rail's outer face to its inner end, and a
+  // hanger from a band round its middle up to the tray's cross bearer above (z 1.12).
+  b.block(-0.535, 0.08, 1.05, 0.07, 0.08, 0.06, black, M.Metal, Z.Trim);
+  b.ring(-0.78, 0.02, 1.05, 0.124, 0.008, black, M.Metal, 'x', Z.Trim);
+  b.rod({ x: -0.78, y: 0.14, z: 1.05 }, { x: -0.78, y: 0.62, z: 1.12 }, 0.012, black, M.Metal, Z.Trim);
 }
 
 function frontEnd(b: VehicleBuilder, tuning: VehicleTuning): void {
@@ -454,20 +489,40 @@ function cab(b: VehicleBuilder): void {
   const mid = (roofFront + back) / 2,
     len = back - roofFront;
   b.block(0, roof + 0.02, mid, 2 * S + 0.04, 0.08, len + 0.08, paint, M.Paint, Z.Roof, 0.035);
+  // The hatch over the passenger's seat, each part standing on the one below: a painted flange
+  // on the roof skin, the lid on the flange with a seal bead round the joint, two hinges at the
+  // back and a latch at the front that each stand on the roof and reach over the lid's edge,
+  // and a grab handle on the lid. Until v2.27 the lid sat on a bare black seal ring, which read
+  // from the side as a gap under it, and the hinge blocks hung 14 mm above the roof.
   const hx = -0.48,
-    hz = mid;
-  b.ring(hx, roof + 0.067, hz, 0.265, 0.012, rubber, M.Rubber, 'y', Z.Roof);
+    hz = mid,
+    skin = roof + 0.06;
   b.slot = M.Paint;
   b.tag = Z.Roof;
-  b.push().translate(hx, roof + 0.08, hz);
-  b.geometry(new THREE.CylinderGeometry(0.257, 0.257, 0.025, 48), paint);
+  b.push().translate(hx, skin + 0.002, hz);
+  b.geometry(new THREE.CylinderGeometry(0.285, 0.285, 0.024, 48), paint);
   b.pop();
+  b.push().translate(hx, skin + 0.027, hz);
+  b.geometry(new THREE.CylinderGeometry(0.257, 0.257, 0.026, 48), paint);
+  b.pop();
+  b.ring(hx, skin + 0.016, hz, 0.259, 0.004, rubber, M.Rubber, 'y', Z.Roof);
   for (const x of [hx - 0.13, hx + 0.13])
-    b.block(x, roof + 0.086, hz + 0.25, 0.09, 0.025, 0.065, bar, M.Metal, Z.Roof, 0.004);
-  b.block(hx, roof + 0.1, hz - 0.22, 0.09, 0.025, 0.045, bar, M.Metal, Z.Roof, 0.004);
+    b.block(x, skin + 0.0225, hz + 0.26, 0.07, 0.055, 0.14, bar, M.Metal, Z.Roof, 0.004);
+  // The pin runs through both hinge blocks, 5 mm proud at each end (it lay along their tops).
   b.rod(
-    { x: hx - 0.08, y: roof + 0.113, z: hz - 0.12 },
-    { x: hx + 0.08, y: roof + 0.113, z: hz - 0.12 },
+    { x: hx - 0.17, y: skin + 0.036, z: hz + 0.275 },
+    { x: hx + 0.17, y: skin + 0.036, z: hz + 0.275 },
+    0.008,
+    steel,
+    M.Metal,
+    Z.Roof,
+  );
+  // The hinge leaf: a strap on the lid's top that reaches back over its edge to the pin.
+  b.block(hx, skin + 0.043, hz + 0.228, 0.1, 0.008, 0.112, bar, M.Metal, Z.Roof, 0.002);
+  b.block(hx, skin + 0.0225, hz - 0.26, 0.07, 0.055, 0.1, bar, M.Metal, Z.Roof, 0.004);
+  b.rod(
+    { x: hx - 0.08, y: skin + 0.075, z: hz - 0.12 },
+    { x: hx + 0.08, y: skin + 0.075, z: hz - 0.12 },
     0.009,
     steel,
     M.Metal,
@@ -475,8 +530,8 @@ function cab(b: VehicleBuilder): void {
   );
   for (const x of [hx - 0.08, hx + 0.08])
     b.rod(
-      { x, y: roof + 0.08, z: hz - 0.12 },
-      { x, y: roof + 0.113, z: hz - 0.12 },
+      { x, y: skin + 0.035, z: hz - 0.12 },
+      { x, y: skin + 0.075, z: hz - 0.12 },
       0.008,
       steel,
       M.Metal,
@@ -590,7 +645,8 @@ function intakeStack(b: VehicleBuilder, tuning: VehicleTuning): void {
   const cowl = bonnetTop(z - 0.1);
   continuousTube(
     b,
-    [v(x - 0.2, cowl - 0.05, z - 0.1), v(x - 0.2, cowl + 0.12, z - 0.1), v(x, 1.32, z), v(x, y + 0.22, z)],
+    // The tube runs up into the cap (it stopped 3 cm under it until v2.27, and the cap floated).
+    [v(x - 0.2, cowl - 0.05, z - 0.1), v(x - 0.2, cowl + 0.12, z - 0.1), v(x, 1.32, z), v(x, y + 0.27, z)],
     0.06,
     paint,
     Z.Sides,
@@ -761,6 +817,41 @@ function rear(b: VehicleBuilder, tuning: VehicleTuning, wheel: THREE.BufferGeome
   b.block(face - 0.06, sy, sz, 0.04, 0.26, 0.26, black, M.Metal, Z.Sides, 0.01);
   b.tag = Z.Sides;
   mountSpare(b, wheel, { x: sx, y: sy, z: sz }, 'left', black);
+  // What holds it, seen from outside: a spindle from the hub plate out through the wheel's
+  // centre into the cap there, a collar round the cap with three arms bearing on the rim's
+  // flange, and a T-bar through the cap to screw it down. (The carrier's frame is all behind
+  // the tyre.) None of it stands out past the wheel's own cap, 0.22 m from the hub's plane.
+  const out = (d: number) => sx - d;
+  b.rod({ x: face - 0.06, y: sy, z: sz }, { x: out(0.2), y: sy, z: sz }, 0.012, steel, M.Metal, Z.Sides);
+  b.slot = M.Metal;
+  b.tag = Z.Sides;
+  b.push()
+    .translate(out(0.1875), sy, sz)
+    .rotate(0, 0, Math.PI / 2);
+  b.geometry(new THREE.CylinderGeometry(0.1, 0.1, 0.035, 20), black);
+  b.pop();
+  for (let i = 0; i < 3; i++) {
+    const a = (i * 2 * Math.PI) / 3,
+      cy = Math.cos(a),
+      cz = Math.sin(a);
+    b.rod(
+      { x: out(0.195), y: sy + cy * 0.09, z: sz + cz * 0.09 },
+      { x: out(0.184), y: sy + cy * 0.262, z: sz + cz * 0.262 },
+      0.012,
+      black,
+      M.Metal,
+      Z.Sides,
+    );
+    b.block(out(0.18), sy + cy * 0.262, sz + cz * 0.262, 0.02, 0.05, 0.05, black, M.Metal, Z.Sides, 0.004);
+  }
+  b.rod(
+    { x: out(0.211), y: sy, z: sz - 0.12 },
+    { x: out(0.211), y: sy, z: sz + 0.12 },
+    0.008,
+    steel,
+    M.Metal,
+    Z.Sides,
+  );
 }
 
 /** Pressed-steel jerry can in a cage, its long side facing out. */

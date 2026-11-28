@@ -449,3 +449,95 @@ Every item in `docs/playtest-v0.16.md` was worked through.
 - **Grass under the tyres** (the v0.25 leftover). Grass now takes a fainter mark (0.26, from 0.32) in its own dark green, a flattened line rather than brown tread printed on it. Gravel (0.3) now marks slightly more than dry grass.
 - **Looked at** on High in the browser here, camera a metre off the ground: the camp track (grit, no crack pattern), the bog hole (lumps), the rock garden (stones on the ground, joints on the ledges) and the rock climb from its foot.
 - **Not done.** The ground is still not pressed in under a tyre (no ruts), and the detail is drawn, not felt: the physics drives on the same smooth surface as before. Shrubs are still plain low-poly shapes.
+
+## v0.27: no wheel spin in neutral, seat backs that lean back, the Range Rover's bar
+
+The owner reported three things after v0.26, all in code shared with Over the Cape. Each was fixed there (its v2.26, where the vehicle work, the renders and the reviewer's findings are written up) and the same files were carried across unchanged.
+
+- **Wheels spun when revving in neutral.** A standing car on loose ground with the throttle in is taken to be bogged, and its wheels spin, throw dust, dig in and (here) lay tyre marks. That test read the pedal alone, so it fired in neutral, between gears and with the clutch in. It now needs the drivetrain engaged (`src/sim/vehicle/vehicle.ts`). `tests/neutralSpin.test.ts` revs a Hilux in neutral on the camp's ground (no spin) and then in 1st (spin); it failed before the change with a spin of 0.25.
+- **Seat backs leaned forward.** Forward is −z, so leaning back is a positive turn about x; every cabin turned its backs the other way. They are now placed with `VehicleBuilder.seatBack()`, which names the direction, in all fifteen vehicles. Backs against a rear wall or with a spare behind them keep their rearmost point where it was; the rest keep their foot where it was.
+- **The Range Rover's roo bar stood too far out.** Its pan was drawn bolted on ahead of the factory bumper, which put the hoops 0.34 m ahead of the grille. A winch bar takes the bumper's place, so the pan now starts where the bumper did: the hoops are 0.2 m ahead of the grille and the car is 14 cm shorter over the bar. The winch rope's start moved back with it (`winchMount` in `src/data/rangie.ts`).
+
+## v0.28: vehicle faults from Over the Cape's v2.26 review
+
+Over the Cape's v2.26 reviewers listed faults on vehicle parts that update had not touched. They were worked through there (its v2.27, where the before and after renders, the measurements, what holds each part and the three reviewers' findings are written up) and the nine changed files were carried across unchanged: `src/render/vehicleEquipment.ts`, `vehicleLooks.ts`, `unimogBody.ts`, `unimogInterior.ts`, `unimogCanvas.ts`, `perentieBody.ts`, `troopyBody.ts`, and `src/data/vehicles.ts` and `perentie.ts`.
+
+- **Code-built 40.** The roof rack's legs stood on the roof skin short of their gutter clamps; they now go out over the roof's edge and down to the clamps. The boards overhung both ends of the rack; the car has the FJ40's 2.5 m deck and they lie inside it. The jerry can stood on the rear bumper in front of the right door; it is on the door in a holder, 9 cm above the bumper.
+- **FJ40.** The rear spare's carrier was hidden behind the tyre; it has a clamp across the wheel's centre and an upper hinge bracket on the body's corner. The rack's legs moved back, 185 mm clear of the snorkel's head.
+- **Unimog.** The steering wheel's rim rested on the driver's cushion: the seats are 0.15 m lower and the wheel flatter, with 0.20 m between rim and cushion (the wheel's position is in `src/data/vehicles.ts`). The hatch lid sits on a flange with hinges, a pin and a latch. The silencer hangs outside the left rail and its tailpipe ends 0.2 m ahead of the rear tyre (it ended at the tread). The dropside spare has a clamp, the board frame on the canvas is one frame, the cab has a firewall (the ground showed under the dash), and the intake's cap sits on its pipe.
+- **Perentie.** The under-floor spare hung in a cradle 0.195 m off the ground, the lowest thing behind the axle. It is tucked up beside the differential, 0.17 m left of centre, its tyre 0.36 m off the ground, under chassis rails that now climb over the axle; the exhaust ends under the left sill. Its collision box (`src/data/perentie.ts`) is now the drawn tyre, which lowers the angle the tail clears from about 24° to about 22.5°.
+- **Troop Carrier.** The back of each front wheelhouse is closed; the cab's footwell bulkhead showed pale behind the tyre.
+
+Three other findings (two on the Camel Trophy 90, one on the 80 Series) were looked at there and are not faults; nothing on those cars changed.
+
+## v0.29: engines that howl at the limit and rev further, and mud that flies as small flecks the right way
+
+Carried over from Over the Cape's v2.28 and v2.29, where the measurements, the per-vehicle table and the reasons are written up (its `docs/DECISIONS.md`; spec: `reidstephen11/over-the-cape` issue 247). The owner likes how the Range Rover's engine howls at high revs and asked for the other engines to give that sound at the limiter, to rev a bit more, and for each vehicle to have a little more power at maximum revs. The changed files (engine sound settings, each vehicle's engine data, the drivetrain, the particle effects and their tests) were identical in the two repos before and are copied unchanged, so their comments carry Over the Cape's version numbers. The mud fix is its v2.30.
+
+- **Sound at the limit.** Measured, the Range Rover's howl is a build-up of intake roar, valve noise and harshness held at the limit with every cylinder firing; it does not stutter. Every engine now has limiter character of its fuel's kind (petrol: ignition cut; diesel: fuel cut), with its sound limiter 4% above the vehicle's rev limit as the Range Rover's is, so it builds and holds. Before, most engines dropped half their firings at random at the limit, and the Camel Trophy Ninety did so over its last 550 rpm. The Range Rover's sound is unchanged; the 40 Series and the LC79 keep their bounce at the limit.
+- **Revs.** Every rev limit but the Range Rover's is a tenth higher, rounded to a hundred, and the automatic's full-throttle upshift moves with it.
+- **Power.** Each vehicle delivers about 8% more power at its limit. The torque curves are stretched above a pivot (peak torque or half the old limit, whichever is higher), and a new engine setting, `topEnd`, lets the engine draw more air from the pivot to the limit, because the airflow cap was already setting the top-end pull of seven engines. Below the pivot nothing changes at any throttle opening, so crawling is as it was.
+
+- **Mud** (the owner's report: too chunky, and it often spits out in the wrong direction when bogged). The spray took its direction from the sign of the car's speed, which reads a little forwards one moment and a little backwards the next when the car is bogged, so the mud flipped. It now follows the way the wheel turns: the gear when the wheel is spinning, the car's motion when it is only rolling. Each piece was a lump 12 to 30 cm across; they are now flecks 2 to 5 cm across, about one in fourteen a clod of up to 8 cm, drawn out along their path, and there are about twice as many. Water droplets are unchanged.
+
+On flat ground at full throttle the vehicles reach 60 km/h about 5–10% sooner (Range Rover 7.2 → 6.9 s, Troop Carrier 10.9 → 9.8 s).
+
+**Tests.** `tests/engineRevs.test.ts` (new), `tests/limiter.test.ts` and `tests/engineSynth.test.ts` check the figures against the engines as they were; `tests/mudSpray.test.ts` (new) checks the mud's direction in both gears whichever way the speed reads, its sizes and its count. Five tests that pinned old figures were updated as in Over the Cape (the Unimog, the Camel, the Xtra Cab, engine heat, and the MQ Patrol's 0–60 bound, which the full run found: it now takes 11.0 s where the test allowed no less than 11). The full unit suite ran with the engine changes (110 of 111 files passed; the one failure was that MQ bound, corrected and run again), and the mud files' tests were run after they were added; lint and the build pass. `scripts/level-drive.ts` was run for every line of Ironbark, locked and open, because the lines are driven at throttle settings the engine change could touch: every line that `tests/ironbark.test.ts` expects to finish, finishes.
+
+Not checkable here: whether it sounds right.
+
+## v0.30: ruts you can see, and signs you can read
+
+The first ticket (issue 36) of the ruts spec (issue 35), agreed with the owner on 27 November 2026: ruts in two stages, seen and then felt. This is the seen stage. Nothing about how the car drives changes.
+
+**Where the ground is pressed in** (`src/sim/world/rutDepth.ts`, no Three.js). A grid of 0.25 m cells, about a tyre's width so the two wheel tracks stay apart, holding only the cells a wheel has pressed, each from 0 to 1 (a full-depth rut stands for 8 cm, the figure the felt stage will use). One wheel pass presses in a share of what is left: black soil 0.34, mud 0.30, sand 0.16, and for ground that ruts only when wet, clay 0.26, dirt 0.12 and grass 0.07 at full wetness. Rock, gravel, timber and a creek bed take none. So a car's two axles over a line of mud once leave it at 0.51, and five times at 0.97: clearly deeper. It keeps 20,000 cells (about 5 km of single wheel track) and forgets the oldest.
+
+**Fed by the tyre trails.** Each wheel's trail (`TyreTrail`, v0.25) presses the cell under each piece it lays, half-way along the piece and at its far end, once per pass. A piece is 0.3 m long and a cell 0.25 m, so one press a piece would skip cells. Each piece now carries the rut's depth at its two ends (two more floats a piece). On a rock, a plank or a bridge nothing is pressed.
+
+**Drawn as a rut** (`src/render/tyreMarks.ts`). Still one mesh and one draw call. A piece that lies in a rut is drawn differently, more so the deeper the rut:
+
+- **The floor:** damp ground, darker and more solid, in place of the tread print showing through.
+- **The walls:** a band along each edge inside the rut, a quarter of the tyre's width. The wall that faces the sun is drawn in the ground's own colour, lit; the other is darkened. Which is which is worked out when the piece is laid, from the way it lies and where the sun is.
+- **The soil pushed up beside it:** the piece is drawn up to 7 cm wider each side than the tyre, and that strip is the ground's own colour, fading out away from the rut.
+
+The quad still lies flat on the ground, 2.5 cm above it: no ground is moved. The 1 m ground mesh is far too coarse to shape a 25 cm rut.
+
+**What was tried on the way.** The first version only darkened the mark and made it solid: after four passes on wet clay it looked like black tape. The mark tones are the ground "darker and damper" and are too dark to be a solid surface, and the first pushed-up strip, made from the same tone, came out darker than the ground and only widened the black. So each tone now has a second colour, near the ground's own, for the lit wall and the strip, and the floor is mixed towards it. A shader that used `out` as a variable name did not compile (it is a reserved word); the screenshots were taken again after that.
+
+**Looked at** (the game in a browser, Low preset, the short 40). After rain, on the flat clay loop to the bog hole, the same line driven once and then four and five times, from the side, from behind and close up: one pass is a tread print; five are solid dark grooves, plainly deeper. In clear afternoon sun, three passes into the mud at the bog hole's edge: the wheels on the mud strip leave a dark sunken groove with a paler far edge, and the wheels on dry clay beside it leave a flat print. Whether the walls and the pushed-up strip are strong enough, or whether it still looks painted on, is for the owner's eyes: the levers are `RUT_LOOK` in `src/render/tyreMarks.ts`.
+
+**Cost.** No new draw call: the ruts share the tyre marks' mesh. Measured in the browser with the same drive (the wet clay line four times, then the chase camera at the start), before on v0.29 and after: on Medium 123 draw calls before and 123 after, 345,900 and 346,500 triangles; on High 124 and 123 draw calls (the one more before was a particle pool that happened to be live), 409,686 and 410,258 triangles. The few hundred triangles are the marks laid, which differ a little run to run. Both are well inside the Medium budget of 210 calls and 760,000 triangles (v0.21). Frame times in the container's software renderer were 5.6 and 4.2 ms on Medium and 5.8 and 4.6 ms on High, which is noise and says nothing about a phone: the headroom test (`?bench`) on the owner's phone is the real check. In memory, each of the 20,000 mark pieces carries 24 more numbers for drawing (about 1.9 MB).
+
+**Signs** (carried over from Over the Cape v2.31, where the reasons and the driver's-seat photographs are). Sign wording is set out over up to three lines of lettering 0.30 m high on a board sized to fit, bolder and darker, with a second board on the back of the post so the lettering reads from behind too. This game's sign code differs from Over the Cape's elsewhere in the file, so the change was applied as a patch; `src/sim/world/signLayout.ts` and its test are copied.
+
+`scripts/shoot.ts` can now pick the conditions (`WEATHER=wet`, `TIME=midday`), as the New drive page does.
+
+### Tests
+
+New `tests/rutDepth.test.ts` (7): depth grows with each pass on soft ground, less each time, to a limit, and five car passes are over 1.6 times as deep as one; nothing on hard ground, and on clay, dirt and grass only when wet; a rut is where the wheel went and nowhere else, and the oldest cells are forgotten; tyre marks carry a deeper rut on each pass over the same line in mud, none on gravel or rock, and none without a rut store; which wall the sun lights. `tests/signLayout.test.ts` (5, copied). The full unit suite passes (114 files, 968 tests), with `tests/ironbark.test.ts` and every scripted drive in it; lint and the build pass. No level and nothing a wheel feels changed, so `scripts/level-drive.ts` was not run again.
+
+## v0.31: ruts you can feel
+
+The second ticket (issue 37) of the ruts spec (issue 35). The seen stage (v0.30) draws a rut where wheels have pressed soft ground; this stage lets the wheels feel it.
+
+**The engine change was made in Over the Cape first** (its v2.36, where the reasons and the measurements are) and the shared files are copied unchanged: `src/sim/vehicle/vehicle.ts`, `src/sim/sim.ts`, `src/data/rutFeel.ts` and `tests/rutFeel.test.ts`. There no episode turns it on. Here Ironbark Creek does (`feltRuts: true`), and the game hands the simulation the rut store that the tyre trails fill.
+
+**What a wheel in a rut feels** (`src/data/rutFeel.ts`):
+
+- **It sits lower,** by the rut's depth, up to 8 cm, settling over about an eighth of a second. That corner of the car comes down with it.
+- **It drags a little:** up to 7% of the wheel's load more rolling resistance in a full-depth rut.
+- **It is held:** the ground is felt 0.2 m to each side of the wheel and the wheel is pulled towards the deeper side with up to 20% of its load, fading out below 0.8 m/s so a standing car is not pushed. Steered gently, the car stays nearer its ruts; full lock climbs out.
+
+Hard ground takes no rut (v0.30), so nothing changes there.
+
+**Every wheel now sits in the rut it is making.** A front wheel on mud presses the ground to 0.30 of full depth as it passes and the rear wheel behind it to 0.51, so on a first pass over mud the front sits 2.4 cm lower and the rear 4 cm. That is the sinking-in the level's bogs were missing a look for; it also means the feel changes a little on any soft ground from the first metre, not only on a worn line.
+
+**The scripted drives press and feel ruts too.** The game lays tyre trails every frame; the test drives had none, so with nothing more they would have driven a level without ruts and said nothing about this change. `driver()` in `tests/helpers/drive.ts` takes `{ ruts: true }` and then lays the same trails every physics step (`trailWheels()` in `src/sim/world/tyreMarks.ts`, which the game now uses as well). `tests/ironbark.test.ts` and `scripts/level-drive.ts` drive with it, as the level is played. `RUTS=off npx vite-node scripts/level-drive.ts` drives without, to compare.
+
+**Every line, locked and open, with ruts felt.** `scripts/level-drive.ts` gives the same outcome on all 32 drives as it did on v0.29 without ruts: every line that finished still finishes, and every line that stopped short stops within 0.7 m of where it did (the open-diff switchbacks 6.8 m short against 6.1 m). Times are within three seconds: the bog trench locked takes 93 s against 90 s, the bog hole locked 61 s both times. So one pass through each line is hardly touched, which is as it should be: a first pass makes shallow ruts. The cost builds with passes over the same line, which these single drives do not measure; that is the owner's test.
+
+**Not checkable here: how it feels.** The numbers above are a first guess at "a few centimetres lower, drags a little more, resists steering out". The pull is the part most likely to need the owner's hand: the store's cells are 0.25 m squares, so a rut that runs at an angle to them is a staircase to the wheel, and the pull is smoothed over an eighth of a second to keep that from being felt as a tug. If it is, `rutFeel.hold` is the lever, and `rutFeel.reach`.
+
+### Tests
+
+`tests/rutFeel.test.ts` (4, copied from Over the Cape): four wheels in full-depth ruts lower the body by the rut's depth; a car coasts to a stop sooner in ruts, but not much sooner; steered gently along two ruts it drifts less far than on flat ground and full lock still leaves them; a rut field that is flat everywhere changes nothing. `tests/rutDepth.test.ts` gains two: the rut store and the wheels agree on what a full-depth rut is, and Ironbark Creek asks for its ruts to be felt. `tests/ironbark.test.ts` drives every line with ruts pressed and felt. The full unit suite passes with it (115 files, 974 tests); lint and the build pass.

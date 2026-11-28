@@ -102,9 +102,9 @@ export function addTroopyInterior(
   for (const x of [-0.42, 0.42]) {
     b.block(x, floor + 0.2 - sd / 2, 0.06, 0.6, 0.36 - sd, 0.48, dark, M.Rubber, Z.Trim, 0.02);
     b.block(x, floor + 0.44 - sd, 0.04, 0.54, 0.12, 0.52, cloth, M.Fabric, Z.Trim, 0.045);
-    b.push().translate(x, -sd, 0.3).rotate(-0.14, 0, 0);
-    b.block(0, floor + 0.78, 0, 0.52, 0.6, 0.12, cloth, M.Fabric, Z.Trim, 0.04);
-    b.block(0, floor + 1.18, 0.0, 0.3, 0.18, 0.1, cloth, M.Fabric, Z.Trim, 0.04);
+    b.seatBack(x, floor + 0.771 - sd, 0.2525, 0.14);
+    b.block(0, 0, 0, 0.52, 0.6, 0.12, cloth, M.Fabric, Z.Trim, 0.04);
+    b.block(0, 0.4, 0, 0.3, 0.18, 0.1, cloth, M.Fabric, Z.Trim, 0.04);
     b.pop();
   }
   // Five-speed gear lever and the transfer lever beside it.

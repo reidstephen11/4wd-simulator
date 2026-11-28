@@ -10,7 +10,10 @@ import {
   td42SynthTuning,
   v8DieselSynthTuning,
   type EngineSynthTuning,
+  engineSynthTunings,
 } from '../src/data/audio';
+import { vehicles } from '../src/data/vehicles';
+import type { VehicleId } from '../src/data/vehicle';
 
 const SR = 48000;
 const base: EngineInputs = {
@@ -323,6 +326,37 @@ describe('engine synthesiser', () => {
         for (const v of x) peak = Number.isFinite(v) ? Math.max(peak, Math.abs(v)) : Infinity;
         expect(peak).toBeLessThanOrEqual(1);
         expect(rms(x, SR / 4)).toBeGreaterThan(0.01);
+      }
+    }
+  });
+
+  it('every engine builds at its rev limit and holds its note, inside full scale', () => {
+    /** Loudness above about 2 kHz: intake roar, valve noise and harshness live up there. */
+    const bright = (x: Float32Array) => {
+      const k = Math.exp((-2 * Math.PI * 2000) / SR);
+      let low = 0;
+      let sum = 0;
+      for (let i = SR / 4; i < x.length; i++) {
+        low = x[i] + (low - x[i]) * k;
+        sum += (x[i] - low) ** 2;
+      }
+      return Math.sqrt(sum / (x.length - SR / 4));
+    };
+    for (const id of Object.keys(vehicles) as VehicleId[]) {
+      const T: EngineSynthTuning = engineSynthTunings[id];
+      const redline = vehicles[id].tuning.engine.redlineRpm;
+      const plain = { ...T, limiter: undefined, limiterRpm: redline * 2 };
+      const at = (tuning: EngineSynthTuning, rpm: number) =>
+        render(1, { rpm, throttle: 1, load: 1 }, new EngineSynth(SR, 3, tuning));
+      // At the limit the limiter character makes the engine brighter than it would be without it.
+      expect(bright(at(T, redline)) / bright(at(plain, redline)), id).toBeGreaterThan(1.08);
+      // A tenth below the limit it has not started.
+      expect(bright(at(T, redline * 0.9)) / bright(at(plain, redline * 0.9)), id).toBeCloseTo(1, 2);
+      // Held at the limit, or pushed past it into the bounce, the output stays inside full scale.
+      for (const rpm of [redline, T.limiterRpm + 50]) {
+        let peak = 0;
+        for (const v of at(T, rpm)) peak = Number.isFinite(v) ? Math.max(peak, Math.abs(v)) : Infinity;
+        expect(peak, `${id} at ${rpm}`).toBeLessThanOrEqual(1);
       }
     }
   });

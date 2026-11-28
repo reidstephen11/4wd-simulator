@@ -56,11 +56,11 @@ export function addXtracabInterior(b: VehicleBuilder, redlineRpm: number): void 
   for (const x of [-0.38, 0.38]) {
     b.block(x, floor + 0.1, 0.07, 0.44, 0.18, 0.44, dark, M.Rubber, Z.Trim, 0.02);
     b.block(x, floor + 0.245, 0.06, 0.5, 0.12, 0.5, C.cloth, M.Fabric, Z.Trim, 0.045);
-    b.push().translate(x, 0, 0.33).rotate(-0.2, 0, 0);
-    b.block(0, floor + 0.55, 0, 0.48, 0.52, 0.11, C.cloth, M.Fabric, Z.Trim, 0.04);
+    b.seatBack(x, floor + 0.537, 0.303, 0.2);
+    b.block(0, 0, 0, 0.48, 0.52, 0.11, C.cloth, M.Fabric, Z.Trim, 0.04);
     for (const px of [-0.06, 0.06])
-      b.rod({ x: px, y: floor + 0.8, z: 0 }, { x: px, y: floor + 0.86, z: 0 }, 0.007, metal, M.Metal, Z.Trim);
-    b.block(0, floor + 0.93, 0.0, 0.26, 0.15, 0.1, C.cloth, M.Fabric, Z.Trim, 0.04);
+      b.rod({ x: px, y: 0.25, z: 0 }, { x: px, y: 0.31, z: 0 }, 0.007, metal, M.Metal, Z.Trim);
+    b.block(0, 0.38, 0, 0.26, 0.15, 0.1, C.cloth, M.Fabric, Z.Trim, 0.04);
     b.pop();
     for (const sx of [-0.09, 0, 0.09])
       b.block(x + sx, floor + 0.307, 0.06, 0.012, 0.006, 0.42, C.trim, M.Fabric, Z.Trim);

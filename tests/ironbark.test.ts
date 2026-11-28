@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { environmentFor } from '../src/data/environment';
+import { environmentFor, lateAfternoon } from '../src/data/environment';
 import { ironbarkLevel } from '../src/data/levels/ironbark';
 import { PLAIN, chuteExitLip, chuteLip, creekBogs, water } from '../src/data/levels/ironbarkCreek';
 import { knollBogs } from '../src/data/levels/ironbarkKnoll';
@@ -13,7 +13,9 @@ import { ironbarkWorld } from './world';
 
 /** Ironbark Creek, the first playground level (v0.22). */
 const world = ironbarkWorld();
-const { drive, trackOf } = driver(world);
+// The level's ruts are felt (v0.31): the scripted car presses and feels them as a player's does.
+const feltRuts = { ruts: !!ironbarkLevel.feltRuts };
+const { drive, trackOf } = driver(world, lateAfternoon, feltRuts);
 const t = world.terrain;
 const KNOLL_LINES = [
   'knoll-rock-climb',
@@ -253,7 +255,7 @@ describe('Ironbark Creek: driving it (low range, crawling)', () => {
     expect(locked.done, `stopped ${locked.remaining.toFixed(1)} m from the top`).toBe(true);
     const open = await drive('knoll-rock-climb', 'open', false, 200, xtracabTuning, 25);
     expect(open.done, 'open diffs').toBe(false);
-    const wet = driver(world, environmentFor({ time: 'afternoon', weather: 'wet' }));
+    const wet = driver(world, environmentFor({ time: 'afternoon', weather: 'wet' }), feltRuts);
     for (const id of ['creek-ford', 'creek-deep']) {
       const s = await wet.scene(id, false, 'both', xtracabTuning);
       try {

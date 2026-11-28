@@ -62,9 +62,9 @@ export function addRangieInterior(b: VehicleBuilder, redlineRpm: number): void {
   for (const x of [-0.4, 0.4]) {
     b.block(x, floor + 0.12, 0.12, 0.46, 0.18, 0.42, mat, M.Rubber, Z.Trim, 0.02);
     b.block(x, floor + 0.27, 0.11, 0.52, 0.12, 0.52, C.vinyl, M.Fabric, Z.Trim, 0.045);
-    b.push().translate(x, 0, 0.41).rotate(-0.18, 0, 0);
-    b.block(0, floor + 0.58, 0, 0.5, 0.54, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
-    b.block(0, floor + 0.93, 0.0, 0.26, 0.16, 0.1, C.vinyl, M.Fabric, Z.Trim, 0.04);
+    b.seatBack(x, floor + 0.569, 0.385, 0.18);
+    b.block(0, 0, 0, 0.5, 0.54, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
+    b.block(0, 0.35, 0, 0.26, 0.16, 0.1, C.vinyl, M.Fabric, Z.Trim, 0.04);
     b.pop();
     for (const dx of [-0.1, 0, 0.1])
       b.block(x + dx, floor + 0.332, 0.11, 0.012, 0.006, 0.44, mat, M.Fabric, Z.Trim);
@@ -86,8 +86,9 @@ export function addRangieInterior(b: VehicleBuilder, redlineRpm: number): void {
   // The cushion and back sit between the rear wheelhouses (inner faces 0.52 m out). Until v2.16
   // they were 1.44 m wide, and their tan ends showed inside the rear wheel openings.
   b.block(0, floor + 0.3, 1.09, 1.02, 0.12, 0.5, C.vinyl, M.Fabric, Z.Trim, 0.045);
-  b.push().translate(0, 0, 1.37).rotate(-0.14, 0, 0);
-  b.block(0, floor + 0.56, 0, 1.02, 0.5, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
+  // Its top stays where its foot was: the spare stands in the load bay right behind it.
+  b.seatBack(0, floor + 0.5535, 1.258, 0.14);
+  b.block(0, 0, 0, 1.02, 0.5, 0.12, C.vinyl, M.Fabric, Z.Trim, 0.04);
   b.pop();
   for (const side of [-1, 1]) {
     // Long door trims with an armrest, a pull and a window winder; the quarter trims behind.

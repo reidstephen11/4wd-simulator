@@ -23,11 +23,12 @@ describe('Unimog UL1700L', () => {
     expect(Math.abs(t.wheels[0].z - t.wheels[2].z)).toBeCloseTo(3.85, 3);
     expect(t.wheelRadius * 2).toBeCloseTo(1.12, 2);
     expect(t.gearbox.ratios).toHaveLength(4);
-    expect(t.engine.redlineRpm).toBe(2800);
+    // 3100 rpm since v2.29 let every engine rev a tenth further (the real one is governed at 2800).
+    expect(t.engine.redlineRpm).toBe(3100);
     // A diesel six: its engine sound fires six cylinders and knocks.
     expect(engineSynthTunings.unimog.firingOrder).toHaveLength(6);
     expect(engineSynthTunings.unimog.knock).toBeDefined();
-    // 80 km/h in top gear is under the governed 2800 rpm; first low creeps at idle
+    // 80 km/h in top gear is under the old governed 2800 rpm; first low creeps at idle
     // slower than any of the others.
     expect(coupledRpm(t, 80 / 3.6, 3, 'high')).toBeLessThan(2700);
     const creep = (v: typeof t) => (v.engine.idleRpm / coupledRpm(v, 1, 0, 'low')) * 3.6;
@@ -50,7 +51,7 @@ describe('Unimog UL1700L', () => {
       if (id !== 'unimog') expect(clearance(t)).toBeGreaterThan(clearance(vehicles[id].tuning) + 0.1);
   });
 
-  it('idles near 650 rpm stopped in gear, holds still, and is slow: 40 km/h in 8 to 13 s, never 70', async () => {
+  it('idles near 650 rpm stopped in gear, holds still, and is slow: 40 km/h in 7.5 to 13 s, never 73', async () => {
     const s = await makeScene({ tuning: t });
     s.run(3, {});
     const v = s.vehicle;
@@ -62,11 +63,12 @@ describe('Unimog UL1700L', () => {
       s.run(0.1, { throttle: 1 });
       time += 0.1;
     }
-    expect(time).toBeGreaterThan(8);
+    // 8.0 s since v2.29 gave every engine a little more at the top (8.5 s before).
+    expect(time).toBeGreaterThan(7.5);
     expect(time).toBeLessThan(13);
     s.run(30, { throttle: 1 });
     expect(v.speed * 3.6).toBeGreaterThan(55);
-    expect(v.speed * 3.6).toBeLessThan(70);
+    expect(v.speed * 3.6).toBeLessThan(73);
     s.physics.world.free();
   });
 

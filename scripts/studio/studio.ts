@@ -124,8 +124,13 @@ if (trailerId) {
   scene.add(view.root);
 }
 
-function view(x: number, y: number, z: number, tx = 0, ty = 0.3, tz = 0, fov = 45): void {
+/**
+ * `near` (m from the camera) cuts away everything closer: from the side with the cut just inside
+ * a door, the cabin is seen in section (the seats, the dash, the pedals).
+ */
+function view(x: number, y: number, z: number, tx = 0, ty = 0.3, tz = 0, fov = 45, near = 0.05): void {
   camera.fov = fov;
+  camera.near = near;
   camera.position.set(x, y, z);
   camera.lookAt(tx, ty, tz);
   camera.updateProjectionMatrix();

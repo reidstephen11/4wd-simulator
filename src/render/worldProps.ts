@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { World } from '../sim/world/world';
 import type { PropDef } from '../sim/world/mapTypes';
 import { propBase, propDims, propYaw } from '../sim/world/props';
+import { SIGN, signCentre, signLayout } from '../sim/world/signLayout';
 import { FALLEN_TREE_STUBS, type DynamicObject } from '../sim/sim';
 import { mulberry32 } from '../sim/world/rng';
 import { pal } from './colors';
@@ -151,14 +152,23 @@ function logSeat(b: MeshBuilder): void {
   b.pop();
 }
 
-function signpost(b: MeshBuilder): void {
+function signpost(b: MeshBuilder, p: PropDef): void {
   b.push().translate(0, propDims.signpost.h / 2, 0);
   b.box(0.12, propDims.signpost.h, 0.12, timber());
   b.pop();
-  b.push().translate(0, propDims.signpost.h - 0.25, -0.08);
-  b.box(1.5, 0.4, 0.05, pal('barkPale'));
-  b.pop();
+  // The board is as big as its wording needs (v2.31).
+  const layout = signLayout(p.text ?? '');
+  // One board on the post's front and, unless an arrow makes the sign one-sided, another on
+  // its back: read from behind, the post no longer stands across the lettering.
+  for (const z of signOneSided(p.text) ? [-0.08] : [-0.08, 0.08]) {
+    b.push().translate(0, signCentre(layout), z);
+    b.box(layout.width, layout.height, 0.05, pal('barkPale'));
+    b.pop();
+  }
 }
+
+/** A sign with an arrow at one end is lettered on its front only: from behind it would point the wrong way. */
+const signOneSided = (text: string | undefined) => /^←|→$/.test(text ?? '');
 
 function fireTower(b: MeshBuilder): void {
   const d = propDims.fireTower;
@@ -415,7 +425,7 @@ function stoneKerb(b: MeshBuilder): void {
   b.pop();
 }
 
-const builders: Record<PropDef['kind'], (b: MeshBuilder) => void> = {
+const builders: Record<PropDef['kind'], (b: MeshBuilder, p: PropDef) => void> = {
   powerPole,
   hut,
   waterTank,
@@ -434,17 +444,18 @@ const builders: Record<PropDef['kind'], (b: MeshBuilder) => void> = {
 };
 
 /**
- * The lettered faces of a signpost's board: just in front of its front face, and just
- * behind its back face unless the text has an arrow at one end (from behind, the arrow
+ * The lettered faces of a signpost's boards: just in front of the front board, and just
+ * behind the back board unless the text has an arrow at one end (from behind, the arrow
  * would point the wrong way).
  */
 export function signFaces(p: PropDef, base: number, material: THREE.Material): THREE.Mesh[] {
-  const geometry = new THREE.PlaneGeometry(1.45, 0.36);
+  const layout = signLayout(p.text ?? '');
+  const geometry = new THREE.PlaneGeometry(layout.width - SIGN_EDGE, layout.height - SIGN_EDGE);
   const yaw = propYaw(p.headingDeg);
   const face = (offset: number, turn: number) => {
     const m = new THREE.Mesh(geometry, material);
     const off = new THREE.Vector3(0, 0, offset).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-    m.position.set(p.x + off.x, base + propDims.signpost.h - 0.25, p.z + off.z);
+    m.position.set(p.x + off.x, base + signCentre(layout), p.z + off.z);
     // Set the whole rotation. (Cloning the front face and changing only rotation.y left
     // the back face turned on most headings: the clone holds a yaw past 90° as a flip
     // about x and z.)
@@ -453,31 +464,57 @@ export function signFaces(p: PropDef, base: number, material: THREE.Material): T
   };
   // The board's front faces local -z; a plane faces its own +z.
   const faces = [face(-0.11, Math.PI)];
-  if (!/^←|→$/.test(p.text ?? '')) faces.push(face(-0.05, 0));
+  if (!signOneSided(p.text)) faces.push(face(0.11, 0));
   return faces;
 }
 
-/** Canvas texture with hand-lettered sign text. */
+/** The lettered face stops this far short of the board's size, so its edge shows as a rim (m). */
+const SIGN_EDGE = 0.04;
+/** Canvas pixels to a metre of board: full-size lettering is 48 px high. */
+const SIGN_PX = 160;
+
+/**
+ * Canvas texture with hand-lettered sign text, set out by `signLayout` (v2.31): up to three
+ * lines of lettering large enough to read from the driver's seat.
+ */
 function signTexture(text: string): THREE.CanvasTexture {
+  const layout = signLayout(text);
   const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 64;
+  c.width = Math.round((layout.width - SIGN_EDGE) * SIGN_PX);
+  c.height = Math.round((layout.height - SIGN_EDGE) * SIGN_PX);
   const ctx = c.getContext('2d') as CanvasRenderingContext2D;
-  ctx.fillStyle = '#D8D0C0';
-  ctx.fillRect(0, 0, 256, 64);
+  ctx.fillStyle = '#E4DCC8';
+  ctx.fillRect(0, 0, c.width, c.height);
   ctx.strokeStyle = '#8E4B2B';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(4, 4, 248, 56);
-  ctx.fillStyle = '#3B2A1E';
-  let size = 30;
-  ctx.font = `${size}px "Patrick Hand", "Nunito", sans-serif`;
-  while (ctx.measureText(text).width > 230 && size > 12)
-    ctx.font = `${--size}px "Patrick Hand", "Nunito", sans-serif`;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(5, 5, c.width - 10, c.height - 10);
+  ctx.fillStyle = ctx.strokeStyle = '#2A1B12';
+  // The layout's widths are estimates: if the real face is wider, come down to fit.
+  const room = c.width - 2 * (SIGN.margin - SIGN_EDGE / 2) * SIGN_PX;
+  let size = Math.round(layout.em * SIGN_PX);
+  const font = () => (ctx.font = `${size}px "Patrick Hand", "Nunito", sans-serif`);
+  font();
+  while (size > 12 && layout.lines.some((l) => ctx.measureText(l).width > room)) {
+    size--;
+    font();
+  }
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text, 128, 34);
+  const step = layout.em * SIGN.lineHeight * SIGN_PX;
+  const first = c.height / 2 - (step * (layout.lines.length - 1)) / 2;
+  // The hand-lettered face is thin: paint each stroke thicker, so the lettering stays dark
+  // when the board is only a few dozen pixels wide on the screen.
+  ctx.lineWidth = size * 0.07;
+  ctx.lineJoin = 'round';
+  layout.lines.forEach((l, i) => {
+    const y = first + i * step + size * 0.04;
+    ctx.strokeText(l, c.width / 2, y);
+    ctx.fillText(l, c.width / 2, y);
+  });
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  // Read at a slant from the track, so keep it sharp there.
+  tex.anisotropy = 4;
   return tex;
 }
 
@@ -500,7 +537,7 @@ export class WorldProps {
       b.push().translate(p.x, base, p.z).rotate(0, propYaw(p.headingDeg), 0);
       // Leaning towards its front (-z).
       if (p.lean) b.rotate((-p.lean * Math.PI) / 180, 0, 0);
-      builders[p.kind](b);
+      builders[p.kind](b, p);
       b.pop();
       if (p.kind === 'signpost' && p.text) this.addSignFace(p, base);
     }

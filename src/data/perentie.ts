@@ -48,10 +48,12 @@ export const perentieTuning: VehicleTuning = {
     { cx: 0, cy: 0.45, cz: -1.42, hx: 0.6, hy: 0.24, hz: 0.6 },
     { cx: 0, cy: 0.45, cz: 1.38, hx: 0.6, hy: 0.28, hz: 0.98 },
     // Bull bar over the bumper, the rear crossmember with its pintle hook, the spare wheel
-    // slung under the rear floor, and the canvas tilt.
+    // slung under the rear floor, and the canvas tilt. The spare's box is the drawn tyre since
+    // v2.27 (0.17 m left of centre, its underside 0.37 m off the ground); before, the drawn
+    // tyre hung 0.21 m below its box.
     { cx: 0, cy: 0.3, cz: -2.16, hx: 0.86, hy: 0.36, hz: 0.1 },
     { cx: 0, cy: 0.02, cz: 2.35, hx: 0.76, hy: 0.07, hz: 0.1 },
-    { cx: 0, cy: 0.03, cz: 1.94, hx: 0.4, hy: 0.1, hz: 0.4 },
+    { cx: -0.17, cy: -0.045, cz: 1.89, hx: 0.4, hy: 0.115, hz: 0.4 },
     { cx: 0, cy: 1.06, cz: 0.75, hx: 0.84, hy: 0.42, hz: 1.55 },
   ],
   bumpRadius: 0.25,
@@ -64,19 +66,20 @@ export const perentieTuning: VehicleTuning = {
     idleRpm: 700,
     crankSeconds: 1.3,
     crankRpm: 170,
-    redlineRpm: 3600,
+    redlineRpm: 4000,
     torqueCurve: [
       [600, 150],
       [1000, 205],
       [1500, 238],
       [1900, 245],
-      [2400, 238],
-      [3000, 220],
-      [3400, 200],
-      [3600, 182],
-      [3800, 40],
+      [2500, 238],
+      [3250, 220],
+      [3750, 200],
+      [4000, 177],
+      [4250, 39],
     ],
     airflow: 900000,
+    topEnd: { fromRpm: 1900, air: 0.08 },
     // Settles the idle at 700 rpm against the friction below.
     idleAir: 0.024,
     throttleCurve: 1.3,
@@ -98,7 +101,7 @@ export const perentieTuning: VehicleTuning = {
     reverse: 3.664,
     finalDrive: 3.54,
     efficiency: 0.85,
-    upshiftRpm: { light: 1900, full: 3300 },
+    upshiftRpm: { light: 1900, full: 3650 },
     downshiftRpm: { light: 1050, full: 1900 },
     shiftTime: 0.55,
   },

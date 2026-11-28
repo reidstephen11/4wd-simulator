@@ -6,6 +6,7 @@ import type { Vehicle } from '../sim/vehicle/vehicle';
 import type { Terrain } from '../sim/world/terrain';
 import { mixPal, pal } from './colors';
 import { patchFog } from './fog';
+import { mudFleck, mudRate, mudThrow, wheelTurning } from './mudSpray';
 
 type Range = readonly [number, number];
 const rnd = (r: Range) => r[0] + Math.random() * (r[1] - r[0]);
@@ -32,6 +33,8 @@ class Pool {
   readonly size: Float32Array;
   readonly size1: Float32Array;
   readonly spin: Float32Array;
+  /** Drawn out along its path by this much (1 = round, and it tumbles instead). */
+  readonly stretch: Float32Array;
   readonly color: Float32Array;
   readonly color1: Float32Array;
   /** Water surface height for wakes; ground kill height for chunks. */
@@ -42,6 +45,7 @@ class Pool {
   private readonly e = new THREE.Euler();
   private readonly s = new THREE.Vector3();
   private readonly p = new THREE.Vector3();
+  private readonly dir = new THREE.Vector3();
   private readonly c = new THREE.Color();
 
   /** The per-particle arrays, three and one numbers a particle, for `kill` to move. */
@@ -65,11 +69,12 @@ class Pool {
     this.size = new Float32Array(n);
     this.size1 = new Float32Array(n);
     this.spin = new Float32Array(n);
+    this.stretch = new Float32Array(n);
     this.color = new Float32Array(n * 3);
     this.color1 = new Float32Array(n * 3);
     this.floor = new Float32Array(n);
     this.vec3s = [this.pos, this.vel, this.color, this.color1];
-    this.scalars = [this.age, this.life, this.size, this.size1, this.spin, this.floor];
+    this.scalars = [this.age, this.life, this.size, this.size1, this.spin, this.stretch, this.floor];
     if (o.opacity) {
       this.opacityAttr = new THREE.InstancedBufferAttribute(new Float32Array(n), 1);
       this.opacityAttr.setUsage(THREE.DynamicDrawUsage);
@@ -95,6 +100,7 @@ class Pool {
     c0: THREE.Color,
     c1: THREE.Color = c0,
     floor = -1e9,
+    stretch = 1,
   ): number {
     if (this.count >= this.max) return -1;
     const i = this.count++;
@@ -110,6 +116,7 @@ class Pool {
     this.size[i] = size0;
     this.size1[i] = size1;
     this.spin[i] = Math.random() * Math.PI * 2;
+    this.stretch[i] = stretch;
     this.color[i3] = c0.r;
     this.color[i3 + 1] = c0.g;
     this.color[i3 + 2] = c0.b;
@@ -170,6 +177,12 @@ class Pool {
       if (flat) {
         this.q.identity();
         this.s.set(sc, 1, sc);
+      } else if (this.stretch[i] > 1) {
+        // Flung mud: drawn out along the way it is going.
+        this.dir.set(this.vel[i3], this.vel[i3 + 1], this.vel[i3 + 2]);
+        if (this.dir.lengthSq() > 1e-6) this.q.setFromUnitVectors(Z_AXIS, this.dir.normalize());
+        else this.q.identity();
+        this.s.set(sc, sc, sc * this.stretch[i]);
       } else {
         const a = this.spin[i] + this.age[i] * 1.5;
         this.q.setFromEuler(this.e.set(a, a * 0.7, 0));
@@ -199,6 +212,8 @@ class Pool {
     this.mesh.count = 0;
   }
 }
+
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
 /** Mark the first `count` items of an instance attribute for upload. */
 function upload(attr: THREE.BufferAttribute, count: number, size: number): void {
@@ -397,23 +412,26 @@ export class Particles {
         (w.surface === SurfaceId.Clay && this.wetness > 0.3)
       ) {
         const m = P.mud;
-        const rate = m.spinRate * w.spin + m.speedRate * Math.min(1, speed / 6);
-        const n = this.count(i, 1, rate * S * dt);
+        const n = this.count(i, 1, mudRate(w.spin, speed) * S * dt);
+        // The way this wheel is turning, not the way the car happens to be creeping (v2.30).
+        const turning = wheelTurning(v.speed, w.spin, v.drivetrain.gear);
         for (let j = 0; j < n; j++) {
-          const back = -dir * rnd(m.throwSpeed) * (0.5 + w.spin);
+          const t = mudThrow(turning, w.spin, Math.random());
+          const fleck = mudFleck(Math.random(), Math.random());
           this.chunks.spawn(
-            cp.x - this.fwd.x * dir * 0.35,
+            cp.x + this.fwd.x * t.behind,
             cp.y + 0.12,
-            cp.z - this.fwd.z * dir * 0.35,
-            vel.x * 0.5 + this.fwd.x * back + rx * side * Math.random() * 1.2,
+            cp.z + this.fwd.z * t.behind,
+            vel.x * 0.5 + this.fwd.x * t.along + rx * side * Math.random() * 1.2,
             rnd(m.lift),
-            vel.z * 0.5 + this.fwd.z * back + rz * side * Math.random() * 1.2,
+            vel.z * 0.5 + this.fwd.z * t.along + rz * side * Math.random() * 1.2,
             rnd(m.life),
-            rnd(m.size),
-            rnd(m.size),
+            fleck.radius,
+            fleck.radius,
             Math.random() < 0.5 ? this.cMud : this.cMudDark,
             undefined,
             this.terrain.heightAt(cp.x, cp.z) - 0.3,
+            fleck.stretch,
           );
         }
         continue;

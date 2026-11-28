@@ -9,6 +9,8 @@ import { trailPoint, trailProgress } from '../../src/sim/world/crawlTrail';
 import type { TrackInfo } from '../../src/sim/world/features';
 import type { World } from '../../src/sim/world/world';
 import type { GullyDef } from '../../src/sim/world/mapTypes';
+import { RutDepth } from '../../src/sim/world/rutDepth';
+import { TyreMarkStore, TyreTrail, trailWheels } from '../../src/sim/world/tyreMarks';
 import { plankTuning } from '../../src/data/tools';
 
 /** Scripted test drives along a world's tracks, shared by the obstacle tests (and free of Vitest, so dev scripts can use them). */
@@ -413,7 +415,12 @@ export async function driveLeg(
 }
 
 /** Drives on one world: a vehicle parked at either end of a track, in low range unless 'high'. */
-export function driver(world: World, env: EnvironmentConfig = lateAfternoon) {
+/**
+ * `ruts` (v0.31): the car presses ruts into soft ground as it goes and feels them, as it does
+ * in a level with `feltRuts`. The game lays the tyre trails that press them every frame; here
+ * they are laid every step.
+ */
+export function driver(world: World, env: EnvironmentConfig = lateAfternoon, { ruts = false } = {}) {
   const trackOf = (id: string) => {
     const track = world.features.tracks.find((t) => t.def.id === id);
     if (!track) throw new Error(`No track ${id}`);
@@ -431,6 +438,19 @@ export function driver(world: World, env: EnvironmentConfig = lateAfternoon) {
     const p = trailPoint(track, back ? track.poly.length : 0);
     const pose = sim.poseAt(p.x, p.z, p.headingDeg + (back ? 180 : 0), tuning.wheelRadius);
     const v = sim.addVehicle('p', pose, tuning);
+    if (ruts) {
+      const pressed = new RutDepth();
+      const store = new TyreMarkStore(2000);
+      const heightAt = (x: number, z: number) => world.terrain.heightAt(x, z);
+      const width = tuning.drawnWheels?.width ?? tuning.wheelWidth;
+      const trails = v.wheels.map(() => new TyreTrail(store, width, heightAt, pressed));
+      sim.ruts = pressed;
+      const step = sim.step.bind(sim);
+      sim.step = (inputs, dt) => {
+        step(inputs, dt);
+        trailWheels(trails, v.wheels, sim.env.wetness);
+      };
+    }
     const inputs = new Map([['p', { ...emptyInput(), brake: 1, handbrake: true }]]);
     for (let i = 0; i < 90; i++) sim.step(inputs, DT);
     if (lockers !== 'high') {

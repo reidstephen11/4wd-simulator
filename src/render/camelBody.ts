@@ -1178,7 +1178,9 @@ function interior(b: VehicleBuilder) {
   b.block(0, 0.8, SCUTTLE + 0.1, 2 * UP - 0.06, 0.065, 0.2, black, M.Rubber, Z.Trim, 0.01);
   for (const x of [-0.42, 0.42]) {
     b.block(x, 0.54, 0.015, 0.46, 0.12, 0.48, seat, M.Fabric, Z.Trim, 0.035);
-    b.block(x, 0.89, 0.23, 0.46, 0.62, 0.11, seat, M.Fabric, Z.Trim, 0.035);
+    b.seatBack(x, 0.89, 0.199, 0.1);
+    b.block(0, 0, 0, 0.46, 0.62, 0.11, seat, M.Fabric, Z.Trim, 0.035);
+    b.pop();
     for (const dx of [-0.115, 0.115])
       b.block(x + dx, 0.603, 0.01, 0.009, 0.005, 0.41, dark, M.Fabric, Z.Trim);
     for (const z of [-0.12, 0.15]) b.block(x, 0.474, z, 0.4, 0.03, 0.035, black, M.Metal, Z.Trim);
@@ -1200,7 +1202,9 @@ function interior(b: VehicleBuilder) {
   b.block(0, 0.295, 0.534, 1.05, 0.29, 0.012, black, M.Rubber, Z.Trim);
   // One forward-facing rear passenger seat, dog guard and the wheel boxes' inside faces.
   b.block(-0.3, 0.64, 1.11, 0.44, 0.12, 0.48, seat, M.Fabric, Z.Trim, 0.025);
-  b.block(-0.3, 0.95, 1.35, 0.44, 0.58, 0.11, seat, M.Fabric, Z.Trim, 0.025);
+  b.seatBack(-0.3, 0.95, 1.321, 0.1);
+  b.block(0, 0, 0, 0.44, 0.58, 0.11, seat, M.Fabric, Z.Trim, 0.025);
+  b.pop();
   for (const z of [0.96, 1.26])
     for (const x of [-0.48, -0.12]) b.block(x, 0.54, z, 0.025, 0.1, 0.025, steel, M.Metal, Z.Trim);
   for (const z of [0.96, 1.26]) b.block(-0.3, 0.48, z, 0.38, 0.025, 0.05, steel, M.Metal, Z.Trim);

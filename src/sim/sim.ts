@@ -8,7 +8,7 @@ import { vehicleTuning, type VehicleTuning } from '../data/vehicle';
 import { Emitter } from '../core/events';
 import { Groups, groups, Physics, type GroundQuery, type Rapier } from './physics';
 import type { VehicleInput } from './input/vehicleInput';
-import { Vehicle, type SpawnPose } from './vehicle/vehicle';
+import { Vehicle, type RutField, type SpawnPose } from './vehicle/vehicle';
 import type { GearboxMode } from './vehicle/drivetrain';
 import type { World } from './world/world';
 import { placedPropShapes } from './world/props';
@@ -145,6 +145,11 @@ export class Simulation {
   readonly stuck = new Map<string, StuckVehicle>();
   /** Clay and mud churned up by wheelspin over the run. */
   readonly churn = new ChurnMap();
+  /**
+   * Where wheels have pressed the ground into ruts, for a level whose ruts are felt (4WD
+   * Simulator v0.31, `EpisodeDef.feltRuts`). Unset, as in Over the Cape, the vehicles feel none.
+   */
+  ruts: RutField | undefined;
   /** Trailers, hitched or standing on their jockey wheels, by id. */
   readonly trailers = new Map<string, Trailer>();
   readonly looseDrums = new Map<string, CargoDrum>();
@@ -592,6 +597,8 @@ export class Simulation {
 
   addVehicle(id: string, pose: SpawnPose, tuning: VehicleTuning = vehicleTuning): Vehicle {
     const env = this.env;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- for the getter below
+    const sim = this;
     const v = new Vehicle(id, this.physics, tuning, pose, {
       get wetness() {
         return env.wetness;
@@ -600,6 +607,10 @@ export class Simulation {
         return env.waterLevelOffset;
       },
       churn: this.churn,
+      // Looked up each time: the game may hand the simulation its ruts after the vehicle is made.
+      get ruts() {
+        return sim.ruts;
+      },
     });
     // A vehicle arrives in neutral in the manual gearbox settings.
     v.setGearboxMode(this.gearboxMode);
