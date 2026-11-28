@@ -9,6 +9,8 @@
  *   tp:<poiId> | tpxz:x,z,h     teleport vehicle
  *   hour:<h>                    set the clock (the light follows)
  *   input:<json>                scripted input ({} clears)
+ *   start                       start the engine and wait until it runs (the first throttle press
+ *                               only starts it, so a drive scripted without this barely moves)
  *   click:<selector>            click a page element (a Test mode button, say)
  *   wait:<ms>
  *   log                         print vehicle state
@@ -75,6 +77,13 @@ for (const s of steps) {
   else if (cmd === 'tpxz') {
     const c = arg.split(',').map(Number);
     await page.evaluate((c) => window.__game?.teleport(c[0], c[1], c[2]), c);
+  } else if (cmd === 'start') {
+    await page.evaluate(() => window.__game?.setInput({ throttle: 0.3 }));
+    await page.waitForFunction(() => window.__game?.vehicle()?.engineRunning === true, null, {
+      timeout: 20_000,
+    });
+    await page.evaluate(() => window.__game?.setInput(null));
+    await page.waitForTimeout(400);
   } else if (cmd === 'input') {
     const inp = JSON.parse(arg);
     await page.evaluate((inp) => window.__game?.setInput(Object.keys(inp).length ? inp : null), inp);
@@ -86,3 +95,11 @@ const stats = await page.evaluate(() => window.__game?.stats());
 console.log('stats', JSON.stringify(stats));
 console.log(errors.length ? errors.join('\n') : 'no console errors/warnings');
 await browser.close();
+// A shader that does not compile draws nothing and only says so in the console: fail the run.
+const broken = errors.filter((e) => /Shader Error|VALIDATE_STATUS false|ERROR: \d+:\d+/.test(e));
+if (broken.length) {
+  console.error(
+    `shader errors (${broken.length}): the screenshots do not show what the code is meant to draw`,
+  );
+  process.exit(1);
+}

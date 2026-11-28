@@ -18,6 +18,10 @@ For each update:
 4. Open a pull request into `main`, wait for its checks to pass, then merge it.
 5. Tell the owner the new version is live at https://reidstephen11.github.io/4wd-simulator/ once the deploy run has finished.
 
+## Running the full tests
+
+The full unit suite takes about 25 minutes and reads the source files as it goes, so editing while it runs can give a result that matches neither version. Run it in a separate checkout of the code you mean to test (`git worktree add --detach ../<repo>-verify origin/main`, then link `node_modules` across), and keep working in the main one. For screenshots, `scripts/shoot.ts` has a `start` step that starts the engine before a scripted drive, and fails if a shader does not compile.
+
 ## Agent skills
 
 Matt Pocock's skills (https://github.com/mattpocock/skills) are in `.claude/skills`, copied unchanged; `/ask-matt` says which one fits a situation. The usual path for an idea is `/grill-with-docs`, then `/to-spec`, `/to-tickets`, `/implement` for each ticket, and `/retro`.
