@@ -570,4 +570,4 @@ Fixed in Over the Cape first (its v2.38, where the reasons are written up) and c
 
 ### Tests
 
-`tests/fj40Snorkel.test.ts` (3, copied): the FJ40's intake is the drawn snorkel head; the code-built 40 keeps its wing intake; in 1.5 m of water the code-built 40 floods and the FJ40 does not. The full unit suite was running when this was committed; its result is added here before the update is merged.
+`tests/fj40Snorkel.test.ts` (3, copied): the FJ40's intake is the drawn snorkel head; the code-built 40 keeps its wing intake; in 1.5 m of water the code-built 40 floods and the FJ40 does not. The full unit suite passes (116 files, 979 tests); lint and the build pass.
