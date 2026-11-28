@@ -999,7 +999,6 @@ function rearEnd(b: VehicleBuilder, wheel: THREE.BufferGeometry): void {
   // corner lamp, and stopped the uprights under the door's window (they stood over its glass).
   b.tag = Z.Rear;
   mountSpare(b, wheel, { x: SPARE_X, y: 0.72, z: T + 0.255 }, 'back', black, {
-    reversed: true,
     cover: () => {
       const profile = [
         [0, -0.15],

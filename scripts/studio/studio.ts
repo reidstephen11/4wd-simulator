@@ -21,6 +21,7 @@ import { WorkingMirrors } from '../../src/render/workingMirrors';
 import { vehicleLooks } from '../../src/render/vehicleLooks';
 import { loadFj40Glb } from '../../src/render/fj40Glb';
 import { buildBodyCore } from '../../src/render/sooty80Body';
+import { takeMountedSpares, type MountedSpare } from '../../src/render/spares';
 
 const params = new URLSearchParams(location.search);
 const trailerId = params.get('trailer') as TrailerTuning['id'] | null;
@@ -76,6 +77,7 @@ if (params.has('stock') && id === 'sooty80')
 if (id === 'shortie') await loadFj40Glb();
 
 const model = new VehicleModel(tuning);
+const spares = takeMountedSpares();
 const mirrors = new WorkingMirrors();
 mirrors.setVehicle(model);
 const articulationBlocks = new THREE.Group();
@@ -149,6 +151,10 @@ declare global {
       flat(wheel: number, angle?: number, drop?: number): void;
       /** The vehicle's box, its hubs and the ground's height, for framing a camera on it. */
       bounds(): { min: number[]; max: number[]; hubs: number[][]; ground: number };
+      /** The spare wheels the body mounted: hub, facing and size, in the vehicle frame. */
+      spares(): (Pick<MountedSpare, 'facing' | 'halfWidth' | 'radius'> & { position: number[] })[];
+      /** Draw only the road wheels (true) or everything again (false), for looking at a wheel's faces. */
+      wheelsOnly(on: boolean): void;
       ready: boolean;
     };
   }
@@ -183,7 +189,7 @@ window.studio = {
   },
   /**
    * Wheel `wheel` as a flat tyre, turned `angle` about its axle: the flat must be at the bottom
-   * whichever way the wheel is turned or mounted (left wheels with an inner face are turned round).
+   * whichever way the wheel is turned or mounted (the left wheels are turned round, outer face out).
    */
   flat(wheel: number, angle = 1, drop = 0.07) {
     const w = model.wheels[wheel];
@@ -215,6 +221,19 @@ window.studio = {
       hubs: model.wheels.map((w) => w.pivot.getWorldPosition(new THREE.Vector3()).toArray()),
       ground: ground.position.y,
     };
+  },
+  spares() {
+    return spares.map((s) => ({
+      facing: s.facing,
+      halfWidth: s.halfWidth,
+      radius: s.radius,
+      position: s.position.toArray(),
+    }));
+  },
+  wheelsOnly(on: boolean) {
+    model.root.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.visible = !on || model.wheels.some((w) => w.mesh === o);
+    });
   },
   ready: true,
 };

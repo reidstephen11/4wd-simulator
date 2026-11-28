@@ -62,15 +62,13 @@ export function withoutSpareWheels<T>(build: () => T): T {
 }
 
 /**
- * Places a spare wheel: the only way a vehicle should. The wheel builders draw a road wheel
- * with its axle along x; this turns it so its axle points the way it `faces` (a quarter turn
- * about y for a door or carrier spare, about z for one lying flat, none for one against a
- * side), draws it with the hub at (x, y, z) in the builder's current frame, and records it
- * for the tests (`tests/spares.test.ts`). The wheels are alike on both faces, so `'back'`
- * and `'front'` (and `'up'` and `'down'`, `'left'` and `'right'`) draw the same thing;
- * `reversed` turns the wheel end for end (a half turn more about y, for door spares
- * placed that way before this helper), which mirrors only the tread's stagger. `cover` draws a
- * cover over the wheel, which counts as part of the spare.
+ * Places a spare wheel: the only way a vehicle should. The body is given the wheel with its
+ * outer face (nuts and hub cap) to +x and its inner side (the rim's barrel and the back of the
+ * disc, from `wheelBack`) to −x; this turns it so the outer face points the way it `faces` (a
+ * quarter turn about y for a door or carrier spare, about z for one lying flat, a half turn
+ * about y for one facing left), draws it with the hub at (x, y, z) in the builder's current
+ * frame, and records it for the tests (`tests/spares.test.ts`). Its inner side is against the
+ * mount. `cover` draws a cover over the wheel, which counts as part of the spare.
  */
 export function mountSpare(
   b: VehicleBuilder,
@@ -78,7 +76,7 @@ export function mountSpare(
   position: THREE.Vector3Like,
   facing: SpareFacing,
   color: THREE.Color,
-  options: { reversed?: boolean; cover?: () => void } = {},
+  options: { cover?: () => void } = {},
 ): void {
   const box = new THREE.Box3().setFromBufferAttribute(
     wheel.getAttribute('position') as THREE.BufferAttribute,
@@ -86,8 +84,12 @@ export function mountSpare(
   const halfWidth = Math.max(-box.min.x, box.max.x);
   const radius = Math.max(-box.min.y, box.max.y, -box.min.z, box.max.z);
   b.push().translate(position.x, position.y, position.z);
-  if (facing === 'back' || facing === 'front') b.rotate(0, options.reversed ? Math.PI / 2 : -Math.PI / 2, 0);
-  else if (facing === 'up' || facing === 'down') b.rotate(0, 0, Math.PI / 2);
+  // Each turn takes the wheel's +x (its outer face) to the facing's axle.
+  if (facing === 'back') b.rotate(0, -Math.PI / 2, 0);
+  else if (facing === 'front') b.rotate(0, Math.PI / 2, 0);
+  else if (facing === 'up') b.rotate(0, 0, Math.PI / 2);
+  else if (facing === 'down') b.rotate(0, 0, -Math.PI / 2);
+  else if (facing === 'left') b.rotate(0, Math.PI, 0);
   const hub = new THREE.Vector3().applyMatrix4(b.matrix);
   if (drawing) b.geometry(wheel.clone(), color);
   b.pop();

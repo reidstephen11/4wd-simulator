@@ -1007,7 +1007,7 @@ function rearEnd(b: VehicleBuilder, wheel: THREE.BufferGeometry): void {
   // The spare on its carrier on the wide right-hand door, its face to the rear, high enough to
   // stand over the foot of that door's window, as on the photographed cars.
   b.tag = Z.Rear;
-  mountSpare(b, wheel, { x: SPARE_X, y: SPARE_Y, z: z + 0.16 }, 'back', black, { reversed: true });
+  mountSpare(b, wheel, { x: SPARE_X, y: SPARE_Y, z: z + 0.16 }, 'back', black);
   b.block(SPARE_X, SPARE_Y, z + 0.04, 0.3, 0.3, 0.06, bar, M.Metal, Z.Rear, 0.02);
 }
 

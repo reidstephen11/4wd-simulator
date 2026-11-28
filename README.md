@@ -232,6 +232,15 @@ Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, so
 
 ## What to test
 
+**v0.34**
+
+Wheels with a real inner side (carried over from Over the Cape v2.39; your report that the wheels looked the same inside as outside).
+
+- Look at the far-side wheels from low down, or turn the camera round low beside the car: instead of a second set of wheel nuts and a hub cap, do you see the rim stepping down into its well and a dark brake drum and backing plate with the hub in the middle?
+- From outside, do the wheels on both sides still show their nuts and hub cap facing out?
+- Do the spares show their nuts and hub cap facing away from what they are mounted on? The Troop Carrier's, the LC79's and the Patrol's rear spares used to face the door: do they face out now?
+- Does a flat tyre still squash at the bottom on the left wheels?
+
 **v0.33**
 
 The FJ40 breathes through its snorkel (carried over from Over the Cape v2.38; your report from the deep crossing).
