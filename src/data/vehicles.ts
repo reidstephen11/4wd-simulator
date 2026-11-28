@@ -110,6 +110,29 @@ export const shortieCabin: CabinLayout = {
 export const FJ40_BODY_LIFT = 0.042;
 
 /**
+ * The centre of the FJ40's snorkel head beside the left windscreen pillar, before the body's
+ * lift (src/render/vehicleEquipment.ts draws it here).
+ */
+export const FJ40_SNORKEL_HEAD = { x: -0.825, y: 1.395, z: -0.375 } as const;
+
+/**
+ * The FJ40: the base tuning, breathing through its snorkel (v2.38). From v1.85 it was drawn
+ * with a snorkel but drew its air through the code-built 40's intake in the front wing, 0.9 m
+ * off the ground, so water well below the snorkel's head flooded it. The code-built 40 has no
+ * snorkel and keeps that intake.
+ */
+export const fj40Tuning: VehicleTuning = {
+  ...vehicleTuning,
+  intake: { ...FJ40_SNORKEL_HEAD, y: FJ40_SNORKEL_HEAD.y + FJ40_BODY_LIFT },
+  // Above the ground at rest: the intake's height over the wheel centre, the tyre and the lift.
+  intakeHeight:
+    FJ40_SNORKEL_HEAD.y +
+    FJ40_BODY_LIFT +
+    vehicleTuning.wheelRadius +
+    (vehicleTuning.intakeHeight - vehicleTuning.intake.y - vehicleTuning.wheelRadius),
+};
+
+/**
  * The Blender FJ40's roof and glass are 0.12 m lower than the code body's, so its seat, dash,
  * wheel and the driver's eye are too. Until v1.85 they were left at the code body's height: the
  * eye was 13 mm under the top of the glass and the dash stood across the windscreen.
@@ -281,7 +304,7 @@ export const vehicles: Record<VehicleId, VehicleDef> = {
     cameraScale: 1.15,
   },
   shortie: {
-    tuning: vehicleTuning,
+    tuning: fj40Tuning,
     blurb:
       '1970s Land Cruiser FJ40, open from the start. The Blender-built body, 4.2 L petrol six, three-speed automatic. The earlier body is listed next to it.',
     get cabin() {

@@ -557,3 +557,17 @@ Looked at and left: the reviewer noted that no rut is pressed where water stands
 ### Tests
 
 `tests/rutDepth.test.ts` gains one test: a trail rolled in steps of 0.1, 0.5, 1.5 and 3.5 m presses every cell along its line, each once. It failed at 1.5 m before the fix. `tests/rutFeel.test.ts` and `tests/mudSpray.test.ts` are copied from Over the Cape with their new tests. The full unit suite passes (115 files, 976 tests), and `scripts/level-drive.ts`, with ruts felt, gives the same outcome on every line, locked and open, as v0.31. Lint and the build pass.
+
+## v0.33: the FJ40 breathes through its snorkel
+
+The owner's report, with a screenshot from the deep crossing: the FJ40's engine flooded with its snorkel head well clear of the water. The FJ40 has been drawn with a snorkel since Over the Cape's v1.85, but drew its air through the code-built 40's intake in the front wing, 0.9 m off the ground. Asked whether to make the snorkel work or take it off the drawing, the owner chose to make it work.
+
+Fixed in Over the Cape first (its v2.38, where the reasons are written up) and carried across: `src/data/vehicles.ts`, `src/render/vehicleEquipment.ts` and `tests/fj40Snorkel.test.ts` are copied unchanged. The FJ40 now has its own settings with the intake at the drawn snorkel head, 1.94 m off the ground; the code-built 40 has no snorkel and keeps its wing intake.
+
+**Looked at** (the game in a browser, the FJ40 parked in the deepest part of the deep crossing, 1.25 m of water, photographed from the snorkel's side). Before: the water at the bonnet line, the snorkel head at the roof line, "Water at the air intake!" and the FLOODING lamp. After, the same spot: no warning and no flooding, only "Deep, fast water: the current is lifting the car", which is right at that depth.
+
+`e2e/m4-tools.spec.ts` floods the default car in the deep crossing on purpose; it now swaps to the code-built 40 first.
+
+### Tests
+
+`tests/fj40Snorkel.test.ts` (3, copied): the FJ40's intake is the drawn snorkel head; the code-built 40 keeps its wing intake; in 1.5 m of water the code-built 40 floods and the FJ40 does not. The full unit suite was running when this was committed; its result is added here before the update is merged.

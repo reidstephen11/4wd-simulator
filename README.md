@@ -232,6 +232,14 @@ Add `?debug` for an overlay (frame rate, draw calls, vehicle state, flooding, so
 
 ## What to test
 
+**v0.33**
+
+The FJ40 breathes through its snorkel (carried over from Over the Cape v2.38; your report from the deep crossing).
+
+- In the **FJ40**, crawl into the deep crossing on the straight line: with the snorkel head clear of the water, the engine keeps running, with no "Water at the air intake" warning. The current can still lift the car and carry it off.
+- In the **Short-wheelbase 4WD** (the earlier body, no snorkel), the same water still floods the engine at wing height.
+- Is the deep crossing now too easy in the FJ40?
+
 **v0.32**
 
 Fixes from a code review.
