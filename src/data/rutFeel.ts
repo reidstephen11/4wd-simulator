@@ -4,6 +4,8 @@
  * has. A wheel in a rut sits lower, drags a little more, and is pulled back into the rut when
  * it tries to climb out sideways.
  */
+import { SurfaceId } from './surfaces';
+
 export const rutFeel = {
   /** The depth of a full rut (m): the rut store's `maxDepth`. */
   fullDepth: 0.08,
@@ -17,4 +19,16 @@ export const rutFeel = {
   settle: 0.12,
   /** Below this speed (m/s) the pull fades out: a standing car is not pushed sideways. */
   pullFromSpeed: 0.8,
+  /**
+   * The ground a rut can be in (v2.37). A wheel on anything else (a plank, a rock, a log, a
+   * bridge, gravel) feels no rut, even with one in the ground beneath it.
+   */
+  surfaces: [
+    SurfaceId.Mud,
+    SurfaceId.BlackSoil,
+    SurfaceId.Sand,
+    SurfaceId.Clay,
+    SurfaceId.Dirt,
+    SurfaceId.Grass,
+  ] as readonly SurfaceId[],
 };

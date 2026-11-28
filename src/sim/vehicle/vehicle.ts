@@ -961,7 +961,11 @@ export class Vehicle {
       // A wheel in a rut sits that much lower, and takes the corner of the car down with it.
       const ruts = this.env.ruts;
       if (ruts) {
-        const rut = w.contact ? ruts.metresAt(w.contactPoint.x, w.contactPoint.z) : 0;
+        // Only on ground that holds a rut: a wheel on a plank or a rock over one feels nothing.
+        const rut =
+          w.contact && rutFeel.surfaces.includes(w.surface)
+            ? ruts.metresAt(w.contactPoint.x, w.contactPoint.z)
+            : 0;
         this.wheelRut[i] += (rut - this.wheelRut[i]) * Math.min(1, dt / rutFeel.settle);
       }
       c.setWheelMaxSuspensionTravel(i, t.suspensionTravel + extraDroop);
@@ -1004,7 +1008,11 @@ export class Vehicle {
     const sv = Math.max(-1, Math.min(1, this.speed / 0.6));
     for (let i = 0; i < 4; i++) {
       const w = this.wheels[i];
-      if (!w.contact) continue;
+      // Off the ground a wheel is pulled by no rut, and lands with no pull left over (v2.37).
+      if (!w.contact) {
+        this.rutPull[i] = 0;
+        continue;
+      }
       const softGround =
         w.surface === SurfaceId.Mud || w.surface === SurfaceId.BlackSoil || isSand(w.surface);
       rr +=
@@ -1022,7 +1030,8 @@ export class Vehicle {
         const toLeft = ruts.metresAt(cp.x - right.x * reach, cp.z - right.z * reach);
         const toRight = ruts.metresAt(cp.x + right.x * reach, cp.z + right.z * reach);
         const moving = Math.min(1, Math.abs(this.speed) / rutFeel.pullFromSpeed);
-        const pull = ((rutFeel.hold * w.load * (toRight - toLeft)) / rutFeel.fullDepth) * moving;
+        const inRut = rutFeel.surfaces.includes(w.surface) ? 1 : 0;
+        const pull = ((rutFeel.hold * w.load * (toRight - toLeft)) / rutFeel.fullDepth) * moving * inRut;
         this.rutPull[i] += (pull - this.rutPull[i]) * Math.min(1, dt / rutFeel.settle);
         const j = this.rutPull[i] * dt;
         if (j !== 0) this.body.applyImpulseAtPoint({ x: right.x * j, y: 0, z: right.z * j }, cp, true);
